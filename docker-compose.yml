@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build: 
+      context: ./apps/frontend
+      dockerfile: Dockerfile.dev # Opcional: um Dockerfile apenas com Node.js rodando 'npm run dev'
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules # Evita sobrescrever os node_modules do container com os do host
+    environment:
+      - NODE_ENV=development

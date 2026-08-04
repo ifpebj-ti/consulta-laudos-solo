@@ -1,0 +1,87 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  # 1. Validação, Testes e Lint
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Tests
+        run: | # Substitua pelo comando de teste da sua linguagem/framework
+          make test 
+      - name: Terraform Format and Validate
+        working-directory: ./infra
+        run: |
+          terraform fmt -check
+          terraform validate
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./apps/frontend
+        run: npm ci
+
+      - name: Frontend Linting
+        working-directory: ./apps/frontend
+        run: npm run lint
+
+      - name: Frontend Tests
+        working-directory: ./apps/frontend
+        run: npm run test -- --run # Roda o Vitest em modo CI (sem watch)
+
+  # 2. Construção e Envio da Imagem (Containerização)
+  build-and-push:
+    needs: test-and-lint
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Login to Oracle Cloud Infrastructure Registry (OCIR)
+        uses: docker/login-action@v3
+        with:
+          registry: <region>.ocir.io
+          username: ${{ secrets.OCI_USERNAME }}
+          password: ${{ secrets.OCI_AUTH_TOKEN }}
+          
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/api-principal
+          push: true
+          tags: <region>.ocir.io/<namespace>/<repo>:latest, <region>.ocir.io/<namespace>/<repo>:${{ github.sha }}
+
+  # 3. Infraestrutura como Código (Terraform na OCI)
+  terraform-apply:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        
+      # É necessário configurar as variáveis de ambiente da OCI via Secrets do GitHub
+      - name: Terraform Init & Apply
+        working-directory: ./infra/environments/prod
+        env:
+          TF_VAR_tenancy_ocid: ${{ secrets.OCI_TENANCY_OCID }}
+          TF_VAR_user_ocid: ${{ secrets.OCI_USER_OCID }}
+          TF_VAR_fingerprint: ${{ secrets.OCI_FINGERPRINT }}
+          TF_VAR_private_key: ${{ secrets.OCI_PRIVATE_KEY }}
+          TF_VAR_region: ${{ secrets.OCI_REGION }}
+        run: |
+          terraform init
+          terraform apply -auto-approve
