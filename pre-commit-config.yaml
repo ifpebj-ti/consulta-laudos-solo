@@ -1,0 +1,53 @@
+# Define que a validação de mensagem de commit também será acionada
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  # 1. VERIFICAÇÕES GERAIS E DE SEGURANÇA
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace         # Remove espaços em branco no final das linhas
+      - id: end-of-file-fixer           # Garante que arquivos terminem com uma linha vazia
+      - id: check-yaml                  # Valida a sintaxe de todos os arquivos .yml/.yaml
+      - id: check-merge-conflict        # Impede commits se houver marcadores de conflito (<<<<<<<)
+      - id: check-added-large-files     # Impede o commit de arquivos maiores que 5MB (ex: binários)
+        args: ['--maxkb=5000']
+      - id: detect-private-key          # CRÍTICO: Impede o vazamento acidental de chaves (.pem, rsa, etc)
+
+  # 2. PADRONIZAÇÃO DE COMMITS (CONVENTIONAL COMMITS)
+  # Essencial para que o Semantic Release consiga gerar as tags e o Changelog automaticamente
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
+
+  # 3. INFRAESTRUTURA (TERRAFORM / OCI)
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.92.0
+    hooks:
+      - id: terraform_fmt               # Executa 'terraform fmt' para padronizar o HCL
+      - id: terraform_validate          # Executa 'terraform validate' para checar a sintaxe
+        args:
+          - --tf-init-args=-upgrade
+
+  # 4. APLICAÇÕES (HOOKS LOCAIS PARA FRONTEND E BACKEND)
+  # Usamos 'repo: local' para aproveitar o SDK do .NET e o Node.js do ambiente
+  - repo: local
+    hooks:
+      # Frontend: Executa o linter do Vite/React apenas se arquivos TS/JS mudarem
+      - id: frontend-lint
+        name: Frontend Lint (Vite/React)
+        entry: bash -c 'cd apps/frontend && npm run lint'
+        language: system
+        files: ^apps/frontend/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+
+      # Backend: Verifica se o código .NET segue o padrão do .editorconfig
+      - id: backend-format
+        name: Backend Format (.NET)
+        entry: bash -c 'dotnet format apps/backend/Backend.sln --verify-no-changes'
+        language: system
+        files: ^apps/backend/.*\.cs$
+        pass_filenames: false

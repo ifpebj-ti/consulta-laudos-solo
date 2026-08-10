@@ -1,5 +1,43 @@
 {
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"]
+  "name": "Monorepo Dev Environment",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" },
+    "ghcr.io/devcontainers/features/dotnet:1": { "version": "8.0" },
+    "ghcr.io/devcontainers/features/terraform:1": { "version": "latest" }
+  },
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "vscode",
+  
+  // Mapeia o socket do Docker da máquina host para dentro do DevContainer.
+  // Isso permite que você rode 'docker ps' ou 'docker compose up' de dentro do VS Code
+  // e os containers subam na máquina real.
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+
+  // Extensões recomendadas que serão instaladas no VS Code isolado do container
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "hashicorp.terraform",
+        "tamasfe.even-better-toml",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[csharp]": {
+          "editor.defaultFormatter": "ms-dotnettools.csharp"
+        }
+      }
+    }
+  },
+
+  // Executado automaticamente após a criação do container
+  "postCreateCommand": "pre-commit install --hook-type pre-commit --hook-type commit-msg && npm ci --prefix apps/frontend && dotnet restore apps/backend/Backend.sln"
 }

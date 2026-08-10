@@ -10,3 +10,16 @@ services:
       - /app/node_modules # Evita sobrescrever os node_modules do container com os do host
     environment:
       - NODE_ENV=development
+  backend:
+    image: mcr.microsoft.com/dotnet/sdk:8.0 # Usa a imagem do SDK para dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./apps/backend:/src
+    working_dir: /src/src/ApiPrincipal
+    # O comando watch observa mudanças no código e re-compila em tempo real
+    command: dotnet watch run --no-hot-reload --urls "http://0.0.0.0:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Essencial para que o 'watch' funcione através do volume do Docker:
+      - DOTNET_USE_POLLING_FILE_WATCHER=1

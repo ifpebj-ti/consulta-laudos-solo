@@ -39,6 +39,24 @@ jobs:
       - name: Frontend Tests
         working-directory: ./apps/frontend
         run: npm run test -- --run # Roda o Vitest em modo CI (sem watch)
+  
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        working-directory: ./apps/backend
+        run: dotnet restore Backend.sln
+
+      - name: Check Code Formatting (Lint)
+        working-directory: ./apps/backend
+        run: dotnet format Backend.sln --verify-no-changes
+        # Isso quebra a pipeline se algum dev commitar código mal formatado
+
+      - name: Run Unit Tests
+        working-directory: ./apps/backend
+        run: dotnet test Backend.sln --no-restore --verbosity normal
 
   # 2. Construção e Envio da Imagem (Containerização)
   build-and-push:
@@ -55,10 +73,17 @@ jobs:
           username: ${{ secrets.OCI_USERNAME }}
           password: ${{ secrets.OCI_AUTH_TOKEN }}
           
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image for Frontend App
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/api-principal
+          context: ./apps/frontend
+          push: true
+          tags: <region>.ocir.io/<namespace>/<repo>:latest, <region>.ocir.io/<namespace>/<repo>:${{ github.sha }}
+      
+      - name: Build and Push Docker Image for Backend App
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/backend
           push: true
           tags: <region>.ocir.io/<namespace>/<repo>:latest, <region>.ocir.io/<namespace>/<repo>:${{ github.sha }}
 
