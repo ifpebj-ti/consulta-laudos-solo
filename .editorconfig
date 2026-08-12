@@ -1,0 +1,85 @@
+# Informa às IDEs que este é o arquivo de configuração raiz do projeto
+root = true
+
+# ---------------------------------------------------------------------------
+# 1. REGRAS GERAIS (Para todos os arquivos)
+# ---------------------------------------------------------------------------
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# 2. FRONTEND, INFRA & CONFIGS (React, Terraform, JSON, YAML)
+# ---------------------------------------------------------------------------
+[*.{js,jsx,ts,tsx,json,yml,yaml,html,css,scss,md,tf,tfvars}]
+indent_style = space
+indent_size = 2
+
+# ---------------------------------------------------------------------------
+# 3. EXCEÇÃO: MAKEFILE
+# O Makefile exige obrigatoriamente o uso de Tabs reais, não espaços.
+# ---------------------------------------------------------------------------
+[Makefile]
+indent_style = tab
+
+# ---------------------------------------------------------------------------
+# 4. BACKEND (.NET / C#)
+# Regras nativas da Microsoft para padronização de código C#
+# ---------------------------------------------------------------------------
+[*.{cs,vb}]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# Organização de 'usings'
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# Estilo de código de alto nível (This/Me)
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# Regras para 'var'
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# Chaves ({ }) em novas linhas (Padrão Allman, nativo do C#)
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+# Comportamento de corpo de métodos (Expression-bodied members)
+csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = false:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_indexers = true:silent
+csharp_style_expression_bodied_accessors = true:silent
+
+# Modificadores de acesso explícitos (ex: colocar 'private' ao invés de omitir)
+dotnet_style_require_accessibility_modifiers = always:suggestion
+
+# Naming Conventions (Convenção de Nomenclatura Padrão .NET)
+dotnet_naming_rule.interface_should_be_begins_with_i.severity = warning
+dotnet_naming_rule.interface_should_be_begins_with_i.symbols = interface
+dotnet_naming_rule.interface_should_be_begins_with_i.style = begins_with_i
+
+dotnet_naming_symbols.interface.applicable_kinds = interface
+dotnet_naming_symbols.interface.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+dotnet_naming_symbols.interface.required_modifiers = 
+
+dotnet_naming_style.begins_with_i.required_prefix = I
+dotnet_naming_style.begins_with_i.required_suffix = 
+dotnet_naming_style.begins_with_i.word_separator = 
+dotnet_naming_style.begins_with_i.capitalization = pascal_case
