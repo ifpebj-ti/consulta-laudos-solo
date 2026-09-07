@@ -2,30 +2,45 @@ name: CI/CD Pipeline
 
 on:
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  # 1. Validação, Testes e Lint
+  # ==========================================================================
+  # Validation, Lint and Tests
+  # ==========================================================================
   test-and-lint:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Run Tests
-        run: | # Substitua pelo comando de teste da sua linguagem/framework
-          make test 
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ----------------------------------------------------------------------
+      # Terraform Validation
+      # ----------------------------------------------------------------------
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Terraform Format and Validate
         working-directory: ./infra
         run: |
-          terraform fmt -check
+          terraform fmt -check -recursive
+          terraform init -backend=false
           terraform validate
 
+      # ----------------------------------------------------------------------
+      # Frontend Validation
+      # ----------------------------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: apps/frontend/package-lock.json
 
       - name: Install Frontend Dependencies
@@ -38,67 +53,100 @@ jobs:
 
       - name: Frontend Tests
         working-directory: ./apps/frontend
-        run: npm run test -- --run # Roda o Vitest em modo CI (sem watch)
-  
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        run: npm run test -- --run
+
+      # ----------------------------------------------------------------------
+      # Backend Validation (FastAPI)
+      # ----------------------------------------------------------------------
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          dotnet-version: '8.0.x'
+          python-version: "3.12"
 
-      - name: Restore dependencies
+      - name: Install Backend Dependencies
         working-directory: ./apps/backend
-        run: dotnet restore Backend.sln
+        run: |
+          python -m pip install --upgrade pip
 
-      - name: Check Code Formatting (Lint)
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          fi
+
+          if [ -f "requirements-dev.txt" ]; then
+            pip install -r requirements-dev.txt
+          fi
+
+          if [ -f "pyproject.toml" ]; then
+            pip install .
+          fi
+
+      - name: Check Code Formatting
         working-directory: ./apps/backend
-        run: dotnet format Backend.sln --verify-no-changes
-        # Isso quebra a pipeline se algum dev commitar código mal formatado
+        run: |
+          black . --check
+
+      - name: Run Linter
+        working-directory: ./apps/backend
+        run: |
+          ruff check .
 
       - name: Run Unit Tests
         working-directory: ./apps/backend
-        run: dotnet test Backend.sln --no-restore --verbosity normal
+        run: |
+          pytest -v
 
-  # 2. Construção e Envio da Imagem (Containerização)
+  # ==========================================================================
+  # Build and Push Images
+  # ==========================================================================
   build-and-push:
     needs: test-and-lint
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Login to Oracle Cloud Infrastructure Registry (OCIR)
         uses: docker/login-action@v3
         with:
           registry: <region>.ocir.io
           username: ${{ secrets.OCI_USERNAME }}
           password: ${{ secrets.OCI_AUTH_TOKEN }}
-          
-      - name: Build and Push Docker Image for Frontend App
+
+      - name: Build and Push Frontend Image
         uses: docker/build-push-action@v5
         with:
           context: ./apps/frontend
           push: true
-          tags: <region>.ocir.io/<namespace>/<repo>:latest, <region>.ocir.io/<namespace>/<repo>:${{ github.sha }}
-      
-      - name: Build and Push Docker Image for Backend App
+          tags: |
+            <region>.ocir.io/<namespace>/frontend:latest
+            <region>.ocir.io/<namespace>/frontend:${{ github.sha }}
+
+      - name: Build and Push Backend Image
         uses: docker/build-push-action@v5
         with:
           context: ./apps/backend
           push: true
-          tags: <region>.ocir.io/<namespace>/<repo>:latest, <region>.ocir.io/<namespace>/<repo>:${{ github.sha }}
+          tags: |
+            <region>.ocir.io/<namespace>/backend:latest
+            <region>.ocir.io/<namespace>/backend:${{ github.sha }}
 
-  # 3. Infraestrutura como Código (Terraform na OCI)
+  # ==========================================================================
+  # Infrastructure Deployment
+  # ==========================================================================
   terraform-apply:
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        
-      # É necessário configurar as variáveis de ambiente da OCI via Secrets do GitHub
+
       - name: Terraform Init & Apply
         working-directory: ./infra/environments/prod
         env:
