@@ -1,0 +1,81 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 12px 22px;
+  border-radius: var(--raio-md);
+  border: 1.5px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--if-verde);
+  color: var(--branco);
+}
+.btn--primary:hover:not(:disabled) {
+  background: var(--if-verde-escuro);
+}
+
+.btn--ghost {
+  background: var(--branco);
+  color: var(--cinza-900);
+  border-color: var(--cinza-300);
+}
+.btn--ghost:hover:not(:disabled) {
+  border-color: var(--cinza-900);
+}
+
+.btn--danger {
+  background: var(--if-vermelho);
+  color: var(--branco);
+}
+.btn--danger:hover:not(:disabled) {
+  background: #a3141a;
+}
+
+.btn--google {
+  background: var(--branco);
+  color: var(--cinza-900);
+  border-color: var(--cinza-300);
+  box-shadow: var(--sombra-1);
+  font-size: 14.5px;
+  padding: 13px 22px;
+}
+.btn--google:hover:not(:disabled) {
+  border-color: var(--cinza-500);
+  background: var(--cinza-50);
+}
+.btn--google:active:not(:disabled) {
+  background: var(--cinza-100);
+}
+.btn--google svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
+.btn--download {
+  background: var(--if-verde);
+  color: var(--branco);
+}
+.btn--download:hover:not(:disabled) {
+  background: var(--if-verde-escuro);
+}
+
+.btn--block {
+  width: 100%;
+  justify-content: center;
+}
+
+.btn--lg {
+  padding: 15px 22px;
+  font-size: 14.5px;
+}
