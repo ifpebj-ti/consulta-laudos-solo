@@ -1,0 +1,168 @@
+/* Estilos compartilhados entre RegistroForm, CalibracaoSecao e HomologacaoView */
+
+.form-section {
+  margin-bottom: var(--espaco-lg);
+}
+.form-section:last-child {
+  margin-bottom: 0;
+}
+
+.form-section__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--if-verde-escuro);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: var(--espaco-md);
+  padding-bottom: var(--espaco-sm);
+  border-bottom: 2px solid var(--if-verde-claro);
+}
+
+.form-section__title .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--if-verde);
+  flex-shrink: 0;
+}
+
+.form-section--fisica .form-section__title {
+  color: #8a5a12;
+  border-bottom-color: var(--amarelo-claro);
+}
+.form-section--fisica .form-section__title .dot {
+  background: var(--amarelo);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--espaco-md);
+}
+
+@media (max-width: 700px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-grid--branco {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1300px) {
+  .form-grid--branco {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .form-grid--branco {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-grid--granulometria {
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 900px) {
+  .form-grid--granulometria {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-field--com-branco {
+  background: var(--cinza-50);
+  border: 1px solid var(--cinza-200);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm) var(--espaco-md) var(--espaco-md);
+}
+
+.form-field__linha-branco {
+  display: flex;
+  gap: var(--espaco-sm);
+}
+
+.form-field__sub {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-field__sub-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--cinza-700);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.form-field__liquido {
+  font-size: 12px;
+  color: var(--cinza-700);
+  margin-top: var(--espaco-sm);
+  padding-top: var(--espaco-sm);
+  border-top: 1px dashed var(--cinza-300);
+}
+
+.form-field__liquido strong {
+  color: var(--if-verde-escuro);
+  font-size: 13.5px;
+}
+
+.form-subsecao-titulo {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--cinza-700);
+  margin-bottom: var(--espaco-sm);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espaco-sm);
+  margin-top: var(--espaco-lg);
+  padding-top: var(--espaco-md);
+  border-top: 1px solid var(--cinza-200);
+}
+
+.calib-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--espaco-sm);
+  margin-bottom: var(--espaco-md);
+}
+
+.calib-summary__item {
+  background: var(--if-verde-claro);
+  border: 1px solid #cdeacf;
+  border-radius: var(--raio-sm);
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.calib-summary__item span {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--if-verde-escuro);
+  margin-bottom: 4px;
+}
+
+.calib-summary__item strong {
+  font-size: 17px;
+  color: var(--if-preto);
+}
