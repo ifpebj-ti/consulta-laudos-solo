@@ -1,0 +1,7 @@
+.topbar {
+  background: var(--if-preto);
+  color: var(--branco);
+  display: flex;
+  align-items: center;
+  padding: var(--espaco-md) var(--espaco-lg);
+}

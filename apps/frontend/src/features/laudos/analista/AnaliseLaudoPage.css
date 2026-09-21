@@ -1,0 +1,30 @@
+.subnav {
+  display: flex;
+  gap: var(--espaco-sm);
+  margin-bottom: var(--espaco-lg);
+  flex-wrap: wrap;
+}
+
+.subnav__btn {
+  border: 1.5px solid var(--cinza-300);
+  background: var(--branco);
+  color: var(--cinza-900);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--raio-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.subnav__btn:hover {
+  border-color: var(--if-verde);
+}
+
+.subnav__btn.is-active {
+  background: var(--if-verde);
+  border-color: var(--if-verde);
+  color: var(--branco);
+}
