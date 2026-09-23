@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Armazenamento e PDFs
     STORAGE_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "storage"))
 
+    # Banco de Dados (PostgreSQL oficial com fallback SQLite assíncrono para dev/testes)
+    DATABASE_URL: str = "sqlite+aiosqlite:///./laudos.db"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
