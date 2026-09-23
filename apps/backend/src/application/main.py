@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import logging
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,29 +6,41 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from src.api.routers import auth, laudos
+from src.api.routers import analises, auth, laudos
 from src.core.config import settings
+from src.core.init_db import init_db
 from src.core.limiter import limiter
 
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        await init_db()
+    except Exception as e:
+        logger.error(f"Erro ao inicializar banco de dados: {e}")
+    yield
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_PREFIX}/openapi.json" if settings.ENVIRONMENT != "production" else None,
     docs_url=f"{settings.API_PREFIX}/docs" if settings.ENVIRONMENT != "production" else None,
     redoc_url=None,
+    lifespan=lifespan,
 )
 
 # Acoplar SlowAPI State e Handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS
+# CORS (Liberado GET, POST, PATCH, PUT, DELETE, OPTIONS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"] if settings.ENVIRONMENT == "dev" else ["https://laudos.instituto.edu.br"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -59,6 +72,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Registro de Rotas sem prefixo /v1 (diretamente /api)
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(laudos.router, prefix=settings.API_PREFIX)
+app.include_router(analises.router, prefix=settings.API_PREFIX)
 
 
 @app.get(f"{settings.API_PREFIX}/health", tags=["Health"])
