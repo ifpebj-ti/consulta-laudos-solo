@@ -34,4 +34,5 @@ export interface ApiErrorBody {
   sucesso: false;
   mensagem: string;
   codigoErro?: string;
+  erros?: string[];
 }

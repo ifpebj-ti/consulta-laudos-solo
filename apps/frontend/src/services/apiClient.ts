@@ -5,17 +5,19 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080
 export class ApiError extends Error {
   status: number;
   codigoErro?: string;
+  erros?: string[];
 
-  constructor(status: number, mensagem: string, codigoErro?: string) {
+  constructor(status: number, mensagem: string, codigoErro?: string, erros?: string[]) {
     super(mensagem);
     this.name = 'ApiError';
     this.status = status;
     this.codigoErro = codigoErro;
+    this.erros = erros;
   }
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
   token?: string;
 }
@@ -36,7 +38,7 @@ async function request<T>(path: string, { method = 'GET', body, token }: Request
     if (contentType.includes('application/json')) {
       const payload = (await response.json()) as { detail?: ApiErrorBody } | ApiErrorBody;
       const erro = 'detail' in payload && payload.detail ? payload.detail : (payload as ApiErrorBody);
-      throw new ApiError(response.status, erro.mensagem ?? 'Erro inesperado.', erro.codigoErro);
+      throw new ApiError(response.status, erro.mensagem ?? 'Erro inesperado.', erro.codigoErro, erro.erros);
     }
     throw new ApiError(response.status, 'Erro inesperado ao comunicar com o servidor.');
   }

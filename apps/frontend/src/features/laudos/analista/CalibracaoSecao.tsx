@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Badge, type BadgeVariant } from '@/components/ui/Badge';
 import { DecimalInput } from '@/components/ui/DecimalInput';
@@ -39,9 +39,15 @@ interface CalibracaoSecaoProps {
 }
 
 export function CalibracaoSecao({ calibracaoAplicada, onAplicar }: CalibracaoSecaoProps) {
-  const [pontos, setPontos] = useState<PontoCalibracao[]>(PONTOS_PADRAO);
+  const [pontos, setPontos] = useState<PontoCalibracao[]>(() => calibracaoAplicada?.pontos ?? PONTOS_PADRAO);
   const [leituraAmostra, setLeituraAmostra] = useState('');
   const [fatorDiluicao, setFatorDiluicao] = useState('1');
+
+  useEffect(() => {
+    if (calibracaoAplicada?.pontos && calibracaoAplicada.pontos.length > 0) {
+      setPontos(calibracaoAplicada.pontos);
+    }
+  }, [calibracaoAplicada?.pontos]);
 
   const regressao = useMemo(() => calcularRegressaoLinear(pontos), [pontos]);
 
@@ -136,7 +142,7 @@ export function CalibracaoSecao({ calibracaoAplicada, onAplicar }: CalibracaoSec
               type="button"
               variant="primary"
               block
-              onClick={() => onAplicar(regressao)}
+              onClick={() => onAplicar({ ...regressao, pontos })}
               disabled={aplicada}
               style={{ marginTop: 'var(--espaco-md)' }}
             >
