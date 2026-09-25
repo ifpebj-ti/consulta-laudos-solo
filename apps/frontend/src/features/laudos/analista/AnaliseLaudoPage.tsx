@@ -1,17 +1,23 @@
 import { useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Badge } from '@/components/ui/Badge';
+import { useAnalista } from '@/context/AnalistaContext';
 import { RegistroForm } from './RegistroForm';
 import { HomologacaoView } from './HomologacaoView';
-import { DADOS_ANALISE_INICIAIS, type DadosAnalise } from './tipos';
 import './AnaliseLaudoPage.css';
 
 type Aba = 'registro' | 'homologacao';
 
 export function AnaliseLaudoPage() {
+  const { amostraAtual, atualizarAmostraAtual, concluirAmostraAtual } = useAnalista();
   const [aba, setAba] = useState<Aba>('registro');
-  const [dados, setDados] = useState<DadosAnalise>(DADOS_ANALISE_INICIAIS);
+  const navigate = useNavigate();
+
+  if (!amostraAtual) {
+    return <Navigate to="/analista" replace />;
+  }
 
   function irParaAba(proxima: Aba) {
     setAba(proxima);
@@ -28,34 +34,32 @@ export function AnaliseLaudoPage() {
             <h1>Gestão de Análises Laboratoriais</h1>
             <p>Registro de dados de bancada, cálculos automáticos e homologação de laudos técnicos.</p>
           </div>
-          <Badge variant="status-processamento">Amostra selecionada: LAB-2026-0142</Badge>
+          <Badge variant="status-processamento">Amostra: {amostraAtual.identificacao.protocolo || 'sem protocolo'}</Badge>
         </div>
 
         <div className="subnav" role="tablist" aria-label="Etapas do processo laboratorial">
-          <button
-            type="button"
-            className={`subnav__btn ${aba === 'registro' ? 'is-active' : ''}`}
-            role="tab"
-            aria-selected={aba === 'registro'}
-            onClick={() => irParaAba('registro')}
-          >
-            Registrar Dados da Análise
+          <button type="button" className="subnav__btn" onClick={() => navigate('/analista')}>
+            &larr; Voltar para o Painel do Analista
           </button>
-          <button
-            type="button"
-            className={`subnav__btn ${aba === 'homologacao' ? 'is-active' : ''}`}
-            role="tab"
-            aria-selected={aba === 'homologacao'}
-            onClick={() => irParaAba('homologacao')}
-          >
-            Homologar Laudo
-          </button>
+          {aba === 'homologacao' && (
+            <button type="button" className="subnav__btn" onClick={() => irParaAba('registro')}>
+              &larr; Voltar para Registrar Dados
+            </button>
+          )}
         </div>
 
         {aba === 'registro' ? (
-          <RegistroForm dados={dados} onChange={setDados} onProcessar={() => irParaAba('homologacao')} />
+          <RegistroForm
+            dados={amostraAtual}
+            onChange={atualizarAmostraAtual}
+            onProcessar={() => irParaAba('homologacao')}
+          />
         ) : (
-          <HomologacaoView dados={dados} onVoltarParaEdicao={() => irParaAba('registro')} />
+          <HomologacaoView
+            dados={amostraAtual}
+            onVoltarParaEdicao={() => irParaAba('registro')}
+            onLiberarLaudo={concluirAmostraAtual}
+          />
         )}
       </main>
       <Footer />
