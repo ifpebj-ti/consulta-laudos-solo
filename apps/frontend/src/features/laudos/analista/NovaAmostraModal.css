@@ -1,0 +1,12 @@
+.nova-amostra-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
+}
+
+@media (max-width: 560px) {
+  .nova-amostra-grid {
+    grid-template-columns: 1fr;
+  }
+}
