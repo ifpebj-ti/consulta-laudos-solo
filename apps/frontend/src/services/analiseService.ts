@@ -69,7 +69,40 @@ export interface ProcessarAnaliseApiResponse {
   };
 }
 
+export interface CriarAmostraPayload {
+  protocolo: string;
+  cpf_cliente: string;
+  cliente_nome: string;
+  propriedade: string;
+  localizacao?: string;
+  areaIdentificacao?: string;
+  areaHectares?: string;
+  profundidadeColeta?: string;
+  cultivo?: string;
+}
+
+export interface CriarAmostraApiResponse {
+  sucesso: boolean;
+  mensagem: string;
+  dados: {
+    protocolo: string;
+    cliente_nome: string;
+    propriedade: string;
+    status: string;
+    versao: number;
+    criadoEm: string;
+  };
+}
+
 export const analiseService = {
+  async criarAmostra(payload: CriarAmostraPayload, token: string): Promise<CriarAmostraApiResponse> {
+    return apiClient.request<CriarAmostraApiResponse>('/laudos', {
+      method: 'POST',
+      body: payload,
+      token,
+    });
+  },
+
   async obterAnalise(protocolo: string, token: string): Promise<ObterAnaliseApiResponse> {
     return apiClient.request<ObterAnaliseApiResponse>(`/laudos/${encodeURIComponent(protocolo)}/analise`, {
       method: 'GET',
@@ -107,3 +140,4 @@ export const analiseService = {
     );
   },
 };
+

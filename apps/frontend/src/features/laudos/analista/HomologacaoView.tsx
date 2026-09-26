@@ -76,7 +76,7 @@ export function HomologacaoView({ dados, onVoltarParaEdicao, onLiberarLaudo }: H
           </div>
           <div className="info-box">
             <span>Data de Emissão</span>
-            <strong>{formatarData(identificacao.dataEmissao)}</strong>
+            <strong>{formatarData(identificacao.dataEmissao || new Date().toISOString().slice(0, 10))}</strong>
           </div>
           <div className="info-box">
             <span>Ref. do Laboratório</span>

@@ -126,20 +126,13 @@ export function RegistroForm({
             <span className="dot"></span> Análise Química
           </div>
 
-          <div className="form-grid">
+          <div className="form-grid form-grid--quimica-simples">
             <FormField
               id="campo-ph"
               label="pH"
               unit="(H₂O / CaCl₂)"
               value={quimica.ph}
               onChange={(numero) => atualizarQuimica('ph', numero)}
-            />
-            <FormField
-              id="campo-fosforo"
-              label="Fósforo (P)"
-              unit="abs. bruta"
-              value={quimica.fosforoAbsBruta}
-              onChange={(numero) => atualizarQuimica('fosforoAbsBruta', numero)}
             />
             <FormField
               id="campo-sodio"
@@ -192,6 +185,8 @@ export function RegistroForm({
         <CalibracaoSecao
           calibracaoAplicada={dados.calibracao}
           onAplicar={(coef) => onChange({ ...dados, calibracao: coef })}
+          leituraAmostra={quimica.fosforoAbsBruta}
+          onLeituraAmostraChange={(numero) => atualizarQuimica('fosforoAbsBruta', numero)}
         />
 
         <div className="form-section form-section--fisica">

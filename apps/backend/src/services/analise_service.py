@@ -25,6 +25,9 @@ from src.schemas.analise import (
     RascunhoAnaliseInput,
     RascunhoSalvoDataSchema,
     RascunhoSalvoResponse,
+    CriarLaudoInput,
+    CriarLaudoResponse,
+    CriarLaudoDataSchema,
 )
 from src.services.calculos_service import (
     calcular_complexo_sortivo,
@@ -35,9 +38,72 @@ from src.services.calculos_service import (
     converter_k_para_cmolc,
     converter_na_para_cmolc,
 )
+import re
+import html
 
 
 class AnaliseService:
+    @staticmethod
+    async def criar_laudo(payload: CriarLaudoInput, usuario: dict, db: AsyncSession) -> CriarLaudoResponse:
+        """
+        Cadastra uma nova amostra/laudo e inicializa uma bancada limpa associada.
+        Aplica sanitização preventiva e validações contra SQLi e conflitos de chave única.
+        """
+        # Limpar e validar CPF (somente dígitos)
+        cpf_limpo = re.sub(r"\D", "", payload.cpf_cliente)
+        if len(cpf_limpo) != 11:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={"sucesso": False, "mensagem": "O CPF do cliente deve conter exatamente 11 dígitos numéricos."},
+            )
+
+        protocolo_sanitizado = payload.protocolo.strip()
+        # Verificar duplicidade de protocolo
+        stmt = select(Laudo).where(Laudo.protocolo == protocolo_sanitizado)
+        res = await db.execute(stmt)
+        existente = res.scalar_one_or_none()
+        if existente:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"sucesso": False, "mensagem": f"O protocolo '{protocolo_sanitizado}' já está cadastrado no sistema."},
+            )
+
+        # Sanitização de textos contra HTML/Script injection
+        nome_cliente = html.escape(payload.cliente_nome.strip())
+        propriedade = html.escape(payload.propriedade.strip())
+        analista_email = usuario.get("email") or usuario.get("sub") or "analista"
+
+        novo_laudo = Laudo(
+            protocolo=protocolo_sanitizado,
+            cpf_cliente=cpf_limpo,
+            cliente_nome=nome_cliente,
+            propriedade=propriedade,
+            status="EM_ANALISE",
+            versao=1,
+            atualizado_por=analista_email,
+        )
+        db.add(novo_laudo)
+        await db.flush()
+
+        # Inicializa a bancada vinculada
+        nova_bancada = AnaliseBancada(laudo_id=novo_laudo.id)
+        db.add(nova_bancada)
+        await db.commit()
+        await db.refresh(novo_laudo)
+
+        return CriarLaudoResponse(
+            sucesso=True,
+            mensagem="Nova amostra cadastrada com sucesso.",
+            dados=CriarLaudoDataSchema(
+                protocolo=novo_laudo.protocolo,
+                cliente_nome=novo_laudo.cliente_nome,
+                propriedade=novo_laudo.propriedade,
+                status=novo_laudo.status,
+                versao=novo_laudo.versao,
+                criadoEm=novo_laudo.criado_em.isoformat(),
+            ),
+        )
+
     @staticmethod
     async def obter_analise(protocolo: str, db: AsyncSession) -> ObterAnaliseResponse:
         """Obtém os dados da bancada laboratorial para o protocolo informado."""

@@ -55,6 +55,16 @@
   }
 }
 
+.form-grid--quimica-simples {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 768px) {
+  .form-grid--quimica-simples {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-grid--branco {
   grid-template-columns: repeat(4, 1fr);
 }

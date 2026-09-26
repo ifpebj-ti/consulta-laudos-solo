@@ -217,3 +217,43 @@ def test_processar_analise_sucesso_caso_spec(client, token_analista):
     assert oficiais["granulometria"]["classeTextural"] == "Argilo Arenoso"
 
     assert oficiais["fosforo"]["curva"] == pytest.approx(179.7, abs=1e-1)
+
+
+def test_criar_laudo_sucesso_e_duplicidade(client, token_analista):
+    # 1. Criação bem sucedida
+    novo_protocolo = "LAB-TESTE-2026-99"
+    payload = {
+        "protocolo": novo_protocolo,
+        "cpf_cliente": "529.982.247-25",
+        "cliente_nome": "Carlos Silva & Filhos <script>",
+        "propriedade": "Fazenda Modelo",
+        "localizacao": "Belo Jardim - PE",
+    }
+    res = client.post(
+        "/api/laudos",
+        json=payload,
+        headers={"Authorization": f"Bearer {token_analista}"},
+    )
+    assert res.status_code == 201
+    dados = res.json()["dados"]
+    assert dados["protocolo"] == novo_protocolo
+    assert dados["cliente_nome"] == "Carlos Silva &amp; Filhos &lt;script&gt;"  # Sanitizado contra XSS
+    assert dados["status"] == "EM_ANALISE"
+
+    # 2. Conflito ao tentar recriar o mesmo protocolo
+    res_duplicado = client.post(
+        "/api/laudos",
+        json=payload,
+        headers={"Authorization": f"Bearer {token_analista}"},
+    )
+    assert res_duplicado.status_code == 409
+
+    # 3. Validação de CPF inválido (menos de 11 dígitos)
+    payload_cpf_invalido = {**payload, "protocolo": "LAB-TESTE-OUTRO", "cpf_cliente": "12345"}
+    res_cpf_err = client.post(
+        "/api/laudos",
+        json=payload_cpf_invalido,
+        headers={"Authorization": f"Bearer {token_analista}"},
+    )
+    assert res_cpf_err.status_code == 422
+

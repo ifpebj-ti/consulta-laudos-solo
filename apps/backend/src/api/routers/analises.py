@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import require_role
 from src.core.database import get_db
 from src.schemas.analise import (
+    CriarLaudoInput,
+    CriarLaudoResponse,
     ObterAnaliseResponse,
     ProcessarAnaliseInput,
     ProcessarAnaliseResponse,
@@ -13,6 +15,24 @@ from src.schemas.analise import (
 from src.services.analise_service import AnaliseService
 
 router = APIRouter(prefix="/laudos", tags=["Análises Laboratoriais"])
+
+
+@router.post(
+    "",
+    response_model=CriarLaudoResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Cadastrar nova amostra / laudo para análise laboratorial",
+)
+async def criar_laudo(
+    payload: CriarLaudoInput,
+    user: dict = Depends(require_role("ANALISTA")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Cadastra uma nova amostra/laudo e inicializa uma bancada limpa associada.
+    Exige perfil de acesso ANALISTA.
+    """
+    return await AnaliseService.criar_laudo(payload=payload, usuario=user, db=db)
 
 
 @router.get(

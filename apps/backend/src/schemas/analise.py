@@ -152,3 +152,32 @@ class ProcessarAnaliseResponse(BaseModel):
     sucesso: bool = True
     mensagem: str = "Dados processados e cálculos consolidados com sucesso. Amostra pronta para homologação."
     dados: ProcessarAnaliseDataSchema
+
+
+# Schemas para Cadastro de Nova Amostra (Laudo)
+class CriarLaudoInput(BaseModel):
+    protocolo: str = Field(..., min_length=3, max_length=32, pattern=r"^[A-Za-z0-9\.\-_/]+$")
+    cpf_cliente: str = Field(..., min_length=11, max_length=14)
+    cliente_nome: str = Field(..., min_length=2, max_length=255)
+    propriedade: str = Field(..., min_length=2, max_length=255)
+    localizacao: Optional[str] = Field(None, max_length=255)
+    areaIdentificacao: Optional[str] = Field(None, max_length=100)
+    areaHectares: Optional[str] = Field(None, max_length=50)
+    profundidadeColeta: Optional[str] = Field(None, max_length=50)
+    cultivo: Optional[str] = Field(None, max_length=100)
+
+
+class CriarLaudoDataSchema(BaseModel):
+    protocolo: str
+    cliente_nome: str
+    propriedade: str
+    status: str
+    versao: int
+    criadoEm: str
+
+
+class CriarLaudoResponse(BaseModel):
+    sucesso: bool = True
+    mensagem: str = "Amostra/laudo cadastrado com sucesso."
+    dados: CriarLaudoDataSchema
+

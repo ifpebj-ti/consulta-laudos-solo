@@ -7,6 +7,7 @@ export interface CampoComBranco {
 
 export interface Identificacao {
   protocolo: string;
+  cpfCliente?: string;
   prazo: string;
   solicitante: string;
   dataEmissao: string;
@@ -20,6 +21,7 @@ export interface Identificacao {
 
 export const IDENTIFICACAO_VAZIA: Identificacao = {
   protocolo: '',
+  cpfCliente: '',
   prazo: '',
   solicitante: '',
   dataEmissao: '',
