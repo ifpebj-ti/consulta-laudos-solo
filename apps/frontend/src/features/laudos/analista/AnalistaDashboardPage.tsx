@@ -5,11 +5,20 @@ import { Footer } from '@/components/layout/Footer';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { useAuth } from '@/context/AuthContext';
 import { useAnalista } from '@/context/AnalistaContext';
+import { analiseService } from '@/services/analiseService';
+import { ApiError } from '@/services/apiClient';
 import { NovaAmostraModal } from './NovaAmostraModal';
 import { formatarData, rotuloStatus, urgenciaPrazo, variantStatus } from './statusAmostra';
 import { IDENTIFICACAO_VAZIA, type AmostraRegistro, type CartaoAmostra, type Identificacao } from './tipos';
 import './AnalistaDashboardPage.css';
+
+function calcularPrazo15Dias(): string {
+  const data = new Date();
+  data.setDate(data.getDate() + 15);
+  return data.toISOString().slice(0, 10);
+}
 
 function EstadoVazio({ mensagem }: { mensagem: string }) {
   return (
@@ -70,10 +79,15 @@ function CartaoBloco({
 }
 
 export function AnalistaDashboardPage() {
+  const { session } = useAuth();
+  const token = session?.token;
   const { amostras, criarAmostra, retomarAmostra } = useAnalista();
   const navigate = useNavigate();
+
   const [modalAberto, setModalAberto] = useState(false);
   const [identificacaoModal, setIdentificacaoModal] = useState<Identificacao>(IDENTIFICACAO_VAZIA);
+  const [erroModal, setErroModal] = useState<string | null>(null);
+  const [salvandoModal, setSalvandoModal] = useState(false);
 
   const cartoes = amostras.map(paraCartao);
 
@@ -84,13 +98,61 @@ export function AnalistaDashboardPage() {
 
   function abrirModalNovaAmostra() {
     setIdentificacaoModal(IDENTIFICACAO_VAZIA);
+    setErroModal(null);
     setModalAberto(true);
   }
 
-  function aoCriarAmostra() {
-    criarAmostra(identificacaoModal);
-    setModalAberto(false);
-    navigate('/analista/analises');
+  async function aoCriarAmostra() {
+    setErroModal(null);
+
+    // Validação preventiva do CPF
+    const cpfLimpo = (identificacaoModal.cpfCliente ?? '').replace(/\D/g, '');
+    if (cpfLimpo.length !== 11) {
+      setErroModal('O CPF do cliente é obrigatório e deve ter 11 dígitos.');
+      return;
+    }
+
+    if (!token) {
+      setErroModal('Sessão expirada. Por favor, realize o login novamente.');
+      return;
+    }
+
+    setSalvandoModal(true);
+    try {
+      await analiseService.criarAmostra(
+        {
+          protocolo: identificacaoModal.protocolo.trim(),
+          cpf_cliente: cpfLimpo,
+          cliente_nome: identificacaoModal.solicitante.trim(),
+          propriedade: identificacaoModal.propriedade.trim(),
+          localizacao: identificacaoModal.localizacao?.trim(),
+          areaIdentificacao: identificacaoModal.areaIdentificacao?.trim(),
+          areaHectares: identificacaoModal.areaHectares?.trim(),
+          profundidadeColeta: identificacaoModal.profundidadeColeta?.trim(),
+          cultivo: identificacaoModal.cultivo?.trim(),
+        },
+        token,
+      );
+
+      // Prazo automático de 15 dias a partir da criação
+      const prazoCalculado = calcularPrazo15Dias();
+      const amostraFinal: Identificacao = {
+        ...identificacaoModal,
+        prazo: prazoCalculado,
+      };
+
+      criarAmostra(amostraFinal);
+      setModalAberto(false);
+      navigate('/analista/analises');
+    } catch (e) {
+      if (e instanceof ApiError) {
+        setErroModal(e.message);
+      } else {
+        setErroModal('Erro ao conectar com o servidor para cadastrar a amostra.');
+      }
+    } finally {
+      setSalvandoModal(false);
+    }
   }
 
   function aoAbrirAmostra(protocolo: string) {
@@ -165,6 +227,8 @@ export function AnalistaDashboardPage() {
         onChange={setIdentificacaoModal}
         onClose={() => setModalAberto(false)}
         onCriar={aoCriarAmostra}
+        erro={erroModal}
+        carregando={salvandoModal}
       />
     </>
   );

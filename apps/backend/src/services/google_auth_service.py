@@ -18,6 +18,7 @@ MOCK_ANALISTA_PAYLOAD = {
 ANALISTAS_AUTORIZADOS = {
     "analista.dev@instituto.edu.br",
     "analista@instituto.edu.br",
+    "inrp@discente.ifpe.edu.br",
 }
 
 

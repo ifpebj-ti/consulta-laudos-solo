@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Badge, type BadgeVariant } from '@/components/ui/Badge';
 import { DecimalInput } from '@/components/ui/DecimalInput';
@@ -36,21 +36,48 @@ function qualidadeR2(r2: number): { variant: BadgeVariant; rotulo: string } {
 interface CalibracaoSecaoProps {
   calibracaoAplicada: RegressaoLinear | null;
   onAplicar: (coef: RegressaoLinear) => void;
+  leituraAmostra?: number;
+  onLeituraAmostraChange?: (valor: number) => void;
 }
 
-export function CalibracaoSecao({ calibracaoAplicada, onAplicar }: CalibracaoSecaoProps) {
-  const [pontos, setPontos] = useState<PontoCalibracao[]>(PONTOS_PADRAO);
-  const [leituraAmostra, setLeituraAmostra] = useState('');
+export function CalibracaoSecao({
+  calibracaoAplicada,
+  onAplicar,
+  leituraAmostra,
+  onLeituraAmostraChange,
+}: CalibracaoSecaoProps) {
+  const [pontos, setPontos] = useState<PontoCalibracao[]>(() => calibracaoAplicada?.pontos ?? PONTOS_PADRAO);
+  const [leituraTexto, setLeituraTexto] = useState(() =>
+    leituraAmostra !== undefined && leituraAmostra !== 0 ? String(leituraAmostra) : ''
+  );
   const [fatorDiluicao, setFatorDiluicao] = useState('1');
+
+  useEffect(() => {
+    if (calibracaoAplicada?.pontos && calibracaoAplicada.pontos.length > 0) {
+      setPontos(calibracaoAplicada.pontos);
+    }
+  }, [calibracaoAplicada?.pontos]);
+
+  useEffect(() => {
+    if (leituraAmostra !== undefined) {
+      const atualNum = parseFloat(leituraTexto);
+      if (Number.isNaN(atualNum) && leituraAmostra === 0) {
+        return;
+      }
+      if (atualNum !== leituraAmostra) {
+        setLeituraTexto(leituraAmostra !== 0 ? String(leituraAmostra) : '');
+      }
+    }
+  }, [leituraAmostra]);
 
   const regressao = useMemo(() => calcularRegressaoLinear(pontos), [pontos]);
 
   const resultadoAmostra = useMemo(() => {
-    const y = parseFloat(leituraAmostra);
+    const y = parseFloat(leituraTexto);
     if (Number.isNaN(y)) return null;
     const fator = parseFloat(fatorDiluicao);
     return calcularConcentracaoFosforo(y, regressao, Number.isNaN(fator) ? 1 : fator);
-  }, [leituraAmostra, fatorDiluicao, regressao]);
+  }, [leituraTexto, fatorDiluicao, regressao]);
 
   const xs = pontos.map((p) => p.x);
   const ys = pontos.map((p) => p.y);
@@ -136,7 +163,7 @@ export function CalibracaoSecao({ calibracaoAplicada, onAplicar }: CalibracaoSec
               type="button"
               variant="primary"
               block
-              onClick={() => onAplicar(regressao)}
+              onClick={() => onAplicar({ ...regressao, pontos })}
               disabled={aplicada}
               style={{ marginTop: 'var(--espaco-md)' }}
             >
@@ -212,8 +239,13 @@ export function CalibracaoSecao({ calibracaoAplicada, onAplicar }: CalibracaoSec
                 id="calib-calc-y"
                 className="calib-input"
                 placeholder="Ex.: 0.292"
-                value={leituraAmostra}
-                onChange={(e) => setLeituraAmostra(e.target.value)}
+                value={leituraTexto}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setLeituraTexto(val);
+                  const parsed = parseFloat(val);
+                  onLeituraAmostraChange?.(Number.isNaN(parsed) ? 0 : parsed);
+                }}
               />
             </div>
             <div className="calib-calculadora__resultado">

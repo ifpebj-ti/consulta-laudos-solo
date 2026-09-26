@@ -7,6 +7,7 @@ export interface RegressaoLinear {
   a: number;
   b: number;
   r2: number;
+  pontos?: PontoCalibracao[];
 }
 
 /** Regressão linear por mínimos quadrados: y = a·x + b. */

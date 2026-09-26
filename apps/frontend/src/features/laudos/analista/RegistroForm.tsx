@@ -38,13 +38,27 @@ function CampoComBrancoInput({ idPrefix, legenda, unidade, valor, onChange }: Ca
   );
 }
 
-interface RegistroFormProps {
+export interface RegistroFormProps {
   dados: DadosAnalise;
   onChange: (proximo: DadosAnalise) => void;
   onProcessar: () => void;
+  processando?: boolean;
+  statusSalvamento?: 'salvo' | 'salvando' | 'erro' | 'conflito' | 'idle';
+  horarioSalvo?: string | null;
+  errosProcessamento?: string[] | null;
+  onRecarregar?: () => void;
 }
 
-export function RegistroForm({ dados, onChange, onProcessar }: RegistroFormProps) {
+export function RegistroForm({
+  dados,
+  onChange,
+  onProcessar,
+  processando = false,
+  statusSalvamento = 'idle',
+  horarioSalvo = null,
+  errosProcessamento = null,
+  onRecarregar,
+}: RegistroFormProps) {
   const { quimica, granulometria } = dados;
   const resultadoGranulometria = calcularGranulometria(granulometria);
 
@@ -65,32 +79,60 @@ export function RegistroForm({ dados, onChange, onProcessar }: RegistroFormProps
         onProcessar();
       }}
     >
-      <div className="card__header">
+      <div className="card__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h2>Formulário de Entrada de Dados Laboratoriais</h2>
           <span className="card__subtitle">Preencha os resultados de bancada da amostra selecionada</span>
         </div>
+        <div>
+          {statusSalvamento === 'salvando' && (
+            <div className="auto-save-status auto-save-status--salvando">
+              <span className="auto-save-spinner" />
+              <span>Salvando rascunho...</span>
+            </div>
+          )}
+          {statusSalvamento === 'salvo' && (
+            <div className="auto-save-status auto-save-status--salvo">
+              <span>✓ Rascunho salvo {horarioSalvo ? `às ${horarioSalvo}` : ''}</span>
+            </div>
+          )}
+          {statusSalvamento === 'conflito' && (
+            <div className="auto-save-status auto-save-status--conflito">
+              <span>⚠ Conflito de versão</span>
+            </div>
+          )}
+          {statusSalvamento === 'erro' && (
+            <div className="auto-save-status auto-save-status--erro">
+              <span>Falha no salvamento</span>
+            </div>
+          )}
+        </div>
       </div>
       <div className="card__body">
+        {statusSalvamento === 'conflito' && (
+          <div className="form-alert-conflito" role="alert">
+            <div>
+              <strong>Conflito de edição detectado!</strong> A análise foi atualizada em outra aba ou por outro analista.
+            </div>
+            {onRecarregar && (
+              <button type="button" className="btn-recarregar-conflito" onClick={onRecarregar}>
+                Recarregar Dados
+              </button>
+            )}
+          </div>
+        )}
         <div className="form-section">
           <div className="form-section__title">
             <span className="dot"></span> Análise Química
           </div>
 
-          <div className="form-grid">
+          <div className="form-grid form-grid--quimica-simples">
             <FormField
               id="campo-ph"
               label="pH"
               unit="(H₂O / CaCl₂)"
               value={quimica.ph}
               onChange={(numero) => atualizarQuimica('ph', numero)}
-            />
-            <FormField
-              id="campo-fosforo"
-              label="Fósforo (P)"
-              unit="abs. bruta"
-              value={quimica.fosforoAbsBruta}
-              onChange={(numero) => atualizarQuimica('fosforoAbsBruta', numero)}
             />
             <FormField
               id="campo-sodio"
@@ -143,6 +185,8 @@ export function RegistroForm({ dados, onChange, onProcessar }: RegistroFormProps
         <CalibracaoSecao
           calibracaoAplicada={dados.calibracao}
           onAplicar={(coef) => onChange({ ...dados, calibracao: coef })}
+          leituraAmostra={quimica.fosforoAbsBruta}
+          onLeituraAmostraChange={(numero) => atualizarQuimica('fosforoAbsBruta', numero)}
         />
 
         <div className="form-section form-section--fisica">
@@ -249,8 +293,21 @@ export function RegistroForm({ dados, onChange, onProcessar }: RegistroFormProps
           </p>
         </div>
 
+        {errosProcessamento && errosProcessamento.length > 0 && (
+          <div className="form-alert-erro" role="alert">
+            <strong>Não foi possível processar os cálculos:</strong>
+            <ul>
+              {errosProcessamento.map((msg, i) => (
+                <li key={i}>{msg}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="form-actions">
-          <Button type="submit">Salvar e Processar Cálculos</Button>
+          <Button type="submit" disabled={processando}>
+            {processando ? 'Processando Cálculos...' : 'Salvar e Processar Cálculos'}
+          </Button>
         </div>
       </div>
     </form>
