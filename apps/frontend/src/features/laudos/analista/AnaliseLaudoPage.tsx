@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/context/AuthContext';
+import { useAnalista } from '@/context/AnalistaContext';
 import { analiseService, type AmostraMetadata } from '@/services/analiseService';
 import { ApiError } from '@/services/apiClient';
+import { DADOS_ANALISE_VAZIOS, type DadosAnalise } from './tipos';
 import { RegistroForm } from './RegistroForm';
 import { HomologacaoView } from './HomologacaoView';
-import { DADOS_ANALISE_INICIAIS, type DadosAnalise } from './tipos';
 import './AnaliseLaudoPage.css';
 
 type Aba = 'registro' | 'homologacao';
@@ -18,9 +20,13 @@ const PROTOCOLO_PADRAO = 'LAB-2026-0142';
 export function AnaliseLaudoPage() {
   const { session } = useAuth();
   const token = session?.token;
+  const navigate = useNavigate();
+  const { amostraAtual, atualizarAmostraAtual, concluirAmostraAtual } = useAnalista();
+
+  const protocoloAlvo = amostraAtual?.identificacao?.protocolo || PROTOCOLO_PADRAO;
 
   const [aba, setAba] = useState<Aba>('registro');
-  const [dados, setDados] = useState<DadosAnalise>(DADOS_ANALISE_INICIAIS);
+  const [dados, setDados] = useState<DadosAnalise>(amostraAtual ?? DADOS_ANALISE_VAZIOS);
   const [versao, setVersao] = useState<number>(1);
   const [statusAmostra, setStatusAmostra] = useState<string>('EM_ANALISE');
   const [amostraInfo, setAmostraInfo] = useState<AmostraMetadata | null>(null);
@@ -44,7 +50,7 @@ export function AnaliseLaudoPage() {
     setStatusSalvamento('idle');
     setErrosProcessamento(null);
     try {
-      const res = await analiseService.obterAnalise(PROTOCOLO_PADRAO, token);
+      const res = await analiseService.obterAnalise(protocoloAlvo, token);
       if (res.sucesso && res.dados) {
         setVersao(res.dados.versao);
         setStatusAmostra(res.dados.status);
@@ -52,48 +58,56 @@ export function AnaliseLaudoPage() {
 
         const bancada = res.dados.dadosBancada;
         const dadosCarregados: DadosAnalise = {
+          identificacao: amostraAtual?.identificacao ?? {
+            ...DADOS_ANALISE_VAZIOS.identificacao,
+            protocolo: protocoloAlvo,
+            solicitante: res.dados.amostra?.solicitante ?? '',
+            propriedade: res.dados.amostra?.propriedade ?? '',
+          },
           quimica: {
-            ph: bancada.quimica.ph ?? DADOS_ANALISE_INICIAIS.quimica.ph,
-            fosforoAbsBruta: bancada.quimica.fosforoAbsBruta ?? DADOS_ANALISE_INICIAIS.quimica.fosforoAbsBruta,
-            sodioMgL: bancada.quimica.sodioMgL ?? DADOS_ANALISE_INICIAIS.quimica.sodioMgL,
-            potassioMgL: bancada.quimica.potassioMgL ?? DADOS_ANALISE_INICIAIS.quimica.potassioMgL,
+            ph: bancada.quimica.ph ?? DADOS_ANALISE_VAZIOS.quimica.ph,
+            fosforoAbsBruta: bancada.quimica.fosforoAbsBruta ?? DADOS_ANALISE_VAZIOS.quimica.fosforoAbsBruta,
+            sodioMgL: bancada.quimica.sodioMgL ?? DADOS_ANALISE_VAZIOS.quimica.sodioMgL,
+            potassioMgL: bancada.quimica.potassioMgL ?? DADOS_ANALISE_VAZIOS.quimica.potassioMgL,
             calcio: {
-              medido: bancada.quimica.calcio?.medido ?? DADOS_ANALISE_INICIAIS.quimica.calcio.medido,
+              medido: bancada.quimica.calcio?.medido ?? DADOS_ANALISE_VAZIOS.quimica.calcio.medido,
               branco: bancada.quimica.calcio?.branco ?? 0,
             },
             magnesio: {
-              medido: bancada.quimica.magnesio?.medido ?? DADOS_ANALISE_INICIAIS.quimica.magnesio.medido,
+              medido: bancada.quimica.magnesio?.medido ?? DADOS_ANALISE_VAZIOS.quimica.magnesio.medido,
               branco: bancada.quimica.magnesio?.branco ?? 0,
             },
             aluminio: {
-              medido: bancada.quimica.aluminio?.medido ?? DADOS_ANALISE_INICIAIS.quimica.aluminio.medido,
+              medido: bancada.quimica.aluminio?.medido ?? DADOS_ANALISE_VAZIOS.quimica.aluminio.medido,
               branco: bancada.quimica.aluminio?.branco ?? 0,
             },
             acidezPotencial: {
-              medido: bancada.quimica.acidezPotencial?.medido ?? DADOS_ANALISE_INICIAIS.quimica.acidezPotencial.medido,
+              medido: bancada.quimica.acidezPotencial?.medido ?? DADOS_ANALISE_VAZIOS.quimica.acidezPotencial.medido,
               branco: bancada.quimica.acidezPotencial?.branco ?? 0,
             },
           },
           granulometria: {
-            tfsa: bancada.granulometria.tfsa ?? DADOS_ANALISE_INICIAIS.granulometria.tfsa,
-            areiaBecker: bancada.granulometria.areiaBecker ?? DADOS_ANALISE_INICIAIS.granulometria.areiaBecker,
-            areiaBeckerVazio: bancada.granulometria.areiaBeckerVazio ?? DADOS_ANALISE_INICIAIS.granulometria.areiaBeckerVazio,
-            argilaBecker: bancada.granulometria.argilaBecker ?? DADOS_ANALISE_INICIAIS.granulometria.argilaBecker,
-            argilaBeckerVazio: bancada.granulometria.argilaBeckerVazio ?? DADOS_ANALISE_INICIAIS.granulometria.argilaBeckerVazio,
-            naohBecker: bancada.granulometria.naohBecker ?? DADOS_ANALISE_INICIAIS.granulometria.naohBecker,
-            naohBeckerVazio: bancada.granulometria.naohBeckerVazio ?? DADOS_ANALISE_INICIAIS.granulometria.naohBeckerVazio,
+            tfsa: bancada.granulometria.tfsa ?? DADOS_ANALISE_VAZIOS.granulometria.tfsa,
+            areiaBecker: bancada.granulometria.areiaBecker ?? DADOS_ANALISE_VAZIOS.granulometria.areiaBecker,
+            areiaBeckerVazio: bancada.granulometria.areiaBeckerVazio ?? DADOS_ANALISE_VAZIOS.granulometria.areiaBeckerVazio,
+            argilaBecker: bancada.granulometria.argilaBecker ?? DADOS_ANALISE_VAZIOS.granulometria.argilaBecker,
+            argilaBeckerVazio: bancada.granulometria.argilaBeckerVazio ?? DADOS_ANALISE_VAZIOS.granulometria.argilaBeckerVazio,
+            naohBecker: bancada.granulometria.naohBecker ?? DADOS_ANALISE_VAZIOS.granulometria.naohBecker,
+            naohBeckerVazio: bancada.granulometria.naohBeckerVazio ?? DADOS_ANALISE_VAZIOS.granulometria.naohBeckerVazio,
           },
-          calibracao: bancada.calibracao?.a !== undefined && bancada.calibracao?.b !== undefined && bancada.calibracao?.r2 !== undefined
-            ? {
-                a: bancada.calibracao.a,
-                b: bancada.calibracao.b,
-                r2: bancada.calibracao.r2,
-                pontos: bancada.calibracao.pontos,
-              }
-            : null,
+          calibracao:
+            bancada.calibracao?.a !== undefined && bancada.calibracao?.b !== undefined && bancada.calibracao?.r2 !== undefined
+              ? {
+                  a: bancada.calibracao.a,
+                  b: bancada.calibracao.b,
+                  r2: bancada.calibracao.r2,
+                  pontos: bancada.calibracao.pontos,
+                }
+              : null,
         };
 
         setDados(dadosCarregados);
+        atualizarAmostraAtual(dadosCarregados);
         ultimoDadosSalvosRef.current = JSON.stringify(dadosCarregados);
       }
     } catch (e) {
@@ -101,7 +115,7 @@ export function AnaliseLaudoPage() {
     } finally {
       setCarregando(false);
     }
-  }, [token]);
+  }, [token, protocoloAlvo, amostraAtual?.identificacao, atualizarAmostraAtual]);
 
   useEffect(() => {
     carregarDados();
@@ -124,7 +138,7 @@ export function AnaliseLaudoPage() {
       timerDebounceRef.current = setTimeout(async () => {
         try {
           const res = await analiseService.salvarRascunho(
-            PROTOCOLO_PADRAO,
+            protocoloAlvo,
             {
               versaoEsperada: versaoRef.current,
               quimica: proximo.quimica,
@@ -150,11 +164,12 @@ export function AnaliseLaudoPage() {
         }
       }, 1500);
     },
-    [token],
+    [token, protocoloAlvo],
   );
 
   function handleDadosChange(proximo: DadosAnalise) {
     setDados(proximo);
+    atualizarAmostraAtual(proximo);
     dispararAutoSave(proximo);
   }
 
@@ -180,7 +195,7 @@ export function AnaliseLaudoPage() {
 
     try {
       const res = await analiseService.processarAnalise(
-        PROTOCOLO_PADRAO,
+        protocoloAlvo,
         {
           versaoEsperada: versaoRef.current,
           quimica: dados.quimica,
@@ -230,33 +245,25 @@ export function AnaliseLaudoPage() {
             <p>
               {amostraInfo
                 ? `${amostraInfo.solicitante} — ${amostraInfo.propriedade}`
+                : dados.identificacao.solicitante
+                ? `${dados.identificacao.solicitante} — ${dados.identificacao.propriedade}`
                 : 'Registro de dados de bancada, cálculos automáticos e homologação de laudos técnicos.'}
             </p>
           </div>
           <Badge variant={statusAmostra === 'AGUARDANDO_HOMOLOGACAO' ? 'status-homologacao' : 'status-processamento'}>
-            Amostra: {PROTOCOLO_PADRAO} ({statusAmostra})
+            Amostra: {protocoloAlvo} ({statusAmostra})
           </Badge>
         </div>
 
         <div className="subnav" role="tablist" aria-label="Etapas do processo laboratorial">
-          <button
-            type="button"
-            className={`subnav__btn ${aba === 'registro' ? 'is-active' : ''}`}
-            role="tab"
-            aria-selected={aba === 'registro'}
-            onClick={() => irParaAba('registro')}
-          >
-            Registrar Dados da Análise
+          <button type="button" className="subnav__btn" onClick={() => navigate('/analista')}>
+            &larr; Voltar para o Painel do Analista
           </button>
-          <button
-            type="button"
-            className={`subnav__btn ${aba === 'homologacao' ? 'is-active' : ''}`}
-            role="tab"
-            aria-selected={aba === 'homologacao'}
-            onClick={() => irParaAba('homologacao')}
-          >
-            Homologar Laudo
-          </button>
+          {aba === 'homologacao' && (
+            <button type="button" className="subnav__btn" onClick={() => irParaAba('registro')}>
+              &larr; Voltar para Registrar Dados
+            </button>
+          )}
         </div>
 
         {carregando ? (
@@ -275,7 +282,11 @@ export function AnaliseLaudoPage() {
             onRecarregar={carregarDados}
           />
         ) : (
-          <HomologacaoView dados={dados} onVoltarParaEdicao={() => irParaAba('registro')} />
+          <HomologacaoView
+            dados={dados}
+            onVoltarParaEdicao={() => irParaAba('registro')}
+            onLiberarLaudo={concluirAmostraAtual}
+          />
         )}
       </main>
       <Footer />

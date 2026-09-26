@@ -1,39 +1,99 @@
 # Consulta Laudos Solo
 
-Este repositório contém o código-fonte, a configuração de infraestrutura e os ambientes de desenvolvimento do projeto **Consulta Laudos Solo**. O projeto adota a arquitetura de monorepo, isolando as camadas de frontend, backend e infraestrutura em seus respectivos diretórios.
+[![CI/CD](https://github.com/ifpebj-ti/consulta-laudos-solo/actions/workflows/ci-cd.yml/badge.svg?branch=main)](https://github.com/ifpebj-ti/consulta-laudos-solo/actions/workflows/ci-cd.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+
+Sistema web para consulta de laudos de análise de solo desenvolvido como Projeto Integrador do 7º Período. Permite que **Analistas** gerenciem laudos via autenticação Google OAuth e que **Clientes** consultem seus laudos informando protocolo e CPF.
+
+O projeto adota arquitetura de monorepo, isolando frontend, backend e infraestrutura em seus respectivos diretórios.
+
+---
+
+## 📚 Documentação
+
+| Documento | Link |
+|-----------|------|
+| Documento de Visão | [Wiki → Documento de Visão](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Documento-de-Visão) |
+| Arquitetura e Modelagem de Dados | [Wiki → Arquitetura e Modelagem de Dados](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Arquitetura-e-Modelagem-de-Dados) |
+| Guia de Execução, Configuração e Operação | [Wiki → Guia de Execução, Configuração e Operação](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Guia-de-Execução,-Configuração-e-Operação) |
+| Manual de Uso do Sistema | [Wiki → Manual de Uso do Sistema](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Manual-de-Uso-do-Sistema) |
+| Protótipos de Interface | [Figma — preencher link](https://figma.com/) <!-- TODO: substituir pelo link real do Figma --> |
+| Backlog do Produto | [GitHub Projects — preencher link](https://github.com/orgs/ifpebj-ti/projects/) <!-- TODO: substituir pelo link real do quadro --> |
+
+---
 
 ## 🏗️ Estrutura do Diretório
 
-O monorepo está organizado da seguinte maneira:
+```
+consulta-laudos-solo/
+├── apps/
+│   ├── frontend/     # React + Vite + TypeScript
+│   └── backend/      # FastAPI (Python)
+├── infra/            # Terraform — Oracle Cloud Infrastructure
+├── docs/             # Convenções de branches e commits
+└── .github/          # Workflows CI/CD e templates de PR/issue
+```
 
-* **`apps/frontend/`**: Aplicação de interface configurada com Vite e React, contendo arquivos de orquestração como o `vite.config.ts` e dependências no `package.json`.
-* **`apps/backend/`**: API principal desenvolvida em .NET, ancorada pelo arquivo de solução `Backend.sln`.
-* **`infra/`**: Definições de Infraestrutura como Código (IaC), separadas logicamente em módulos (`compute`, `network`, `registry`) e parametrizadas para os ambientes de `dev` e `prod`.
-* **`.devcontainer/`**: Padrões e definições para provisionamento de ambiente de desenvolvimento conteinerizado.
-* **`.github/`**: Diretório base para abrigar a automação e workflows de integração contínua (CI/CD).
+- **`apps/frontend/`**: Interface web construída com React, Vite e TypeScript.
+- **`apps/backend/`**: API REST desenvolvida em FastAPI (Python), com autenticação JWT e Google OAuth.
+- **`infra/`**: Infraestrutura como Código (IaC) com módulos Terraform para `compute`, `network` e `registry` nos ambientes `dev` e `prod`.
+- **`.devcontainer/`**: Definições para ambiente de desenvolvimento conteinerizado.
+- **`.github/`**: Workflows de CI/CD e templates de PR e issues.
 
-## 🚀 Como Executar o Projeto Localmente
+---
 
-O projeto faz uso do `docker-compose.yml` para unificar e subir a stack de desenvolvimento local com facilidade. Os seguintes serviços estão orquestrados:
+## 🚀 Como Executar Localmente
 
-* **Frontend**: Executa na porta `5173`, mapeando o diretório local para dentro do container e preservando os `node_modules` de conflitos com o host.
-* **Backend**: Utiliza a imagem do SDK do .NET 8.0, rodando na porta `8080`. O ambiente aplica o comando `dotnet watch`, ativando o monitoramento de arquivos para re-compilação em tempo real e desativando o hot-reload nativo (`--no-hot-reload`).
+Pré-requisitos: **Docker** e **Docker Compose** instalados.
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/ifpebj-ti/consulta-laudos-solo.git
+cd consulta-laudos-solo
+
+# 2. Configure as variáveis de ambiente do backend
+cp apps/backend/.env.example apps/backend/.env
+# Edite apps/backend/.env se necessário (para dev, os valores padrão já funcionam)
+
+# 3. Suba o ambiente local
+docker compose up --build
+
+# 4. Verifique que o backend está saudável
+curl http://localhost:8000/api/health
+# Resposta esperada: {"status": "ok", "ambiente": "dev"}
+```
+
+Serviços disponíveis após `docker compose up --build`:
+
+| Serviço | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend (API) | http://localhost:8000/api |
+| Documentação interativa (Swagger) | http://localhost:8000/api/docs |
+
+---
 
 ## 🐳 Containerização para Produção
 
 Cada aplicação em `apps/` conta com um `Dockerfile` otimizado em múltiplos estágios (Multi-stage Build):
 
-* **Frontend**: O primeiro estágio utiliza a imagem `node:20-alpine` para baixar dependências e gerar o build estático. O segundo estágio utiliza o servidor `nginx:alpine` para servir a aplicação na porta 80, injetando um `nginx.conf` customizado com a diretiva `try_files` para garantir o roteamento correto da Single Page Application.
-* **Backend**: Inicia com a imagem do SDK do .NET 8.0 para restaurar dependências e publicar o código otimizado (`Release`). A versão final utiliza exclusivamente a imagem de runtime do ASP.NET 8.0, definindo o ponto de entrada seguro e leve para a `ApiPrincipal.dll`.
+- **Frontend**: Primeiro estágio usa `node:20-alpine` para gerar o build estático; segundo estágio usa `nginx:alpine` para servir a aplicação na porta 80 com roteamento correto para SPA.
+- **Backend**: Usa `python:3.12-slim` como imagem base, instala dependências via `pip` e expõe o servidor Uvicorn na porta 8000.
+
+As imagens de produção são publicadas automaticamente no **GHCR** pelo pipeline CI/CD:
+- `ghcr.io/ifpebj-ti/consulta-laudos-frontend:latest`
+- `ghcr.io/ifpebj-ti/consulta-laudos-backend:latest`
+
+---
 
 ## 🛠️ Padronização e Qualidade
 
-Ferramentas de qualidade de código estão configuradas na raiz do projeto para manter todos os desenvolvedores alinhados:
+- **`.editorconfig`**: Impõe regras de estilo, indentação e formatação compatíveis com as principais IDEs.
+- **`docs/conventions/BRANCHES.md`**: Convenção de nomenclatura de branches (`feat/`, `fix/`, `chore/`, `docs/`).
+- **`docs/conventions/COMMITS.md`**: Padrão de mensagens de commit baseado em Conventional Commits v1.0.0.
 
-* **`.editorconfig`**: Impõe regras automáticas de estilo, indentação e formatação compatíveis com a maioria das IDEs do mercado.
-* **`pre-commit-config.yaml`**: Define os "hooks" obrigatórios que serão avaliados localmente antes de autorizar qualquer commit no repositório.
-* **`Makefile`**: Encapsula comandos úteis de execução e setup do ambiente de trabalho.
+---
 
 ## 📄 Licença
 
-Este software está licenciado sob os termos da **Apache License, Versão 2.0** (Janeiro de 2004). O uso, reprodução ou distribuição pressupõe a concordância com os termos que isentam os mantenedores de garantias explícitas e responsabilidade direta.
+Este software está licenciado sob os termos da **Apache License, Versão 2.0**. Consulte o arquivo [`LICENSE`](./LICENSE) para mais detalhes.

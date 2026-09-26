@@ -16,11 +16,19 @@ import './HomologacaoView.css';
 interface HomologacaoViewProps {
   dados: DadosAnalise;
   onVoltarParaEdicao: () => void;
+  onLiberarLaudo: () => void;
 }
 
-export function HomologacaoView({ dados, onVoltarParaEdicao }: HomologacaoViewProps) {
+function formatarData(data: string): string {
+  if (!data) return '—';
+  const [ano, mes, dia] = data.split('-');
+  if (!ano || !mes || !dia) return data;
+  return `${dia}/${mes}/${ano}`;
+}
+
+export function HomologacaoView({ dados, onVoltarParaEdicao, onLiberarLaudo }: HomologacaoViewProps) {
   const [liberado, setLiberado] = useState(false);
-  const { quimica, granulometria, calibracao } = dados;
+  const { identificacao, quimica, granulometria, calibracao } = dados;
 
   const granulometriaCalc = calcularGranulometria(granulometria);
   const resultadoFosforo = calibracao ? calcularConcentracaoFosforo(quimica.fosforoAbsBruta, calibracao, 1) : null;
@@ -57,26 +65,45 @@ export function HomologacaoView({ dados, onVoltarParaEdicao }: HomologacaoViewPr
           </div>
           <div className="laudo-doc__protocolo">
             Protocolo
-            <strong>LAB-2026-0142</strong>
+            <strong>{identificacao.protocolo || '—'}</strong>
           </div>
         </div>
 
         <div className="laudo-doc__grid-info">
           <div className="info-box">
-            <span>Solicitante</span>
-            <strong>Antônio S. Lima</strong>
+            <span>Proprietário/Solicitante</span>
+            <strong>{identificacao.solicitante || '—'}</strong>
           </div>
           <div className="info-box">
-            <span>CPF/CNPJ</span>
-            <strong>•••.•••.•••-12</strong>
+            <span>Data de Emissão</span>
+            <strong>{formatarData(identificacao.dataEmissao)}</strong>
           </div>
           <div className="info-box">
-            <span>Propriedade</span>
-            <strong>Sítio Boa Vista</strong>
+            <span>Ref. do Laboratório</span>
+            <strong>{identificacao.protocolo || '—'}</strong>
           </div>
           <div className="info-box">
-            <span>Data da Coleta</span>
-            <strong>12/08/2026</strong>
+            <span>Nome e Localização da Propriedade</span>
+            <strong>
+              {identificacao.propriedade || '—'}
+              {identificacao.localizacao ? ` · ${identificacao.localizacao}` : ''}
+            </strong>
+          </div>
+          <div className="info-box">
+            <span>Identificação da Área</span>
+            <strong>{identificacao.areaIdentificacao || '—'}</strong>
+          </div>
+          <div className="info-box">
+            <span>Área (ha)</span>
+            <strong>{identificacao.areaHectares || '—'}</strong>
+          </div>
+          <div className="info-box">
+            <span>Prof. de Coleta da Amostra</span>
+            <strong>{identificacao.profundidadeColeta || '—'}</strong>
+          </div>
+          <div className="info-box">
+            <span>Cultivo</span>
+            <strong>{identificacao.cultivo || '—'}</strong>
           </div>
         </div>
 
@@ -279,7 +306,15 @@ export function HomologacaoView({ dados, onVoltarParaEdicao }: HomologacaoViewPr
         <Button variant="ghost" lg onClick={onVoltarParaEdicao}>
           Voltar para Edição
         </Button>
-        <Button variant="danger" lg onClick={() => setLiberado(true)} disabled={liberado}>
+        <Button
+          variant="danger"
+          lg
+          onClick={() => {
+            setLiberado(true);
+            onLiberarLaudo();
+          }}
+          disabled={liberado}
+        >
           {liberado ? 'Laudo Liberado' : 'Assinar Digitalmente e Liberar Laudo'}
         </Button>
       </div>

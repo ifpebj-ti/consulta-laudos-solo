@@ -85,7 +85,7 @@ export function CalibracaoSecao({ calibracaoAplicada, onAplicar }: CalibracaoSec
           {aplicada ? 'Calibração aplicada' : 'Calibração pendente'}
         </Badge>
       </div>
-      <p className="calib-secao-subtitulo">Teste os 5 pontos padrão e confirme a equação y = a·x + b</p>
+      <p className="calib-secao-subtitulo">Informe as leituras dos 5 pontos padrão e confirme a equação y = a·x + b</p>
 
       <div>
         <div className="calib-secao-grid">

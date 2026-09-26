@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { DecimalInput } from '@/components/ui/DecimalInput';
 import { CalibracaoSecao } from './CalibracaoSecao';
 import { calcularGranulometria, calcularValorLiquido } from './calculos';
-import { DADOS_ANALISE_INICIAIS, type CampoComBranco, type DadosAnalise } from './tipos';
+import type { CampoComBranco, DadosAnalise } from './tipos';
 import './analista.css';
 
 interface CampoComBrancoInputProps {
@@ -68,10 +68,6 @@ export function RegistroForm({
 
   function atualizarGranulometria<K extends keyof typeof granulometria>(campo: K, valor: number) {
     onChange({ ...dados, granulometria: { ...granulometria, [campo]: valor } });
-  }
-
-  function restaurarExemplo() {
-    onChange(DADOS_ANALISE_INICIAIS);
   }
 
   return (
@@ -314,9 +310,6 @@ export function RegistroForm({
         )}
 
         <div className="form-actions">
-          <Button type="button" variant="ghost" onClick={restaurarExemplo} disabled={processando}>
-            Restaurar Exemplo
-          </Button>
           <Button type="submit" disabled={processando}>
             {processando ? 'Processando Cálculos...' : 'Salvar e Processar Cálculos'}
           </Button>

@@ -1,0 +1,48 @@
+name: Bug Report
+description: Relate um comportamento inesperado
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar um bug! Preencha os campos abaixo com o máximo de detalhes possível.
+
+  - type: textarea
+    id: descricao
+    attributes:
+      label: Descrição do bug
+      description: Descreva claramente o comportamento inesperado.
+      placeholder: O que aconteceu?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducao
+    attributes:
+      label: Passos para reproduzir
+      description: Descreva passo a passo como reproduzir o bug.
+      placeholder: |
+        1. Acesse '...'
+        2. Clique em '...'
+        3. Observe o erro
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Comportamento esperado
+      description: O que deveria acontecer?
+      placeholder: Descreva o comportamento esperado.
+    validations:
+      required: true
+
+  - type: input
+    id: ambiente
+    attributes:
+      label: Ambiente
+      description: Sistema operacional, navegador e versão da aplicação.
+      placeholder: "Ex.: Windows 11, Chrome 126, v0.1.0"
+    validations:
+      required: true

@@ -1,25 +1,25 @@
 services:
   frontend:
-    build: 
+    build:
       context: ./apps/frontend
-      dockerfile: Dockerfile.dev # Opcional: um Dockerfile apenas com Node.js rodando 'npm run dev'
+      dockerfile: Dockerfile
     ports:
-      - "5173:5173"
-    volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules # Evita sobrescrever os node_modules do container com os do host
+      - "5173:80"
+    depends_on:
+      - backend
     environment:
-      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:8000/api
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-}
+
   backend:
-    image: mcr.microsoft.com/dotnet/sdk:8.0 # Usa a imagem do SDK para dev
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8000:8000"
     volumes:
-      - ./apps/backend:/src
-    working_dir: /src/src/ApiPrincipal
-    # O comando watch observa mudanças no código e re-compila em tempo real
-    command: dotnet watch run --no-hot-reload --urls "http://0.0.0.0:8080"
+      - ./apps/backend/storage:/app/storage
+    env_file:
+      - ./apps/backend/.env
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      # Essencial para que o 'watch' funcione através do volume do Docker:
-      - DOTNET_USE_POLLING_FILE_WATCHER=1
+      - ENVIRONMENT=dev
