@@ -79,40 +79,6 @@
   min-height: 44px;
 }
 
-.login-dev-mock {
-  border: 1.5px dashed var(--amarelo);
-  background: var(--amarelo-claro);
-  border-radius: var(--raio-md);
-  padding: var(--espaco-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-sm);
-}
-
-.login-dev-mock__tag {
-  align-self: flex-start;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  color: #8a5a12;
-  background: rgba(255, 255, 255, 0.6);
-  padding: 3px 8px;
-  border-radius: 999px;
-}
-
-.login-dev-mock__aviso {
-  font-size: 11px;
-  color: #8a5a12;
-  line-height: 1.5;
-}
-
-.login-dev-mock__aviso code {
-  background: rgba(255, 255, 255, 0.6);
-  padding: 1px 4px;
-  border-radius: 3px;
-}
-
 .divisor-institucional {
   display: flex;
   align-items: center;

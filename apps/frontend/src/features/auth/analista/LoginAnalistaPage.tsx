@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TopBar } from '@/components/layout/TopBar';
 import { Footer } from '@/components/layout/Footer';
-import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useGoogleIdentity } from '@/hooks/useGoogleIdentity';
 import { ApiError } from '@/services/apiClient';
@@ -21,7 +20,7 @@ export function LoginAnalistaPage() {
     setMensagemErro(null);
     try {
       await entrarComGoogle(idToken);
-      navigate('/analista/analises', { replace: true });
+      navigate('/analista', { replace: true });
     } catch (erro) {
       setMensagemErro(
         erro instanceof ApiError
@@ -57,25 +56,6 @@ export function LoginAnalistaPage() {
 
             <div className="login-form">
               <div ref={containerRef} className="login-google-btn" aria-busy={autenticando} />
-
-              {!GOOGLE_CLIENT_ID && (
-                <div className="login-dev-mock">
-                  <span className="login-dev-mock__tag">Somente ambiente de dev</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    block
-                    disabled={autenticando}
-                    onClick={() => aoReceberCredencial('mock-dev-token')}
-                  >
-                    {autenticando ? 'Entrando...' : 'Entrar como analista (modo dev)'}
-                  </Button>
-                  <p className="login-dev-mock__aviso">
-                    Usa o mock de autenticação do próprio backend (idToken "mock-dev-token"). Só funciona com o
-                    backend em <code>ENVIRONMENT=dev</code> e <code>ENABLE_MOCK_AUTH=True</code> — os padrões locais.
-                  </p>
-                </div>
-              )}
 
               <div className="divisor-institucional">Acesso institucional</div>
 
