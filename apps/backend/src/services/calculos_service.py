@@ -9,10 +9,10 @@ Executa cálculos agronômicos oficiais de bancada:
 - Curva de Calibração e Concentração de Fósforo
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
-def calcular_regressao_linear(pontos: List[Dict[str, float]]) -> Dict[str, float]:
+def calcular_regressao_linear(pontos: list[dict[str, float]]) -> dict[str, float]:
     """Regressão linear por mínimos quadrados: y = a·x + b."""
     n = len(pontos)
     if n == 0:
@@ -37,9 +37,9 @@ def calcular_regressao_linear(pontos: List[Dict[str, float]]) -> Dict[str, float
 
 def calcular_concentracao_fosforo(
     leitura_amostra: float,
-    coef: Dict[str, float],
+    coef: dict[str, float],
     fator_diluicao: float = 1.0,
-) -> Optional[Dict[str, float]]:
+) -> dict[str, float] | None:
     """A partir da leitura de absorbância da amostra (y) e da reta de calibração, obtém a concentração de Fósforo."""
     a = coef.get("a", 0.0)
     b = coef.get("b", 0.0)
@@ -80,7 +80,7 @@ def calcular_complexo_sortivo(
     h_al: float,
     na_cmolc: float,
     k_cmolc: float,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Soma de Bases, CTC efetiva/potencial, saturações e relações catiônicas:
     SB = Ca + Mg + Na + K
@@ -93,7 +93,9 @@ def calcular_complexo_sortivo(
     ctc_potencial = soma_bases + h_al
     ctc_efetiva = soma_bases + al
 
-    saturacao_bases = (soma_bases / ctc_potencial * 100.0) if ctc_potencial != 0 else 0.0
+    saturacao_bases = (
+        (soma_bases / ctc_potencial * 100.0) if ctc_potencial != 0 else 0.0
+    )
     saturacao_aluminio = (al / ctc_efetiva * 100.0) if ctc_efetiva != 0 else 0.0
 
     relacao_ca_mg = (ca / mg) if mg != 0 else None
@@ -127,7 +129,7 @@ def calcular_granulometria(
     argila_becker_vazio: float,
     naoh_becker: float,
     naoh_becker_vazio: float,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Cálculo das frações Areia/Silte/Argila:
     - Peso areia = (areia + becker) - becker
@@ -188,13 +190,27 @@ def classificar_textura(pct_areia: float, pct_silte: float, pct_argila: float) -
         return "Franco Argilo Arenoso"
     if areia >= 45 and areia < 65 and silte <= 20 and argila >= 35 and argila <= 55:
         return "Argilo Arenoso"
-    if areia >= 23 and areia < 55 and silte >= 28 and silte <= 50 and argila >= 5 and argila <= 28:
+    if (
+        areia >= 23
+        and areia < 55
+        and silte >= 28
+        and silte <= 50
+        and argila >= 5
+        and argila <= 28
+    ):
         return "Franco"
     if areia < 50 and silte >= 50 and silte <= 90 and argila <= 28:
         return "Franco Siltoso"
     if areia < 20 and silte >= 80 and argila <= 10:
         return "Silte"
-    if areia >= 20 and areia < 45 and silte >= 15 and silte <= 53 and argila >= 28 and argila <= 40:
+    if (
+        areia >= 20
+        and areia < 45
+        and silte >= 15
+        and silte <= 53
+        and argila >= 28
+        and argila <= 40
+    ):
         return "Franco Argiloso"
     if areia < 20 and silte >= 40 and silte <= 73 and argila >= 28 and argila <= 40:
         return "Franco Argilo Siltoso"

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+
 from sqlalchemy import DateTime, Float, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -34,7 +35,9 @@ class ResultadoCalculado(Base):
     fosforo_mg_dm3: Mapped[float] = mapped_column(Float, nullable=False)
 
     calculado_em: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
     laudo: Mapped["Laudo"] = relationship("Laudo", back_populates="resultado_calculado")

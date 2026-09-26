@@ -1,5 +1,8 @@
+import html
+import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,9 +13,12 @@ from src.models.laudo import Laudo
 from src.models.resultado_calculado import ResultadoCalculado
 from src.schemas.analise import (
     AmostraInfoSchema,
-    CalibracaoLinearSchema,
     CalculosOficiaisSchema,
+    CalibracaoLinearSchema,
     CampoComBrancoSchema,
+    CriarLaudoDataSchema,
+    CriarLaudoInput,
+    CriarLaudoResponse,
     DadosBancadaSchema,
     GranulometriaRascunhoSchema,
     ObterAnaliseDataSchema,
@@ -25,9 +31,6 @@ from src.schemas.analise import (
     RascunhoAnaliseInput,
     RascunhoSalvoDataSchema,
     RascunhoSalvoResponse,
-    CriarLaudoInput,
-    CriarLaudoResponse,
-    CriarLaudoDataSchema,
 )
 from src.services.calculos_service import (
     calcular_complexo_sortivo,
@@ -38,13 +41,13 @@ from src.services.calculos_service import (
     converter_k_para_cmolc,
     converter_na_para_cmolc,
 )
-import re
-import html
 
 
 class AnaliseService:
     @staticmethod
-    async def criar_laudo(payload: CriarLaudoInput, usuario: dict, db: AsyncSession) -> CriarLaudoResponse:
+    async def criar_laudo(
+        payload: CriarLaudoInput, usuario: dict, db: AsyncSession
+    ) -> CriarLaudoResponse:
         """
         Cadastra uma nova amostra/laudo e inicializa uma bancada limpa associada.
         Aplica sanitização preventiva e validações contra SQLi e conflitos de chave única.
@@ -54,7 +57,10 @@ class AnaliseService:
         if len(cpf_limpo) != 11:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={"sucesso": False, "mensagem": "O CPF do cliente deve conter exatamente 11 dígitos numéricos."},
+                detail={
+                    "sucesso": False,
+                    "mensagem": "O CPF do cliente deve conter exatamente 11 dígitos numéricos.",
+                },
             )
 
         protocolo_sanitizado = payload.protocolo.strip()
@@ -65,7 +71,10 @@ class AnaliseService:
         if existente:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail={"sucesso": False, "mensagem": f"O protocolo '{protocolo_sanitizado}' já está cadastrado no sistema."},
+                detail={
+                    "sucesso": False,
+                    "mensagem": f"O protocolo '{protocolo_sanitizado}' já está cadastrado no sistema.",
+                },
             )
 
         # Sanitização de textos contra HTML/Script injection
@@ -109,7 +118,9 @@ class AnaliseService:
         """Obtém os dados da bancada laboratorial para o protocolo informado."""
         query = (
             select(Laudo)
-            .options(selectinload(Laudo.bancada), selectinload(Laudo.resultado_calculado))
+            .options(
+                selectinload(Laudo.bancada), selectinload(Laudo.resultado_calculado)
+            )
             .where(Laudo.protocolo == protocolo)
         )
         result = await db.execute(query)
@@ -118,7 +129,10 @@ class AnaliseService:
         if not laudo:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail={"sucesso": False, "mensagem": "Laudo ou amostra não localizada para o protocolo informado."},
+                detail={
+                    "sucesso": False,
+                    "mensagem": "Laudo ou amostra não localizada para o protocolo informado.",
+                },
             )
 
         bancada = laudo.bancada
@@ -139,10 +153,18 @@ class AnaliseService:
                 fosforoAbsBruta=bancada.fosforo_abs,
                 sodioMgL=bancada.sodio_mg_l,
                 potassioMgL=bancada.potassio_mg_l,
-                calcio=CampoComBrancoSchema(medido=bancada.ca_medido, branco=bancada.ca_branco or 0.0),
-                magnesio=CampoComBrancoSchema(medido=bancada.mg_medido, branco=bancada.mg_branco or 0.0),
-                aluminio=CampoComBrancoSchema(medido=bancada.al_medido, branco=bancada.al_branco or 0.0),
-                acidezPotencial=CampoComBrancoSchema(medido=bancada.h_al_medido, branco=bancada.h_al_branco or 0.0),
+                calcio=CampoComBrancoSchema(
+                    medido=bancada.ca_medido, branco=bancada.ca_branco or 0.0
+                ),
+                magnesio=CampoComBrancoSchema(
+                    medido=bancada.mg_medido, branco=bancada.mg_branco or 0.0
+                ),
+                aluminio=CampoComBrancoSchema(
+                    medido=bancada.al_medido, branco=bancada.al_branco or 0.0
+                ),
+                acidezPotencial=CampoComBrancoSchema(
+                    medido=bancada.h_al_medido, branco=bancada.h_al_branco or 0.0
+                ),
             ),
             granulometria=GranulometriaRascunhoSchema(
                 tfsa=bancada.tfsa,
@@ -170,10 +192,16 @@ class AnaliseService:
                 amostra=AmostraInfoSchema(
                     solicitante=laudo.cliente_nome,
                     propriedade=laudo.propriedade,
-                    dataColeta=laudo.criado_em.strftime("%Y-%m-%d") if laudo.criado_em else None,
+                    dataColeta=(
+                        laudo.criado_em.strftime("%Y-%m-%d")
+                        if laudo.criado_em
+                        else None
+                    ),
                 ),
                 dadosBancada=dados_bancada,
-                atualizadoEm=laudo.atualizado_em.isoformat() if laudo.atualizado_em else None,
+                atualizadoEm=(
+                    laudo.atualizado_em.isoformat() if laudo.atualizado_em else None
+                ),
                 atualizadoPor=laudo.atualizado_por,
             ),
         )
@@ -182,7 +210,7 @@ class AnaliseService:
     async def salvar_rascunho(
         protocolo: str,
         payload: RascunhoAnaliseInput,
-        usuario: Dict[str, Any],
+        usuario: dict[str, Any],
         db: AsyncSession,
     ) -> RascunhoSalvoResponse:
         """Salva incrementalmente os dados parciais de bancada com bloqueio otimista."""
@@ -197,7 +225,10 @@ class AnaliseService:
         if not laudo:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail={"sucesso": False, "mensagem": "Laudo ou amostra não localizada para o protocolo informado."},
+                detail={
+                    "sucesso": False,
+                    "mensagem": "Laudo ou amostra não localizada para o protocolo informado.",
+                },
             )
 
         # Bloqueio Concorrente Otimista (409 Conflict)
@@ -307,13 +338,15 @@ class AnaliseService:
     async def processar_analise(
         protocolo: str,
         payload: ProcessarAnaliseInput,
-        usuario: Dict[str, Any],
+        usuario: dict[str, Any],
         db: AsyncSession,
     ) -> ProcessarAnaliseResponse:
         """Valida completude, reexecuta cálculos no backend e avança para AGUARDANDO_HOMOLOGACAO."""
         query = (
             select(Laudo)
-            .options(selectinload(Laudo.bancada), selectinload(Laudo.resultado_calculado))
+            .options(
+                selectinload(Laudo.bancada), selectinload(Laudo.resultado_calculado)
+            )
             .where(Laudo.protocolo == protocolo)
         )
         result = await db.execute(query)
@@ -322,7 +355,10 @@ class AnaliseService:
         if not laudo:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail={"sucesso": False, "mensagem": "Laudo ou amostra não localizada para o protocolo informado."},
+                detail={
+                    "sucesso": False,
+                    "mensagem": "Laudo ou amostra não localizada para o protocolo informado.",
+                },
             )
 
         # Concorrência Otimista
@@ -337,11 +373,15 @@ class AnaliseService:
             )
 
         # Validação de Domínio e Completude Essencial (400 Bad Request)
-        erros: List[str] = []
+        erros: list[str] = []
         if payload.granulometria.tfsa <= 0:
-            erros.append("O campo 'granulometria.tfsa' é obrigatório e deve ser maior que zero para processar os cálculos.")
+            erros.append(
+                "O campo 'granulometria.tfsa' é obrigatório e deve ser maior que zero para processar os cálculos."
+            )
         if payload.calibracao.a == 0:
-            erros.append("A curva de calibração de fósforo deve ser aplicada antes do processamento com coeficiente angular diferente de zero.")
+            erros.append(
+                "A curva de calibração de fósforo deve ser aplicada antes do processamento com coeficiente angular diferente de zero."
+            )
 
         if erros:
             raise HTTPException(
@@ -354,10 +394,19 @@ class AnaliseService:
             )
 
         # 1. Cálculos de Líquidos e Cátions
-        liq_ca = calcular_valor_liquido(payload.quimica.calcio.medido, payload.quimica.calcio.branco)
-        liq_mg = calcular_valor_liquido(payload.quimica.magnesio.medido, payload.quimica.magnesio.branco)
-        liq_al = calcular_valor_liquido(payload.quimica.aluminio.medido, payload.quimica.aluminio.branco)
-        liq_h_al = calcular_valor_liquido(payload.quimica.acidezPotencial.medido, payload.quimica.acidezPotencial.branco)
+        liq_ca = calcular_valor_liquido(
+            payload.quimica.calcio.medido, payload.quimica.calcio.branco
+        )
+        liq_mg = calcular_valor_liquido(
+            payload.quimica.magnesio.medido, payload.quimica.magnesio.branco
+        )
+        liq_al = calcular_valor_liquido(
+            payload.quimica.aluminio.medido, payload.quimica.aluminio.branco
+        )
+        liq_h_al = calcular_valor_liquido(
+            payload.quimica.acidezPotencial.medido,
+            payload.quimica.acidezPotencial.branco,
+        )
 
         na_cmolc = converter_na_para_cmolc(payload.quimica.sodioMgL)
         k_cmolc = converter_k_para_cmolc(payload.quimica.potassioMgL)
@@ -434,7 +483,19 @@ class AnaliseService:
         # Persistência nos Resultados Calculados
         res_calc = laudo.resultado_calculado
         if not res_calc:
-            res_calc = ResultadoCalculado(laudo_id=laudo.id, soma_bases=0, ctc_efetiva=0, ctc_potencial=0, saturacao_bases_v=0, saturacao_al_m=0, pct_areia=0, pct_silte=0, pct_argila=0, classe_textural="", fosforo_mg_dm3=0)
+            res_calc = ResultadoCalculado(
+                laudo_id=laudo.id,
+                soma_bases=0,
+                ctc_efetiva=0,
+                ctc_potencial=0,
+                saturacao_bases_v=0,
+                saturacao_al_m=0,
+                pct_areia=0,
+                pct_silte=0,
+                pct_argila=0,
+                classe_textural="",
+                fosforo_mg_dm3=0,
+            )
             db.add(res_calc)
 
         res_calc.soma_bases = round(sortivo["somaBases"], 4)
@@ -442,9 +503,21 @@ class AnaliseService:
         res_calc.ctc_potencial = round(sortivo["ctcPotencial"], 4)
         res_calc.saturacao_bases_v = round(sortivo["saturacaoBases"], 2)
         res_calc.saturacao_al_m = round(sortivo["saturacaoAluminio"], 2)
-        res_calc.relacao_ca_mg = round(sortivo["relacaoCaMg"], 2) if sortivo["relacaoCaMg"] is not None else None
-        res_calc.relacao_ca_k = round(sortivo["relacaoCaK"], 2) if sortivo["relacaoCaK"] is not None else None
-        res_calc.relacao_mg_k = round(sortivo["relacaoMgK"], 2) if sortivo["relacaoMgK"] is not None else None
+        res_calc.relacao_ca_mg = (
+            round(sortivo["relacaoCaMg"], 2)
+            if sortivo["relacaoCaMg"] is not None
+            else None
+        )
+        res_calc.relacao_ca_k = (
+            round(sortivo["relacaoCaK"], 2)
+            if sortivo["relacaoCaK"] is not None
+            else None
+        )
+        res_calc.relacao_mg_k = (
+            round(sortivo["relacaoMgK"], 2)
+            if sortivo["relacaoMgK"] is not None
+            else None
+        )
 
         res_calc.pct_areia = round(granulo["pctAreia"], 2)
         res_calc.pct_silte = round(granulo["pctSilte"], 2)
@@ -480,9 +553,21 @@ class AnaliseService:
                 "ctcPotencial": round(sortivo["ctcPotencial"], 4),
                 "saturacaoBases": round(sortivo["saturacaoBases"], 2),
                 "saturacaoAluminio": round(sortivo["saturacaoAluminio"], 2),
-                "relacaoCaMg": round(sortivo["relacaoCaMg"], 2) if sortivo["relacaoCaMg"] is not None else None,
-                "relacaoCaK": round(sortivo["relacaoCaK"], 2) if sortivo["relacaoCaK"] is not None else None,
-                "relacaoMgK": round(sortivo["relacaoMgK"], 2) if sortivo["relacaoMgK"] is not None else None,
+                "relacaoCaMg": (
+                    round(sortivo["relacaoCaMg"], 2)
+                    if sortivo["relacaoCaMg"] is not None
+                    else None
+                ),
+                "relacaoCaK": (
+                    round(sortivo["relacaoCaK"], 2)
+                    if sortivo["relacaoCaK"] is not None
+                    else None
+                ),
+                "relacaoMgK": (
+                    round(sortivo["relacaoMgK"], 2)
+                    if sortivo["relacaoMgK"] is not None
+                    else None
+                ),
                 "caSobreT": round(sortivo["caSobreT"], 2),
                 "mgSobreT": round(sortivo["mgSobreT"], 2),
                 "hAlSobreT": round(sortivo["hAlSobreT"], 2),

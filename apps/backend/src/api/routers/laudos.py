@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
 
@@ -29,7 +30,10 @@ async def baixar_pdf_laudo(
     if "/" in clean_protocolo or "\\" in clean_protocolo or ".." in clean_protocolo:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"sucesso": False, "mensagem": "Protocolo com caracteres inválidos."},
+            detail={
+                "sucesso": False,
+                "mensagem": "Protocolo com caracteres inválidos.",
+            },
         )
 
     base_storage = Path(settings.STORAGE_DIR).resolve()
@@ -45,7 +49,10 @@ async def baixar_pdf_laudo(
     if not is_safe or not target_path.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"sucesso": False, "mensagem": "Arquivo PDF do laudo não encontrado."},
+            detail={
+                "sucesso": False,
+                "mensagem": "Arquivo PDF do laudo não encontrado.",
+            },
         )
 
     # VULN-06: Concorrência controlada

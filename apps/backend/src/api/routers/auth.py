@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+
 from src.api.deps import get_current_user
 from src.core.limiter import limiter
 from src.core.security import create_access_token
@@ -37,7 +38,7 @@ async def login_analista_google(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"sucesso": False, "mensagem": str(e)},
-        )
+        ) from e
 
     email = dados_google.get("email")
     nome = dados_google.get("name", "Analista de Solo")
@@ -77,7 +78,10 @@ async def login_cliente_laudo(
         # VULN-02: Resposta unificada neutra para impedir enumeração e timing attack
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"sucesso": False, "mensagem": "Dados de consulta inválidos ou laudo indisponível."},
+            detail={
+                "sucesso": False,
+                "mensagem": "Dados de consulta inválidos ou laudo indisponível.",
+            },
         )
 
     # Emite token restrito ao laudo

@@ -1,7 +1,8 @@
 import logging
-from typing import Any, Dict, Optional
-from google.oauth2 import id_token
+from typing import Any
+
 from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 
 from src.core.config import settings
 
@@ -28,7 +29,7 @@ class GoogleAuthError(Exception):
 
 class GoogleAuthService:
     @staticmethod
-    def verify_token(token_str: str) -> Dict[str, Any]:
+    def verify_token(token_str: str) -> dict[str, Any]:
         """
         Valida o Google ID Token segundo requisitos da VULN-04:
         1. aud == settings.GOOGLE_CLIENT_ID
@@ -39,11 +40,15 @@ class GoogleAuthService:
         # Em modo dev com flag explícita, se não houver credencial do Google configurada, aceita token 'mock-dev-token'
         if settings.ENVIRONMENT == "dev" and settings.ENABLE_MOCK_AUTH:
             if token_str == "mock-dev-token" or not settings.GOOGLE_CLIENT_ID:
-                logger.warning("AUDIT: Login de Analista realizado via MOCK_AUTH de desenvolvimento.")
+                logger.warning(
+                    "AUDIT: Login de Analista realizado via MOCK_AUTH de desenvolvimento."
+                )
                 return MOCK_ANALISTA_PAYLOAD
 
         if not settings.GOOGLE_CLIENT_ID:
-            raise GoogleAuthError("Serviço de autenticação Google não configurado no servidor.")
+            raise GoogleAuthError(
+                "Serviço de autenticação Google não configurado no servidor."
+            )
 
         try:
             request = google_requests.Request()
@@ -64,10 +69,12 @@ class GoogleAuthService:
 
             email = payload.get("email")
             if not email or email not in ANALISTAS_AUTORIZADOS:
-                logger.warning(f"AUDIT: Tentativa de acesso negada para e-mail não cadastrado como analista: {email}")
+                logger.warning(
+                    f"AUDIT: Tentativa de acesso negada para e-mail não cadastrado como analista: {email}"
+                )
                 raise GoogleAuthError("Usuário não cadastrado como analista ativo.")
 
             return payload
 
         except ValueError as e:
-            raise GoogleAuthError(f"Token Google inválido ou expirado: {str(e)}") from e
+            raise GoogleAuthError(f"Token Google inválido ou expirado: {e!s}") from e

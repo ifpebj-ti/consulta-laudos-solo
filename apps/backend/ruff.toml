@@ -1,0 +1,10 @@
+target-version = "py312"
+line-length = 88
+
+[lint]
+select = ["E", "F", "W", "I", "B"]
+ignore = [
+    "E501",  # Line too long (handled by black)
+    "B008",  # Do not perform function call `Depends` in argument defaults (FastAPI)
+    "F821",  # SQLAlchemy forward references in Mapped["Model"]
+]

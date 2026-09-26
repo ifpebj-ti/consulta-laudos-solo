@@ -1,9 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
-from pathlib import Path
 
 from src.application.main import app
-from src.core.config import settings
 from src.core.security import create_access_token
 
 
@@ -70,7 +68,9 @@ def test_login_cliente_nao_encontrado_unificado_401(client):
 
 def test_me_endpoint_com_token_analista(client):
     """Testa checagem de sessão com token de analista."""
-    token = create_access_token("analista@instituto.edu.br", "ANALISTA", extra_claims={"nome": "Prof. Analista"})
+    token = create_access_token(
+        "analista@instituto.edu.br", "ANALISTA", extra_claims={"nome": "Prof. Analista"}
+    )
     response = client.get(
         "/api/auth/me",
         headers={"Authorization": f"Bearer {token}"},
@@ -83,8 +83,10 @@ def test_me_endpoint_com_token_analista(client):
 
 def test_bola_idor_mitigation_cliente_tentando_outro_laudo(client):
     """Mitigação BOLA: Cliente com token de um protocolo não pode baixar outro."""
-    token_cliente = create_access_token("52998224725", "CLIENTE", extra_claims={"protocolo": "20101.2306"})
-    
+    token_cliente = create_access_token(
+        "52998224725", "CLIENTE", extra_claims={"protocolo": "20101.2306"}
+    )
+
     # Tentativa de acessar outro protocolo diferente
     response = client.get(
         "/api/laudos/2026-SOLO-00123/pdf",

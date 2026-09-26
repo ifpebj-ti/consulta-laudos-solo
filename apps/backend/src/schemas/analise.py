@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -9,44 +9,44 @@ class PontoCalibracaoSchema(BaseModel):
 
 
 class CalibracaoLinearSchema(BaseModel):
-    a: Optional[float] = None
-    b: Optional[float] = None
-    r2: Optional[float] = None
-    pontos: Optional[List[PontoCalibracaoSchema]] = None
+    a: float | None = None
+    b: float | None = None
+    r2: float | None = None
+    pontos: list[PontoCalibracaoSchema] | None = None
 
 
 class CampoComBrancoSchema(BaseModel):
-    medido: Optional[float] = None
-    branco: Optional[float] = 0.0
+    medido: float | None = None
+    branco: float | None = 0.0
 
 
 # Schemas para Rascunho (Parcial/Opcional)
 class QuimicaRascunhoSchema(BaseModel):
-    ph: Optional[float] = None
-    fosforoAbsBruta: Optional[float] = None
-    sodioMgL: Optional[float] = None
-    potassioMgL: Optional[float] = None
-    calcio: Optional[CampoComBrancoSchema] = None
-    magnesio: Optional[CampoComBrancoSchema] = None
-    aluminio: Optional[CampoComBrancoSchema] = None
-    acidezPotencial: Optional[CampoComBrancoSchema] = None
+    ph: float | None = None
+    fosforoAbsBruta: float | None = None
+    sodioMgL: float | None = None
+    potassioMgL: float | None = None
+    calcio: CampoComBrancoSchema | None = None
+    magnesio: CampoComBrancoSchema | None = None
+    aluminio: CampoComBrancoSchema | None = None
+    acidezPotencial: CampoComBrancoSchema | None = None
 
 
 class GranulometriaRascunhoSchema(BaseModel):
-    tfsa: Optional[float] = None
-    areiaBecker: Optional[float] = None
-    areiaBeckerVazio: Optional[float] = None
-    argilaBecker: Optional[float] = None
-    argilaBeckerVazio: Optional[float] = None
-    naohBecker: Optional[float] = None
-    naohBeckerVazio: Optional[float] = None
+    tfsa: float | None = None
+    areiaBecker: float | None = None
+    areiaBeckerVazio: float | None = None
+    argilaBecker: float | None = None
+    argilaBeckerVazio: float | None = None
+    naohBecker: float | None = None
+    naohBeckerVazio: float | None = None
 
 
 class RascunhoAnaliseInput(BaseModel):
     versaoEsperada: int
-    quimica: Optional[QuimicaRascunhoSchema] = None
-    granulometria: Optional[GranulometriaRascunhoSchema] = None
-    calibracao: Optional[CalibracaoLinearSchema] = None
+    quimica: QuimicaRascunhoSchema | None = None
+    granulometria: GranulometriaRascunhoSchema | None = None
+    calibracao: CalibracaoLinearSchema | None = None
 
 
 # Schemas para Processamento Oficial
@@ -80,7 +80,7 @@ class CalibracaoProcessarSchema(BaseModel):
     a: float
     b: float
     r2: float
-    pontos: Optional[List[PontoCalibracaoSchema]] = None
+    pontos: list[PontoCalibracaoSchema] | None = None
 
 
 class ProcessarAnaliseInput(BaseModel):
@@ -94,13 +94,13 @@ class ProcessarAnaliseInput(BaseModel):
 class AmostraInfoSchema(BaseModel):
     solicitante: str
     propriedade: str
-    dataColeta: Optional[str] = None
+    dataColeta: str | None = None
 
 
 class DadosBancadaSchema(BaseModel):
     quimica: QuimicaRascunhoSchema
     granulometria: GranulometriaRascunhoSchema
-    calibracao: Optional[CalibracaoLinearSchema] = None
+    calibracao: CalibracaoLinearSchema | None = None
 
 
 class ObterAnaliseDataSchema(BaseModel):
@@ -109,8 +109,8 @@ class ObterAnaliseDataSchema(BaseModel):
     versao: int
     amostra: AmostraInfoSchema
     dadosBancada: DadosBancadaSchema
-    atualizadoEm: Optional[str] = None
-    atualizadoPor: Optional[str] = None
+    atualizadoEm: str | None = None
+    atualizadoPor: str | None = None
 
 
 class ObterAnaliseResponse(BaseModel):
@@ -145,26 +145,30 @@ class ProcessarAnaliseDataSchema(BaseModel):
     novaVersao: int
     calculosOficiais: CalculosOficiaisSchema
     processadoEm: str
-    processadoPor: Optional[str] = None
+    processadoPor: str | None = None
 
 
 class ProcessarAnaliseResponse(BaseModel):
     sucesso: bool = True
-    mensagem: str = "Dados processados e cálculos consolidados com sucesso. Amostra pronta para homologação."
+    mensagem: str = (
+        "Dados processados e cálculos consolidados com sucesso. Amostra pronta para homologação."
+    )
     dados: ProcessarAnaliseDataSchema
 
 
 # Schemas para Cadastro de Nova Amostra (Laudo)
 class CriarLaudoInput(BaseModel):
-    protocolo: str = Field(..., min_length=3, max_length=32, pattern=r"^[A-Za-z0-9\.\-_/]+$")
+    protocolo: str = Field(
+        ..., min_length=3, max_length=32, pattern=r"^[A-Za-z0-9\.\-_/]+$"
+    )
     cpf_cliente: str = Field(..., min_length=11, max_length=14)
     cliente_nome: str = Field(..., min_length=2, max_length=255)
     propriedade: str = Field(..., min_length=2, max_length=255)
-    localizacao: Optional[str] = Field(None, max_length=255)
-    areaIdentificacao: Optional[str] = Field(None, max_length=100)
-    areaHectares: Optional[str] = Field(None, max_length=50)
-    profundidadeColeta: Optional[str] = Field(None, max_length=50)
-    cultivo: Optional[str] = Field(None, max_length=100)
+    localizacao: str | None = Field(None, max_length=255)
+    areaIdentificacao: str | None = Field(None, max_length=100)
+    areaHectares: str | None = Field(None, max_length=50)
+    profundidadeColeta: str | None = Field(None, max_length=50)
+    cultivo: str | None = Field(None, max_length=100)
 
 
 class CriarLaudoDataSchema(BaseModel):
@@ -180,4 +184,3 @@ class CriarLaudoResponse(BaseModel):
     sucesso: bool = True
     mensagem: str = "Amostra/laudo cadastrado com sucesso."
     dados: CriarLaudoDataSchema
-
