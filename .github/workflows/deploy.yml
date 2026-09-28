@@ -1,0 +1,55 @@
+name: 'Terraform Deploy'
+
+on:
+  push:
+    branches:
+      - main
+    # Executa apenas se houver mudanças nas pastas de dev ou nos módulos
+    paths:
+      - 'environments/prod/**'
+      - 'modules/**'
+  # Permite rodar o workflow manualmente pelo painel do GitHub
+  workflow_dispatch: 
+
+jobs:
+  terraform:
+    name: 'Terraform Process'
+    runs-on: ubuntu-latest
+    
+    # Define a pasta raiz de execução para o ambiente de dev
+    defaults:
+      run:
+        working-directory: ./environments/prod
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Autenticação na AWS usando Secrets do GitHub
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -out=tfplan
+        
+      # Aplica as mudanças automaticamente apenas se for um push na branch main
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve tfplan

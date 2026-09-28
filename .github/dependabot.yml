@@ -7,10 +7,16 @@ version: 2
 updates:
   - package-ecosystem: "pip" # See documentation for possible values
     directory: "/apps/backend" # Location of package manifests
+    commit-message:
+      prefix: "deps"
+    file: "requirements.txt"
     schedule:
       interval: "weekly"
       
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/app/frontend" # Location of package manifests
+    commit-message:
+      prefix: "deps"
+    file: "package.json"
     schedule:
       interval: "weekly"
