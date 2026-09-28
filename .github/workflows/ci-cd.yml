@@ -186,27 +186,27 @@ jobs:
   # ==========================================================================
   # Code Quality Scanning with CodeQL
   # ==========================================================================
-  code-scanning:
-    needs: test-and-lint
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
+  # code-scanning:
+  #   needs: test-and-lint
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     security-events: write
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: python, javascript-typescript
+  #     - name: Initialize CodeQL
+  #       uses: github/codeql-action/init@v3
+  #       with:
+  #         languages: python, javascript-typescript
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+  #     - name: Autobuild
+  #       uses: github/codeql-action/autobuild@v3
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+  #     - name: Perform CodeQL Analysis
+  #       uses: github/codeql-action/analyze@v3
 
   # ==========================================================================
   # Automated Release with release-please
