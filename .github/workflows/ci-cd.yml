@@ -166,7 +166,7 @@ jobs:
 
     steps:
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/consulta-laudos-${{ matrix.image }}:${{ github.sha }}
           format: sarif
