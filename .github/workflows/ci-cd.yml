@@ -158,7 +158,7 @@ jobs:
   # Vulnerability Scanning with Trivy
   # ==========================================================================
   trivy-scan:
-    needs: build-push-ghcr
+    needs: test-and-lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -187,7 +187,7 @@ jobs:
   # Code Quality Scanning with CodeQL
   # ==========================================================================
   code-scanning:
-    needs: build-push-ghcr
+    needs: test-and-lint
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -213,7 +213,7 @@ jobs:
   # ==========================================================================
   release:
     needs: [trivy-scan, code-scanning]
-    if: github.ref == 'refs/heads/release/'
+    if: startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -229,7 +229,6 @@ jobs:
         with:
           release-type: simple
           token: ${{ secrets.GITHUB_TOKEN }}
-          extra-files: apps/frontend/package.json
 
       - name: Update release with GHCR image URIs
         if: ${{ steps.release_please.outputs.release_created }}
