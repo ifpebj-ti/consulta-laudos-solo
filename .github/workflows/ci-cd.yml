@@ -212,7 +212,7 @@ jobs:
   # Automated Release with release-please
   # ==========================================================================
   release:
-    needs: [trivy-scan, code-scanning]
+    needs: trivy-scan
     if: startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-latest
     permissions:
