@@ -1,0 +1,46 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge--baixo {
+  background: var(--if-vermelho-claro);
+  color: var(--if-vermelho);
+}
+.badge--medio {
+  background: var(--amarelo-claro);
+  color: var(--amarelo);
+}
+.badge--adequado {
+  background: var(--if-verde-claro);
+  color: var(--if-verde-escuro);
+}
+
+.badge--status-concluido {
+  background: var(--if-verde-claro);
+  color: var(--if-verde-escuro);
+}
+.badge--status-homologacao {
+  background: var(--amarelo-claro);
+  color: var(--amarelo);
+}
+.badge--status-processamento {
+  background: var(--cinza-200);
+  color: var(--cinza-700);
+}

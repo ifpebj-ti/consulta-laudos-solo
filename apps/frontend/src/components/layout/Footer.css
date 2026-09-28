@@ -1,0 +1,7 @@
+.footer-institucional {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--cinza-500);
+  padding: var(--espaco-lg) var(--espaco-md);
+  margin-top: auto;
+}

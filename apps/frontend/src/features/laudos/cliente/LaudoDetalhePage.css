@@ -1,0 +1,93 @@
+.cliente-shell {
+  max-width: 780px;
+  margin: 0 auto;
+  flex: 1;
+  width: 100%;
+}
+
+.detalhe-cabecalho {
+  background: var(--branco);
+  border: 1px solid var(--cinza-200);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-lg);
+  margin-bottom: var(--espaco-lg);
+  box-shadow: var(--sombra-1);
+}
+
+.detalhe-cabecalho__topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--espaco-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--espaco-md);
+}
+
+.detalhe-cabecalho h2 {
+  font-size: 19px;
+}
+
+.detalhe-cabecalho__sub {
+  font-size: 12.5px;
+  color: var(--cinza-700);
+  margin-top: 3px;
+}
+
+.indicadores-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 620px) {
+  .indicadores-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.indicador-item {
+  background: var(--cinza-50);
+  border: 1px solid var(--cinza-200);
+  border-radius: var(--raio-sm);
+  padding: 10px;
+  text-align: center;
+}
+
+.indicador-item .indicador-nome {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cinza-700);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.indicador-item .indicador-valor {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--if-preto);
+  display: block;
+}
+
+.download-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-md);
+  flex-wrap: wrap;
+  background: var(--if-preto);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-md) var(--espaco-lg);
+  margin-bottom: var(--espaco-lg);
+}
+
+.download-bar p {
+  color: var(--branco);
+  font-size: 12.5px;
+}
+
+.download-bar strong {
+  display: block;
+  font-size: 14px;
+  color: var(--branco);
+}

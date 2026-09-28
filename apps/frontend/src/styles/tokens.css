@@ -1,0 +1,37 @@
+:root {
+  --if-verde: #2f9e41;
+  --if-verde-escuro: #227a32;
+  --if-verde-claro: #eaf6ec;
+  --if-vermelho: #cd191e;
+  --if-vermelho-claro: #fceaea;
+  --if-preto: #000000;
+
+  --amarelo: #c98a00;
+  --amarelo-claro: #fff6e0;
+
+  --cinza-50: #f7f8f7;
+  --cinza-100: #eef0ee;
+  --cinza-200: #e0e3e0;
+  --cinza-300: #c9cdc9;
+  --cinza-500: #8b928d;
+  --cinza-700: #5a615c;
+  --cinza-900: #2b2f2c;
+  --branco: #ffffff;
+
+  --fonte: 'Open Sans', Arial, sans-serif;
+
+  --raio-sm: 4px;
+  --raio-md: 8px;
+  --raio-lg: 14px;
+
+  /* Escala de elevação: 1 = sutil (cards), 2 = média (navbar sticky), 3 = alta (login/modais) */
+  --sombra-1: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --sombra-2: 0 4px 14px rgba(0, 0, 0, 0.1);
+  --sombra-3: 0 12px 32px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  --espaco-xs: 4px;
+  --espaco-sm: 8px;
+  --espaco-md: 16px;
+  --espaco-lg: 24px;
+  --espaco-xl: 40px;
+}
