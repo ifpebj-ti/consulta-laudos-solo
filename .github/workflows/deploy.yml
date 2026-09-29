@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-    # Executa apenas se houver mudanças nas pastas de dev ou nos módulos
     paths:
       - 'infra/environments/prod/**'
       - 'infra/modules/**'
@@ -16,10 +15,10 @@ jobs:
     name: 'Terraform Process'
     runs-on: ubuntu-latest
     
-    # Define a pasta raiz de execução para o ambiente de dev
+    # Define a pasta raiz de execução para o ambiente 
     defaults:
       run:
-        working-directory: ./environments/prod
+        working-directory: infra/environments/prod
 
     steps:
       - name: Checkout Repository
