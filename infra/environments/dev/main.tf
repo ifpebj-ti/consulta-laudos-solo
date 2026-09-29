@@ -12,7 +12,7 @@ module "network" {
 module "compute" {
   source            = "../../modules/compute"
   app_name          = local.app_name
-  instance_type     = "t2.micro"
+  instance_type     = "c7i-flex.large"
   subnet_id         = module.network.public_subnet_id
   security_group_id = module.network.app_sg_id
 }
