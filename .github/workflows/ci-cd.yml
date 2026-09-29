@@ -138,7 +138,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./apps/frontend
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/consulta-laudos-frontend:latest
@@ -158,7 +158,7 @@ jobs:
   # Vulnerability Scanning with Trivy
   # ==========================================================================
   trivy-scan:
-    needs: test-and-lint
+    needs: build-push-ghcr
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -212,7 +212,7 @@ jobs:
   # Automated Release with release-please
   # ==========================================================================
   release:
-    needs: trivy-scan
+    needs: build-push-ghcr
     if: startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-latest
     permissions:
