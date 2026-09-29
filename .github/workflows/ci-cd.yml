@@ -111,7 +111,7 @@ jobs:
   # ==========================================================================
   build-push-ghcr:
     needs: test-and-lint
-    if: startsWith(github.ref, 'refs/heads/release/')
+    if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')
     runs-on: ubuntu-latest
     permissions:
       contents: read
