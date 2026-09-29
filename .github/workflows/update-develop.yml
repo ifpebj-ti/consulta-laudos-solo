@@ -1,0 +1,33 @@
+name: Sincronizar Main com Develop
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  merge-main-back-to-develop:
+    # Garante que o workflow só rode se o Pull Request foi de fato MERJADO (e não apenas fechado/cancelado)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Baixa todo o histórico de commits necessário para o merge
+
+      - name: Configurar Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Mesclar Main na Develop
+        run: |
+          git fetch origin
+          git checkout develop
+          git pull origin develop
+          # O argumento -X theirs resolve conflitos priorizando o que veio da main, caso haja divergências estritas
+          git merge -X theirs origin/main -m "Chore: Auto-merge da main para develop [skip ci]"
+          git push origin develop

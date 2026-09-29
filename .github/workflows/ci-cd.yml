@@ -111,7 +111,7 @@ jobs:
   # ==========================================================================
   build-push-ghcr:
     needs: test-and-lint
-    if: startsWith(github.ref, 'refs/heads/release/')
+    if: startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -138,7 +138,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./apps/frontend
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/consulta-laudos-frontend:latest
@@ -158,7 +158,7 @@ jobs:
   # Vulnerability Scanning with Trivy
   # ==========================================================================
   trivy-scan:
-    needs: test-and-lint
+    needs: build-push-ghcr
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -184,36 +184,11 @@ jobs:
           retention-days: 30
 
   # ==========================================================================
-  # Code Quality Scanning with CodeQL
-  # ==========================================================================
-  # code-scanning:
-  #   needs: test-and-lint
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #     security-events: write
-
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v4
-
-  #     - name: Initialize CodeQL
-  #       uses: github/codeql-action/init@v3
-  #       with:
-  #         languages: python, javascript-typescript
-
-  #     - name: Autobuild
-  #       uses: github/codeql-action/autobuild@v3
-
-  #     - name: Perform CodeQL Analysis
-  #       uses: github/codeql-action/analyze@v3
-
-  # ==========================================================================
   # Automated Release with release-please
   # ==========================================================================
   release:
-    needs: trivy-scan
-    if: startsWith(github.ref, 'refs/heads/release/')
+    needs: build-push-ghcr
+    if: startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
