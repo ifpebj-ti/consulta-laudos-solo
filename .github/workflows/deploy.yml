@@ -50,5 +50,5 @@ jobs:
         
       # Aplica as mudanças automaticamente apenas se for um push na branch main
       - name: Terraform Apply
-        if: github.base_ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve tfplan
