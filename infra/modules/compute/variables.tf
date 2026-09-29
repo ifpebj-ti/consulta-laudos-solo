@@ -7,7 +7,7 @@ variable "app_name" {
 variable "instance_type" {
   description = "Tipo da instancia EC2"
   type        = string
-  default     = "c7i-flex.large"
+  default     = "t3.micro"
 }
 
 variable "subnet_id" {
