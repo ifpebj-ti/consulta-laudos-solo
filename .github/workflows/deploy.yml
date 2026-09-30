@@ -1,5 +1,8 @@
 name: 'Terraform Deploy'
 
+permissions:
+    contents: read
+
 on:
   push:
     branches:
