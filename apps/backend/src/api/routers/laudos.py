@@ -1,4 +1,5 @@
-from pathlib import Path
+import os
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import FileResponse
@@ -8,6 +9,9 @@ from src.core.config import settings
 from src.core.limiter import limiter
 
 router = APIRouter(prefix="/laudos", tags=["Laudos"])
+
+# Regex para validação estrita do formato de protocolo (apenas alfanuméricos, ponto e hífen)
+PROTOCOLO_REGEX = re.compile(r"^[A-Z0-9.-]{4,30}$")
 
 
 @router.get("/{protocolo}/pdf")
@@ -21,13 +25,20 @@ async def baixar_pdf_laudo(
     Download do arquivo PDF do laudo.
     Proteções aplicadas (SEC-001):
     - RBAC / BOLA: Cliente só pode baixar o PDF do seu próprio protocolo.
-    - Path Traversal: Checagem canônica via Path.resolve().is_relative_to().
+    - Path Traversal (CodeQL py/path-injection): Validação por regex estrita,
+      extração com os.path.basename e contenção canônica com os.path.realpath/startswith.
     - DoS: Semáforo assíncrono para limitar streaming concorrente a 10 processos.
     - Rate Limit: 10 downloads/minuto por IP.
     """
-    # Sanitização básica do parâmetro
     clean_protocolo = protocolo.strip().upper()
-    if "/" in clean_protocolo or "\\" in clean_protocolo or ".." in clean_protocolo:
+
+    # Validação rigorosa do protocolo com regex e bloqueio explícito de sequências de diretório
+    if (
+        not PROTOCOLO_REGEX.fullmatch(clean_protocolo)
+        or ".." in clean_protocolo
+        or "/" in clean_protocolo
+        or "\\" in clean_protocolo
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -36,17 +47,17 @@ async def baixar_pdf_laudo(
             },
         )
 
-    base_storage = Path(settings.STORAGE_DIR).resolve()
-    target_path = (base_storage / f"{clean_protocolo}.pdf").resolve()
+    # Sanitização do nome de arquivo com os.path.basename para prevenir path injection
+    safe_filename = os.path.basename(f"{clean_protocolo}.pdf")
 
-    # VULN-05: Garantir que o caminho resolvido permanece estritamente dentro da pasta de storage
-    try:
-        is_safe = target_path.is_relative_to(base_storage)
-    except AttributeError:
-        # Fallback para Python < 3.9
-        is_safe = str(target_path).startswith(str(base_storage))
+    # Resolução canônica absoluta do diretório base e do arquivo alvo
+    base_storage = os.path.realpath(settings.STORAGE_DIR)
+    target_path = os.path.realpath(os.path.join(base_storage, safe_filename))
 
-    if not is_safe or not target_path.is_file():
+    # VULN-05: Garantir que o caminho canônico reside estritamente sob o diretório base
+    if not target_path.startswith(base_storage + os.sep) or not os.path.isfile(
+        target_path
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
