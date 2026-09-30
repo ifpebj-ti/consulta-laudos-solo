@@ -7,6 +7,14 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ---
 
+## [0.2.1](https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.0...v0.2.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* **backend/security:** sanear manipulacao de caminhos de pdf contra p… ([f13adc3](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/f13adc36ecaad107befd2a416de327bd37ce7d19))
+* **backend/security:** sanear manipulacao de caminhos de pdf contra path injection ([92a5d57](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/92a5d575971f2db4754534b05eda1fa1d51033e3))
+
 ## [Unreleased]
 
 ---
