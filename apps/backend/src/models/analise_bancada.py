@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Any, List
-from sqlalchemy import DateTime, Float, ForeignKey, JSON, Uuid
+from typing import Any
+
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base
@@ -43,10 +44,14 @@ class AnaliseBancada(Base):
     calib_a: Mapped[float | None] = mapped_column(Float, nullable=True)
     calib_b: Mapped[float | None] = mapped_column(Float, nullable=True)
     calib_r2: Mapped[float | None] = mapped_column(Float, nullable=True)
-    calib_pontos: Mapped[List[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
+    calib_pontos: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        JSON, nullable=True
+    )
 
     criado_em: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

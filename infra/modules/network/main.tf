@@ -2,19 +2,19 @@ resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = { Name = "${var.app_name}-vpc" }
+  tags                 = { Name = "${var.app_name}-vpc" }
 }
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
-  tags = { Name = "${var.app_name}-igw" }
+  tags   = { Name = "${var.app_name}-igw" }
 }
 
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.subnet_cidr
   map_public_ip_on_launch = true # Garante que a EC2 receba IP público
-  tags = { Name = "${var.app_name}-public-subnet" }
+  tags                    = { Name = "${var.app_name}-public-subnet" }
 }
 
 resource "aws_route_table" "public_rt" {

@@ -1,9 +1,8 @@
-from datetime import datetime, timezone
 import secrets
-from typing import Dict, Optional
+from datetime import datetime, timezone
 
 # Base de dados simulada em memória (mock temporário até camada de persistência/banco)
-BASE_LAUDOS_MOCK: Dict[str, dict] = {
+BASE_LAUDOS_MOCK: dict[str, dict] = {
     "20101.2306": {
         "protocolo": "20101.2306",
         "cpf": "52998224725",
@@ -33,13 +32,13 @@ BASE_LAUDOS_MOCK: Dict[str, dict] = {
             "potassio": "0.40 cmolc/dm³",
         },
         "tem_pdf": True,
-    }
+    },
 }
 
 
 class LaudoAuthService:
     @staticmethod
-    def autenticar_cliente(protocolo: str, cpf_limpo: str) -> Optional[dict]:
+    def autenticar_cliente(protocolo: str, cpf_limpo: str) -> dict | None:
         """
         Valida a consulta do cliente.
         Mitigação de timing attacks e enumeração (VULN-02):

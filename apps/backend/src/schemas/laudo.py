@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -9,11 +10,11 @@ class ClienteInfoResponse(BaseModel):
 
 
 class ParametrosSoloResponse(BaseModel):
-    ph: Optional[float] = None
-    materiaOrganica: Optional[str] = None
-    fosforo: Optional[str] = None
-    potassio: Optional[str] = None
-    dadosAdicionais: Optional[Dict[str, Any]] = None
+    ph: float | None = None
+    materiaOrganica: str | None = None
+    fosforo: str | None = None
+    potassio: str | None = None
+    dadosAdicionais: dict[str, Any] | None = None
 
 
 class LaudoDetalheResponse(BaseModel):
@@ -36,4 +37,4 @@ class LoginClienteResponse(BaseModel):
 class RespostaErroPadrao(BaseModel):
     sucesso: bool = False
     mensagem: str
-    codigoErro: Optional[str] = None
+    codigoErro: str | None = None

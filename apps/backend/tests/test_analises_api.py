@@ -13,12 +13,18 @@ def client():
 
 @pytest.fixture
 def token_analista():
-    return create_access_token("analista.dev@instituto.edu.br", "ANALISTA", extra_claims={"nome": "Analista Teste"})
+    return create_access_token(
+        "analista.dev@instituto.edu.br",
+        "ANALISTA",
+        extra_claims={"nome": "Analista Teste"},
+    )
 
 
 @pytest.fixture
 def token_cliente():
-    return create_access_token("52998224725", "CLIENTE", extra_claims={"protocolo": "LAB-2026-0142"})
+    return create_access_token(
+        "52998224725", "CLIENTE", extra_claims={"protocolo": "LAB-2026-0142"}
+    )
 
 
 def test_obter_analise_analista_sucesso(client, token_analista):
@@ -30,7 +36,11 @@ def test_obter_analise_analista_sucesso(client, token_analista):
     data = response.json()
     assert data["sucesso"] is True
     assert data["dados"]["protocolo"] == "LAB-2026-0142"
-    assert data["dados"]["status"] in ["PENDENTE", "EM_ANALISE", "AGUARDANDO_HOMOLOGACAO"]
+    assert data["dados"]["status"] in [
+        "PENDENTE",
+        "EM_ANALISE",
+        "AGUARDANDO_HOMOLOGACAO",
+    ]
     assert "quimica" in data["dados"]["dadosBancada"]
     assert "granulometria" in data["dados"]["dadosBancada"]
     assert "calibracao" in data["dados"]["dadosBancada"]
@@ -205,9 +215,15 @@ def test_processar_analise_sucesso_caso_spec(client, token_analista):
 
     assert oficiais["complexoSortivo"]["somaBases"] == pytest.approx(3.1173, abs=1e-3)
     assert oficiais["complexoSortivo"]["ctcEfetiva"] == pytest.approx(3.4173, abs=1e-3)
-    assert oficiais["complexoSortivo"]["ctcPotencial"] == pytest.approx(6.3173, abs=1e-3)
-    assert oficiais["complexoSortivo"]["saturacaoBases"] == pytest.approx(49.35, abs=1e-1)
-    assert oficiais["complexoSortivo"]["saturacaoAluminio"] == pytest.approx(8.78, abs=1e-1)
+    assert oficiais["complexoSortivo"]["ctcPotencial"] == pytest.approx(
+        6.3173, abs=1e-3
+    )
+    assert oficiais["complexoSortivo"]["saturacaoBases"] == pytest.approx(
+        49.35, abs=1e-1
+    )
+    assert oficiais["complexoSortivo"]["saturacaoAluminio"] == pytest.approx(
+        8.78, abs=1e-1
+    )
     assert oficiais["complexoSortivo"]["relacaoCaMg"] == pytest.approx(2.47, abs=1e-2)
 
     assert oficiais["granulometria"]["pesoAreia"] == pytest.approx(11.4392, abs=1e-3)
@@ -237,7 +253,9 @@ def test_criar_laudo_sucesso_e_duplicidade(client, token_analista):
     assert res.status_code == 201
     dados = res.json()["dados"]
     assert dados["protocolo"] == novo_protocolo
-    assert dados["cliente_nome"] == "Carlos Silva &amp; Filhos &lt;script&gt;"  # Sanitizado contra XSS
+    assert (
+        dados["cliente_nome"] == "Carlos Silva &amp; Filhos &lt;script&gt;"
+    )  # Sanitizado contra XSS
     assert dados["status"] == "EM_ANALISE"
 
     # 2. Conflito ao tentar recriar o mesmo protocolo
@@ -249,11 +267,14 @@ def test_criar_laudo_sucesso_e_duplicidade(client, token_analista):
     assert res_duplicado.status_code == 409
 
     # 3. Validação de CPF inválido (menos de 11 dígitos)
-    payload_cpf_invalido = {**payload, "protocolo": "LAB-TESTE-OUTRO", "cpf_cliente": "12345"}
+    payload_cpf_invalido = {
+        **payload,
+        "protocolo": "LAB-TESTE-OUTRO",
+        "cpf_cliente": "12345",
+    }
     res_cpf_err = client.post(
         "/api/laudos",
         json=payload_cpf_invalido,
         headers={"Authorization": f"Bearer {token_analista}"},
     )
     assert res_cpf_err.status_code == 422
-

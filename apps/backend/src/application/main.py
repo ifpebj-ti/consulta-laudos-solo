@@ -1,5 +1,6 @@
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -25,8 +26,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_PREFIX}/openapi.json" if settings.ENVIRONMENT != "production" else None,
-    docs_url=f"{settings.API_PREFIX}/docs" if settings.ENVIRONMENT != "production" else None,
+    openapi_url=(
+        f"{settings.API_PREFIX}/openapi.json"
+        if settings.ENVIRONMENT != "production"
+        else None
+    ),
+    docs_url=(
+        f"{settings.API_PREFIX}/docs" if settings.ENVIRONMENT != "production" else None
+    ),
     redoc_url=None,
     lifespan=lifespan,
 )
@@ -38,7 +45,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS (Liberado GET, POST, PATCH, PUT, DELETE, OPTIONS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.ENVIRONMENT == "dev" else ["https://laudos.instituto.edu.br"],
+    allow_origins=(
+        ["*"] if settings.ENVIRONMENT == "dev" else ["https://laudos.instituto.edu.br"]
+    ),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -58,7 +67,9 @@ async def add_security_headers(request: Request, call_next):
 # VULN-09: Handler global para capturar exceções não tratadas e não vazar traceback
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Exceção não tratada na rota {request.url.path}: {str(exc)}", exc_info=True)
+    logger.error(
+        f"Exceção não tratada na rota {request.url.path}: {exc!s}", exc_info=True
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={

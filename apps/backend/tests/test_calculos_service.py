@@ -1,13 +1,14 @@
 import pytest
+
 from src.services.calculos_service import (
-    calcular_regressao_linear,
-    calcular_concentracao_fosforo,
-    calcular_valor_liquido,
-    converter_na_para_cmolc,
-    converter_k_para_cmolc,
     calcular_complexo_sortivo,
+    calcular_concentracao_fosforo,
     calcular_granulometria,
+    calcular_regressao_linear,
+    calcular_valor_liquido,
     classificar_textura,
+    converter_k_para_cmolc,
+    converter_na_para_cmolc,
 )
 
 

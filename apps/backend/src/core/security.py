@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
 import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
 import jwt
 
 from src.core.config import settings
@@ -8,7 +9,6 @@ from src.core.config import settings
 
 class JWTError(Exception):
     """Exceção base para erros de manipulação de JWT."""
-    pass
 
 
 class InvalidTokenError(JWTError):
@@ -22,8 +22,8 @@ class ExpiredTokenError(JWTError):
 def create_access_token(
     subject: str,
     role: str,
-    expires_delta: Optional[timedelta] = None,
-    extra_claims: Optional[Dict[str, Any]] = None,
+    expires_delta: timedelta | None = None,
+    extra_claims: dict[str, Any] | None = None,
 ) -> str:
     """
     Gera um token JWT com algoritmo forçado HS256 e UUID (jti) para revogabilidade.
@@ -39,7 +39,7 @@ def create_access_token(
         )
         expire = now + timedelta(hours=hours)
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "sub": subject,
         "role": role,
         "jti": str(uuid.uuid4()),
@@ -58,7 +58,7 @@ def create_access_token(
     return token
 
 
-def decode_access_token(token: str) -> Dict[str, Any]:
+def decode_access_token(token: str) -> dict[str, Any]:
     """
     Decodifica e valida o JWT forçando algoritmos permitidos (mitiga Algorithm Confusion).
     """

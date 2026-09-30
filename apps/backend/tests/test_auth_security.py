@@ -1,9 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
-from pathlib import Path
 
 from src.application.main import app
-from src.core.config import settings
 from src.core.security import create_access_token
 
 
