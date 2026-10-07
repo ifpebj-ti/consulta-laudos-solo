@@ -30,6 +30,6 @@ RUN useradd --create-home --shell /bin/bash appuser
 
 USER appuser
 
-EXPOSE 8080
+EXPOSE 8000
 
-CMD ["uvicorn", "src.application.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "src.application.main:app", "--host", "0.0.0.0", "--port", "8000"]
