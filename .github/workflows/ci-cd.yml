@@ -19,6 +19,8 @@ jobs:
   # ==========================================================================
   test-and-lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout Repository
@@ -111,7 +113,7 @@ jobs:
   # ==========================================================================
   build-push-ghcr:
     needs: test-and-lint
-    if: startsWith(github.ref, 'refs/heads/release/')
+    if: startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -138,7 +140,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./apps/frontend
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/consulta-laudos-frontend:latest
@@ -160,13 +162,15 @@ jobs:
   trivy-scan:
     needs: build-push-ghcr
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         image: [frontend, backend]
 
     steps:
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/consulta-laudos-${{ matrix.image }}:${{ github.sha }}
           format: sarif
@@ -184,36 +188,11 @@ jobs:
           retention-days: 30
 
   # ==========================================================================
-  # Code Quality Scanning with CodeQL
-  # ==========================================================================
-  code-scanning:
-    needs: build-push-ghcr
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: python, javascript-typescript
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-
-  # ==========================================================================
   # Automated Release with release-please
   # ==========================================================================
   release:
-    needs: [trivy-scan, code-scanning]
-    if: github.ref == 'refs/heads/release/'
+    needs: build-push-ghcr
+    if: startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -229,7 +208,6 @@ jobs:
         with:
           release-type: simple
           token: ${{ secrets.GITHUB_TOKEN }}
-          extra-files: apps/frontend/package.json
 
       - name: Update release with GHCR image URIs
         if: ${{ steps.release_please.outputs.release_created }}

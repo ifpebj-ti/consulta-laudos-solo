@@ -1,0 +1,49 @@
+name: Sincronizar Main com Develop
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  merge-main-back-to-develop:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    # Necessário para permitir que o bot crie branches e abra PRs
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Criar branch de sincronização e aplicar merge
+        run: |
+          # 1. Cria uma branch temporária a partir da develop atual
+          git checkout -b sync-main-to-develop origin/develop
+          
+          # 2. Faz o merge da main mantendo a sua estratégia de prioridade
+          git merge -X theirs origin/main -m "Chore: Auto-merge da main para develop"
+          
+          # 3. Envia a branch temporária para o repositório remoto
+          git push -f origin sync-main-to-develop
+
+      - name: Criar Pull Request para Develop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Usa o CLI nativo do GitHub para abrir o PR
+          gh pr create \
+            --base develop \
+            --head sync-main-to-develop \
+            --title "Chore: Sincronização automática (Main ➔ Develop)" \
+            --body "Este PR foi criado automaticamente pelo GitHub Actions para garantir que a \`develop\` esteja atualizada com as últimas mudanças da \`main\`."

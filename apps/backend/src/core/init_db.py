@@ -1,5 +1,7 @@
 import logging
+
 from sqlalchemy import select
+
 from src.core.database import Base, async_engine, async_session_factory
 from src.models import AnaliseBancada, Laudo
 

@@ -8,8 +8,8 @@ Covers Requirements 6.4, 6.5 and 6.6:
 
 import time
 
-import pytest
 import jwt as pyjwt
+import pytest
 from fastapi.testclient import TestClient
 
 from src.application.main import app
@@ -17,6 +17,7 @@ from src.application.main import app
 # ---------------------------------------------------------------------------
 # Shared client fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def client():
@@ -35,6 +36,7 @@ VALID_CPF = "52998224725"
 # ---------------------------------------------------------------------------
 # Test 1: Full happy-path flow (Req 6.4, 6.5)
 # ---------------------------------------------------------------------------
+
 
 def test_client_auth_full_flow_valid_credentials(client):
     """
@@ -66,6 +68,7 @@ def test_client_auth_full_flow_valid_credentials(client):
 # Test 2: Non-existent protocol → 401 (Req 6.6)
 # ---------------------------------------------------------------------------
 
+
 def test_client_auth_invalid_protocol_returns_401(client):
     """
     Req 6.6: A protocol that does not exist in the dataset must return HTTP 401.
@@ -88,6 +91,7 @@ def test_client_auth_invalid_protocol_returns_401(client):
 # ---------------------------------------------------------------------------
 # Test 3: Wrong CPF for existing protocol → 401 or 422 (Req 6.6)
 # ---------------------------------------------------------------------------
+
 
 def test_client_auth_invalid_cpf_returns_401_or_422(client):
     """
@@ -117,6 +121,7 @@ def test_client_auth_invalid_cpf_returns_401_or_422(client):
 # ---------------------------------------------------------------------------
 # Test 4: Token received from login allows GET /api/auth/me (Req 6.4, 6.5)
 # ---------------------------------------------------------------------------
+
 
 def test_client_token_works_on_me_endpoint(client):
     """

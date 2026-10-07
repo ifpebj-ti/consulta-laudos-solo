@@ -1,5 +1,5 @@
 import re
-from typing import Optional
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -21,7 +21,11 @@ def validar_digitos_cpf(cpf: str) -> bool:
 
 
 class LoginGoogleRequest(BaseModel):
-    idToken: str = Field(..., min_length=10, description="Token JWT retornado pelo Google Identity Services")
+    idToken: str = Field(
+        ...,
+        min_length=10,
+        description="Token JWT retornado pelo Google Identity Services",
+    )
 
 
 class UsuarioAnalistaResponse(BaseModel):
@@ -38,7 +42,12 @@ class LoginGoogleResponse(BaseModel):
 
 
 class LoginClienteRequest(BaseModel):
-    protocolo: str = Field(..., min_length=8, max_length=30, description="Número identificador do protocolo")
+    protocolo: str = Field(
+        ...,
+        min_length=8,
+        max_length=30,
+        description="Número identificador do protocolo",
+    )
     cpf: str = Field(..., description="CPF do cliente (apenas números ou pontuado)")
 
     @field_validator("protocolo")
@@ -47,7 +56,9 @@ class LoginClienteRequest(BaseModel):
         protocolo = v.strip().upper()
         # Regex estrito: apenas letras, números e traço/ponto para mitigar Path Traversal e Injeção
         if not re.match(r"^[A-Z0-9.-]{8,30}$", protocolo):
-            raise ValueError("Formato de protocolo inválido. Use caracteres alfanuméricos, pontos ou traços.")
+            raise ValueError(
+                "Formato de protocolo inválido. Use caracteres alfanuméricos, pontos ou traços."
+            )
         return protocolo
 
     @field_validator("cpf")
@@ -62,6 +73,6 @@ class LoginClienteRequest(BaseModel):
 class UsuarioMeResponse(BaseModel):
     sub: str
     role: str
-    nome: Optional[str] = None
-    email: Optional[str] = None
-    protocolo: Optional[str] = None
+    nome: str | None = None
+    email: str | None = None
+    protocolo: str | None = None
