@@ -1,12 +1,12 @@
 services:
   frontend:
-    image: ghcr.io/<owner>/consulta-laudos-frontend:latest
+    image: ghcr.io/ifpebj-ti/consulta-laudos-frontend:latest
     restart: unless-stopped
     expose:
-      - "80"
+      - "8080"
 
   backend:
-    image: ghcr.io/<owner>/consulta-laudos-backend:latest
+    image: ghcr.io/ifpebj-ti/consulta-laudos-backend:latest
     restart: unless-stopped
     expose:
       - "8000"
