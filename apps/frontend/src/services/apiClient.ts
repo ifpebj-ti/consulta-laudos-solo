@@ -16,6 +16,11 @@ export class ApiError extends Error {
   }
 }
 
+interface ErroValidacaoFastApi {
+  loc: (string | number)[];
+  msg: string;
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
@@ -36,8 +41,16 @@ async function request<T>(path: string, { method = 'GET', body, token }: Request
   if (!response.ok) {
     const contentType = response.headers.get('content-type') ?? '';
     if (contentType.includes('application/json')) {
-      const payload = (await response.json()) as { detail?: ApiErrorBody } | ApiErrorBody;
-      const erro = 'detail' in payload && payload.detail ? payload.detail : (payload as ApiErrorBody);
+      const payload = (await response.json()) as { detail?: ApiErrorBody | ErroValidacaoFastApi[] } | ApiErrorBody;
+      const detalhe = 'detail' in payload ? payload.detail : undefined;
+
+      // Erro de validação automática do FastAPI: `detail` vem como lista de campos inválidos
+      if (Array.isArray(detalhe)) {
+        const erros = detalhe.map((item) => `${item.loc.filter((p) => p !== 'body').join('.')}: ${item.msg}`);
+        throw new ApiError(response.status, 'Alguns campos enviados são inválidos.', 'VALIDATION_ERROR', erros);
+      }
+
+      const erro = detalhe ?? (payload as ApiErrorBody);
       throw new ApiError(response.status, erro.mensagem ?? 'Erro inesperado.', erro.codigoErro, erro.erros);
     }
     throw new ApiError(response.status, 'Erro inesperado ao comunicar com o servidor.');

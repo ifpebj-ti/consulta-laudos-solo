@@ -5,8 +5,25 @@
   margin-bottom: var(--espaco-lg);
 }
 
+.nova-amostra-grid__largo {
+  grid-column: 1 / -1;
+}
+
+.form-field input.nova-amostra-calculado {
+  background: var(--cinza-100);
+  border-style: dashed;
+  color: var(--cinza-900);
+  font-weight: 700;
+  cursor: default;
+}
+
 @media (max-width: 560px) {
   .nova-amostra-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Botão de dados de teste (somente em desenvolvimento) fica separado à esquerda */
+.nova-amostra-teste {
+  margin-right: auto;
 }

@@ -244,6 +244,11 @@ def test_criar_laudo_sucesso_e_duplicidade(client, token_analista):
         "cliente_nome": "Carlos Silva & Filhos <script>",
         "propriedade": "Fazenda Modelo",
         "localizacao": "Belo Jardim - PE",
+        "dataRecebimento": "2026-10-07",
+        "tipoAnalise": "fisico_quimica",
+        "culturaExistente": "Pastagem",
+        "email": "carlos@exemplo.com",
+        "telefone": "81999998888",
     }
     res = client.post(
         "/api/laudos",
@@ -278,3 +283,32 @@ def test_criar_laudo_sucesso_e_duplicidade(client, token_analista):
         headers={"Authorization": f"Bearer {token_analista}"},
     )
     assert res_cpf_err.status_code == 422
+<<<<<<< Updated upstream
+=======
+
+
+
+@pytest.mark.parametrize(
+    "campo, valor",
+    [
+        ("tipoAnalise", "biologica"),
+        ("email", "email-invalido"),
+        ("telefone", "1234"),
+        ("dataRecebimento", "07/10/2026"),
+    ],
+)
+def test_criar_laudo_rejeita_campos_invalidos(client, token_analista, campo, valor):
+    payload = {
+        "protocolo": f"LAB-INVALIDO-{campo}",
+        "cpf_cliente": "52998224725",
+        "cliente_nome": "Carlos Silva",
+        "propriedade": "Fazenda Modelo",
+        campo: valor,
+    }
+    res = client.post(
+        "/api/laudos",
+        json=payload,
+        headers={"Authorization": f"Bearer {token_analista}"},
+    )
+    assert res.status_code == 422
+>>>>>>> Stashed changes

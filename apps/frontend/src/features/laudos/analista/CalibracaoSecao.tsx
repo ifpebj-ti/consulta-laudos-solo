@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Badge, type BadgeVariant } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
 import { DecimalInput } from '@/components/ui/DecimalInput';
 import {
   calcularConcentracaoFosforo,
@@ -26,12 +26,6 @@ const PAD_DIR = 336;
 const PAD_TOPO = 16;
 const PAD_BASE = 210;
 const N_TICKS = 5;
-
-function qualidadeR2(r2: number): { variant: BadgeVariant; rotulo: string } {
-  if (r2 >= 0.99) return { variant: 'adequado', rotulo: 'Excelente ajuste' };
-  if (r2 >= 0.95) return { variant: 'medio', rotulo: 'Ajuste aceitável' };
-  return { variant: 'baixo', rotulo: 'Ajuste fraco' };
-}
 
 interface CalibracaoSecaoProps {
   calibracaoAplicada: RegressaoLinear | null;
@@ -88,7 +82,6 @@ export function CalibracaoSecao({
 
   const ticksX = Array.from({ length: N_TICKS + 1 }, (_, i) => (xMax / N_TICKS) * i);
   const ticksY = Array.from({ length: N_TICKS + 1 }, (_, i) => (yMax / N_TICKS) * i);
-  const qualidade = qualidadeR2(regressao.r2);
 
   const aplicada = calibracaoAplicada !== null && calibracaoAplicada.a === regressao.a && calibracaoAplicada.b === regressao.b;
 
@@ -106,7 +99,6 @@ export function CalibracaoSecao({
           {aplicada ? 'Calibração aplicada' : 'Calibração pendente'}
         </Badge>
       </div>
-      <p className="calib-secao-subtitulo">Informe as leituras dos 5 pontos padrão e confirme a equação y = a·x + b</p>
 
       <div>
         <div className="calib-secao-grid">
@@ -156,13 +148,13 @@ export function CalibracaoSecao({
                 <span>R&sup2;</span>
                 <strong>{regressao.r2.toFixed(4)}</strong>
               </div>
-              <Badge variant={qualidade.variant}>{qualidade.rotulo}</Badge>
             </div>
 
             <Button
               type="button"
               variant="primary"
               block
+              data-foco-validacao
               onClick={() => onAplicar({ ...regressao, pontos })}
               disabled={aplicada}
               style={{ marginTop: 'var(--espaco-md)' }}
@@ -274,10 +266,6 @@ export function CalibracaoSecao({
               <div className="calib-calculadora__valor">{resultadoAmostra ? resultadoAmostra.fosforo.toFixed(2) : '—'}</div>
             </div>
           </div>
-          <p className="calib-calculadora__aviso">
-            Curva já aplica a multiplicação padrão por 10. Deixe o Fator de diluição em 1 quando não houver diluição
-            adicional. Sem calibração aplicada, o laudo bloqueia o cálculo de Fósforo.
-          </p>
         </div>
       </div>
     </div>

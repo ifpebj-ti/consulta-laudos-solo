@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { DadosAnalise } from '@/features/laudos/analista/tipos';
+import type { DadosAnalise, TipoAnalise } from '@/features/laudos/analista/tipos';
 import type { RegressaoLinear } from '@/features/laudos/analista/calculos';
 
 export interface AmostraMetadata {
@@ -79,6 +79,11 @@ export interface CriarAmostraPayload {
   areaHectares?: string;
   profundidadeColeta?: string;
   cultivo?: string;
+  dataRecebimento: string;
+  tipoAnalise: TipoAnalise;
+  culturaExistente: string;
+  email?: string;
+  telefone?: string;
 }
 
 export interface CriarAmostraApiResponse {

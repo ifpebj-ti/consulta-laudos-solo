@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { TopBar } from '@/components/layout/TopBar';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
+import { MensagemErroCampo } from '@/components/ui/MensagemErroCampo';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/apiClient';
 import './ConsultaLaudoPage.css';
@@ -14,9 +15,15 @@ export function ConsultaLaudoPage() {
   const [cpf, setCpf] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [mensagemErro, setMensagemErro] = useState<string | null>(null);
+  const [erros, setErros] = useState<{ protocolo?: string; cpf?: string }>({});
 
   async function aoConsultar(evento: FormEvent) {
     evento.preventDefault();
+    const encontrados: { protocolo?: string; cpf?: string } = {};
+    if (!protocolo.trim()) encontrados.protocolo = 'Informe o número do protocolo.';
+    if (!cpf.trim()) encontrados.cpf = 'Informe o CPF do titular.';
+    setErros(encontrados);
+    if (encontrados.protocolo || encontrados.cpf) return;
     setCarregando(true);
     setMensagemErro(null);
     try {
@@ -43,23 +50,39 @@ export function ConsultaLaudoPage() {
             </div>
           )}
 
-          <form className="consulta-form" onSubmit={aoConsultar}>
-            <input
-              type="text"
-              placeholder="Protocolo (ex.: LAB-2026-0142)"
-              aria-label="Número do protocolo"
-              value={protocolo}
-              onChange={(evento) => setProtocolo(evento.target.value)}
-              required
-            />
-            <input
-              type="text"
-              placeholder="CPF"
-              aria-label="CPF do titular"
-              value={cpf}
-              onChange={(evento) => setCpf(evento.target.value)}
-              required
-            />
+          <form className="consulta-form" onSubmit={aoConsultar} noValidate>
+            <div className={`consulta-campo ${erros.protocolo ? 'consulta-campo--invalido' : ''}`.trim()}>
+              <input
+                type="text"
+                placeholder="Protocolo (ex.: LAB-2026-0142)"
+                aria-label="Número do protocolo"
+                aria-invalid={erros.protocolo ? true : undefined}
+                aria-describedby={erros.protocolo ? 'consulta-protocolo-erro' : undefined}
+                value={protocolo}
+                onChange={(evento) => {
+                  setProtocolo(evento.target.value);
+                  setErros((atual) => ({ ...atual, protocolo: undefined }));
+                }}
+                required
+              />
+              <MensagemErroCampo id="consulta-protocolo-erro" mensagem={erros.protocolo} />
+            </div>
+            <div className={`consulta-campo ${erros.cpf ? 'consulta-campo--invalido' : ''}`.trim()}>
+              <input
+                type="text"
+                placeholder="CPF"
+                aria-label="CPF do titular"
+                aria-invalid={erros.cpf ? true : undefined}
+                aria-describedby={erros.cpf ? 'consulta-cpf-erro' : undefined}
+                value={cpf}
+                onChange={(evento) => {
+                  setCpf(evento.target.value);
+                  setErros((atual) => ({ ...atual, cpf: undefined }));
+                }}
+                required
+              />
+              <MensagemErroCampo id="consulta-cpf-erro" mensagem={erros.cpf} />
+            </div>
             <Button type="submit" disabled={carregando}>
               {carregando ? 'Consultando...' : 'Consultar Laudo'}
             </Button>
