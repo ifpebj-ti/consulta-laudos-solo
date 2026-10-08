@@ -1,0 +1,124 @@
+.select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  font-family: var(--fonte);
+  color: var(--if-preto);
+  background: var(--cinza-50);
+  border: 1.5px solid var(--cinza-300);
+  border-radius: var(--raio-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.select--campo {
+  width: 100%;
+  font-size: 14px;
+  padding: 10px 11px;
+}
+
+.select--compacto {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 10px 8px 12px;
+  min-width: 190px;
+}
+
+.select:hover {
+  border-color: var(--cinza-500);
+}
+
+.select:focus-visible,
+.select--aberto {
+  outline: none;
+  border-color: var(--if-verde);
+  background: var(--branco);
+  box-shadow: 0 0 0 3px var(--if-verde-claro);
+}
+
+.select--invalido,
+.select--invalido:hover {
+  border-color: var(--if-vermelho);
+  background: var(--if-vermelho-claro);
+}
+
+.select__valor {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select__valor--vazio {
+  color: var(--cinza-500);
+}
+
+.select__seta {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--cinza-700);
+  transition: transform 0.15s ease;
+}
+
+.select--aberto .select__seta {
+  transform: rotate(180deg);
+  color: var(--if-verde-escuro);
+}
+
+/* Lista renderizada em portal (fora do modal), por isso posição fixa e z-index acima do modal */
+.select__lista {
+  position: fixed;
+  z-index: 1100;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--branco);
+  border: 1px solid var(--cinza-200);
+  border-radius: var(--raio-md);
+  box-shadow: var(--sombra-3);
+  animation: select-surgir 0.12s ease-out;
+}
+
+@keyframes select-surgir {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.select__opcao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-md);
+  padding: 8px 10px;
+  border-radius: var(--raio-sm);
+  font-family: var(--fonte);
+  font-size: 13.5px;
+  color: var(--cinza-900);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.select__opcao--ativa {
+  background: var(--cinza-100);
+}
+
+.select__opcao--marcada {
+  color: var(--if-verde-escuro);
+  font-weight: 700;
+}
+
+.select__opcao svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
