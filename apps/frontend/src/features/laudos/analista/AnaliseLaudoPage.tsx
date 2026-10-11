@@ -7,15 +7,22 @@ import { useAuth } from '@/context/AuthContext';
 import { useAnalista } from '@/context/AnalistaContext';
 import { analiseService, type AmostraMetadata } from '@/services/analiseService';
 import { ApiError } from '@/services/apiClient';
-import { DADOS_ANALISE_VAZIOS, type DadosAnalise } from './tipos';
+import { DADOS_ANALISE_VAZIOS, ROTULOS_TIPO_ANALISE, type DadosAnalise } from './tipos';
 import { RegistroForm, type ErrosCamposRegistro } from './RegistroForm';
 import { HomologacaoView } from './HomologacaoView';
+import { formatarData } from './statusAmostra';
 import './AnaliseLaudoPage.css';
 
 type Aba = 'registro' | 'homologacao';
 type StatusSalvamento = 'salvo' | 'salvando' | 'erro' | 'conflito' | 'idle';
 
 const PROTOCOLO_PADRAO = 'LAB-2026-0142';
+
+/** Status devolvido pela API, em texto legível; um status desconhecido aparece como veio. */
+const ROTULOS_STATUS_ANALISE: Record<string, string> = {
+  EM_ANALISE: 'Em análise',
+  AGUARDANDO_HOMOLOGACAO: 'Aguardando homologação',
+};
 
 export function AnaliseLaudoPage() {
   const { session } = useAuth();
@@ -297,26 +304,69 @@ export function AnaliseLaudoPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  // Ficha da amostra no cabeçalho: só entram os dados que de fato foram informados
+  const identificacao = dados.identificacao;
+  const solicitante = amostraInfo?.solicitante || identificacao.solicitante;
+  const detalhesAmostra = [
+    { rotulo: 'Propriedade', valor: amostraInfo?.propriedade || identificacao.propriedade },
+    { rotulo: 'Localização', valor: identificacao.localizacao },
+    { rotulo: 'Identificação da área', valor: identificacao.areaIdentificacao },
+    { rotulo: 'Profundidade da coleta', valor: identificacao.profundidadeColeta },
+    { rotulo: 'Cultivo', valor: identificacao.cultivo },
+    { rotulo: 'Tipo de análise', valor: identificacao.tipoAnalise ? ROTULOS_TIPO_ANALISE[identificacao.tipoAnalise] : '' },
+    { rotulo: 'Recebimento', valor: identificacao.dataRecebimento ? formatarData(identificacao.dataRecebimento) : '' },
+    // Sem a data de recebimento, vale a data em que a amostra foi registrada (é o que a API guarda)
+    {
+      rotulo: 'Registrada em',
+      valor: !identificacao.dataRecebimento && amostraInfo?.dataColeta ? formatarData(amostraInfo.dataColeta) : '',
+    },
+    { rotulo: 'Prazo do laudo', valor: identificacao.prazo ? formatarData(identificacao.prazo) : '' },
+  ].filter((detalhe) => detalhe.valor);
+  // A API só guarda solicitante e propriedade; o restante do cadastro vive na sessão aberta pelo Painel
+  const semCadastroNaSessao = !amostraAtual;
+
   return (
     <>
       <Navbar titulo="Módulo do Analista" />
       <main className="page-container">
-        <div className="page-header">
-          <div>
-            <span className="page-header__eyebrow">Laboratório de Solos &middot; Uso interno</span>
-            <h1>Gestão de Análises Laboratoriais</h1>
-            {(amostraInfo || dados.identificacao.solicitante) && (
-              <p>
-                {amostraInfo
-                  ? `${amostraInfo.solicitante} — ${amostraInfo.propriedade}`
-                  : `${dados.identificacao.solicitante} — ${dados.identificacao.propriedade}`}
-              </p>
-            )}
+        <header className="analise-cabecalho">
+          <div className="analise-cabecalho__topo">
+            <div>
+              <span className="page-header__eyebrow">Laboratório de Solos &middot; Uso interno</span>
+              <h1>Gestão de Análises Laboratoriais</h1>
+            </div>
+            <Badge variant={statusAmostra === 'AGUARDANDO_HOMOLOGACAO' ? 'status-homologacao' : 'status-processamento'}>
+              {ROTULOS_STATUS_ANALISE[statusAmostra] ?? statusAmostra}
+            </Badge>
           </div>
-          <Badge variant={statusAmostra === 'AGUARDANDO_HOMOLOGACAO' ? 'status-homologacao' : 'status-processamento'}>
-            Amostra: {protocoloAlvo} ({statusAmostra})
-          </Badge>
-        </div>
+
+          <div className="analise-amostra">
+            <div className="analise-amostra__quem">
+              <span className="analise-amostra__rotulo">Solicitante</span>
+              <strong className="analise-amostra__solicitante">{solicitante || 'Não informado'}</strong>
+              <span className="analise-amostra__rotulo">Protocolo da amostra</span>
+              <span className="analise-amostra__protocolo">{protocoloAlvo}</span>
+            </div>
+            <div className="analise-amostra__dados">
+              {detalhesAmostra.length > 0 && (
+                <dl className="analise-amostra__detalhes">
+                  {detalhesAmostra.map((detalhe) => (
+                    <div key={detalhe.rotulo}>
+                      <dt>{detalhe.rotulo}</dt>
+                      <dd>{detalhe.valor}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {semCadastroNaSessao && !carregando && (
+                <p className="analise-amostra__aviso">
+                  Os demais dados do cadastro (localização, área, cultivo, prazo) só aparecem quando a amostra é aberta pelo
+                  Painel do Analista.
+                </p>
+              )}
+            </div>
+          </div>
+        </header>
 
         <div className="subnav" role="tablist" aria-label="Etapas do processo laboratorial">
           <button type="button" className="subnav__btn" onClick={() => navigate('/analista')}>
