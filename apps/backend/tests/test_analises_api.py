@@ -283,9 +283,6 @@ def test_criar_laudo_sucesso_e_duplicidade(client, token_analista):
         headers={"Authorization": f"Bearer {token_analista}"},
     )
     assert res_cpf_err.status_code == 422
-<<<<<<< Updated upstream
-=======
-
 
 
 @pytest.mark.parametrize(
@@ -311,4 +308,3 @@ def test_criar_laudo_rejeita_campos_invalidos(client, token_analista, campo, val
         headers={"Authorization": f"Bearer {token_analista}"},
     )
     assert res.status_code == 422
->>>>>>> Stashed changes

@@ -1,10 +1,6 @@
-<<<<<<< Updated upstream
-from typing import Any
+from datetime import date
+from typing import Any, Literal
 
-=======
-from datetime import date, datetime
-from typing import Any, List, Literal, Optional
->>>>>>> Stashed changes
 from pydantic import BaseModel, Field
 
 
@@ -169,25 +165,19 @@ class CriarLaudoInput(BaseModel):
     cpf_cliente: str = Field(..., min_length=11, max_length=14)
     cliente_nome: str = Field(..., min_length=2, max_length=255)
     propriedade: str = Field(..., min_length=2, max_length=255)
-<<<<<<< Updated upstream
     localizacao: str | None = Field(None, max_length=255)
     areaIdentificacao: str | None = Field(None, max_length=100)
     areaHectares: str | None = Field(None, max_length=50)
     profundidadeColeta: str | None = Field(None, max_length=50)
     cultivo: str | None = Field(None, max_length=100)
-=======
-    localizacao: Optional[str] = Field(None, max_length=255)
-    areaIdentificacao: Optional[str] = Field(None, max_length=100)
-    areaHectares: Optional[str] = Field(None, max_length=50)
-    profundidadeColeta: Optional[str] = Field(None, max_length=50)
-    cultivo: Optional[str] = Field(None, max_length=100)
-    dataRecebimento: Optional[date] = None
-    tipoAnalise: Optional[Literal["fisica", "quimica", "fisico_quimica"]] = None
-    culturaExistente: Optional[str] = Field(None, max_length=100)
+    dataRecebimento: date | None = None
+    tipoAnalise: Literal["fisica", "quimica", "fisico_quimica"] | None = None
+    culturaExistente: str | None = Field(None, max_length=100)
     # Contato opcional do solicitante
-    email: Optional[str] = Field(None, max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-    telefone: Optional[str] = Field(None, pattern=r"^\d{10,11}$")
->>>>>>> Stashed changes
+    email: str | None = Field(
+        None, max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    )
+    telefone: str | None = Field(None, pattern=r"^\d{10,11}$")
 
 
 class CriarLaudoDataSchema(BaseModel):
