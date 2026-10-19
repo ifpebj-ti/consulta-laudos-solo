@@ -96,4 +96,4 @@ As imagens de produção são publicadas automaticamente no **GHCR** pelo pipeli
 
 ## 📄 Licença
 
-Este software está licenciado sob os termos da **Apache License, Versão 2.0**. Consulte o arquivo [`LICENSE`](./LICENSE) para mais detalhes.
+Este software está licenciado sob os termos da **Apache License, Versão 2.0**. Consulte o arquivo [`LICENSE`](./LICENSE) para mais detalhes. 
