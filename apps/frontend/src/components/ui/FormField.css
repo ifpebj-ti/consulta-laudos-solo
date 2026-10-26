@@ -1,61 +1,68 @@
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--u);
 }
 
 .form-field label {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--cinza-900);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--cinza);
 }
 
 .form-field .unit {
   font-weight: 400;
-  color: var(--cinza-700);
   font-size: 11.5px;
+  color: var(--cinza-claro);
 }
 
 .form-field input,
 .form-field select {
-  font-family: var(--fonte);
-  font-size: 14px;
-  padding: 10px 11px;
-  border: 1.5px solid var(--cinza-300);
-  border-radius: var(--raio-sm);
-  background: var(--cinza-50);
-  color: var(--if-preto);
   width: 100%;
   transition: border-color 0.12s ease, background 0.12s ease;
+  padding: var(--u) 0;
+  font-family: var(--fonte);
+  font-size: 15px;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--texto);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .form-field input:focus,
 .form-field select:focus {
-  border-color: var(--if-verde);
-  background: var(--branco);
+  border-color: var(--verde);
   outline: none;
+  background: transparent;
+  border-bottom-color: var(--verde);
+  box-shadow: 0 1px 0 0 var(--verde);
 }
 
-/* Validação própria (o formulário usa noValidate para não mostrar o balão do navegador) */
 .form-field__obrigatorio {
-  color: var(--if-vermelho);
-  font-weight: 700;
+  color: var(--vermelho);
+  font-weight: 600;
 }
 
 .form-field--invalido input,
 .form-field--invalido input:focus {
-  border-color: var(--if-vermelho);
-  background: var(--if-vermelho-claro);
+  border-color: var(--vermelho);
+  background: rgba(205, 25, 30, 0.04);
+  border-bottom-color: var(--vermelho);
+  box-shadow: 0 1px 0 0 var(--vermelho);
 }
 
 .form-field__erro {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11.5px;
   font-weight: 600;
-  color: var(--if-vermelho);
   animation: form-field-erro-surgir 0.15s ease-out;
+  font-size: 12px;
+  color: var(--vermelho);
 }
 
 .form-field__erro svg {
@@ -75,7 +82,6 @@
   }
 }
 
-/* Campo de data: ícone do calendário nativo mais discreto e alinhado ao tema */
 .form-field input[type='date'] {
   cursor: pointer;
 }
@@ -92,5 +98,5 @@
 
 .form-field--help {
   font-size: 11px;
-  color: var(--cinza-500);
+  color: var(--cinza-claro);
 }

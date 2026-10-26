@@ -19,11 +19,6 @@ interface AnalistaContextValue {
 
 const AnalistaContext = createContext<AnalistaContextValue | undefined>(undefined);
 
-/**
- * Só em desenvolvimento: guarda as amostras no localStorage para que testes manuais
- * sobrevivam a recarregar a página ou reabrir o navegador. Em produção continua só
- * em memória (os dados incluem CPF e não devem ficar gravados no navegador).
- */
 const CHAVE_PERSISTENCIA_DEV = 'consulta-laudos-solo:amostras-analista';
 const PERSISTIR = import.meta.env.DEV;
 
@@ -38,12 +33,6 @@ function carregarAmostrasSalvas(): AmostraRegistro[] {
   }
 }
 
-/**
- * Estado da área do Analista mantido em memória, enquanto a persistência das
- * análises não é integrada à API — em produção some ao recarregar a página. Guarda o DadosAnalise completo
- * de cada amostra (não só a identificação) para permitir sair do Registro e
- * voltar depois sem perder o que já foi digitado.
- */
 export function AnalistaProvider({ children }: { children: ReactNode }) {
   const [amostras, setAmostras] = useState<AmostraRegistro[]>(carregarAmostrasSalvas);
   const [protocoloAtual, setProtocoloAtual] = useState<string | null>(null);
@@ -53,7 +42,6 @@ export function AnalistaProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(CHAVE_PERSISTENCIA_DEV, JSON.stringify(amostras));
     } catch {
-      // Sem espaço ou armazenamento bloqueado: segue só em memória
     }
   }, [amostras]);
 

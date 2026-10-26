@@ -1,7 +1,7 @@
 .brand-mark {
   display: flex;
   align-items: center;
-  gap: var(--espaco-md);
+  gap: calc(var(--u) * 2);
   min-height: 30px;
 }
 
@@ -10,8 +10,8 @@
   align-items: center;
   min-height: 30px;
   padding: 6px 10px;
-  border: 1.5px dashed rgba(255, 255, 255, 0.55);
-  border-radius: var(--raio-sm);
+  border: 1.5px dashed var(--filete);
+  border-radius: 0;
 }
 
 .brand-mark__logo-grid {
@@ -24,13 +24,15 @@
 .brand-mark__logo-grid span {
   width: 8px;
   height: 8px;
-  background: var(--if-verde-escuro);
-  border-radius: 2px;
+  background: var(--verde-escuro);
+  border-radius: 0;
 }
+
 .brand-mark__logo-grid span:nth-child(1) {
-  background: var(--if-vermelho);
+  background: var(--vermelho);
   border-radius: 50%;
 }
+
 .brand-mark__logo-grid span:nth-child(6),
 .brand-mark__logo-grid span:nth-child(12) {
   background: transparent;
@@ -43,25 +45,14 @@
 .brand-mark__texto strong {
   display: block;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.3px;
-  color: var(--branco);
+  color: var(--texto);
 }
 
 .brand-mark__texto span {
   display: block;
   font-size: 11.5px;
   font-weight: 400;
-  color: var(--cinza-300);
-}
-
-/* Variante clara: usada sobre fundos brancos (ex.: cabeçalho do documento do laudo) */
-.brand-mark:not(.brand-mark--dark) .brand-mark__logo {
-  border-color: var(--cinza-300);
-}
-.brand-mark:not(.brand-mark--dark) .brand-mark__texto strong {
-  color: var(--if-preto);
-}
-.brand-mark:not(.brand-mark--dark) .brand-mark__texto span {
-  color: var(--cinza-700);
+  color: var(--cinza);
 }

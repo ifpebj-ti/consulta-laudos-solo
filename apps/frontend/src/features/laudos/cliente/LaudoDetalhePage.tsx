@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { laudoService } from '@/services/laudoService';
 import { ApiError } from '@/services/apiClient';
+import { LinhasVelocidade, SetaVelocidade } from '@/features/home/LayoutEntrada';
 import { statusParaBadge } from './statusBadge';
+import '@/styles/painel-minimalista.css';
 import './LaudoDetalhePage.css';
 
 export function LaudoDetalhePage() {
@@ -52,55 +54,60 @@ export function LaudoDetalhePage() {
   }
 
   return (
-    <>
+    <div className="painel-min painel-min--cliente">
+      <LinhasVelocidade className="painel-min__velocidade" />
       <Navbar titulo="Portal do Cliente" />
       <main className="page-container cliente-shell">
         <div className="detalhe-cabecalho">
           <div className="detalhe-cabecalho__topo">
             <div>
-              <h2>Laudo Técnico — {laudo.protocolo}</h2>
+              <p className="page-header__eyebrow">Laudo de análise de solo</p>
+              <h2>
+                <span>Laudo Técnico</span>
+                <span className="visually-hidden"> — </span>
+                <span className="painel-min__destaque">{laudo.protocolo}</span>
+              </h2>
               <p className="detalhe-cabecalho__sub">
                 {laudo.cliente.nome} &middot; {laudo.propriedade} &middot; Emitido em {dataEmissao}
               </p>
             </div>
             <Badge variant={variant}>{rotulo}</Badge>
           </div>
-
-          {indicadores.length > 0 && (
-            <>
-              <p className="section-heading" style={{ marginTop: 0 }}>
-                Indicadores de fertilidade
-              </p>
-              <div className="indicadores-grid">
-                {indicadores.map((indicador) => (
-                  <div className="indicador-item" key={indicador.nome}>
-                    <span className="indicador-nome">{indicador.nome}</span>
-                    <span className="indicador-valor">{indicador.valor}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
         </div>
 
-        <div className="download-bar">
+        {indicadores.length > 0 && (
+          <section className="detalhe-modulo">
+            <p className="detalhe-modulo__titulo">Indicadores de fertilidade</p>
+            <div className="indicadores-grid">
+              {indicadores.map((indicador) => (
+                <div className="indicador-item" key={indicador.nome}>
+                  <span className="indicador-nome">{indicador.nome}</span>
+                  <span className="indicador-valor">{indicador.valor}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="detalhe-modulo download-bar">
           <div>
-            <strong>Laudo técnico completo (PDF)</strong>
+            <strong className="detalhe-modulo__titulo">Laudo técnico completo (PDF)</strong>
             <p>Titular: {laudo.cliente.nome} ({laudo.cliente.cpfMascarado})</p>
           </div>
           {laudo.temPdfDisponivel ? (
             <Button variant="download" lg onClick={aoBaixarPdf} disabled={baixando}>
               {baixando ? 'Baixando...' : 'Download em PDF'}
+              <SetaVelocidade />
             </Button>
           ) : (
             <Button variant="ghost" lg disabled>
               PDF ainda não disponível
             </Button>
           )}
-        </div>
+        </section>
         {erroDownload && <div className="alerta-erro">{erroDownload}</div>}
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

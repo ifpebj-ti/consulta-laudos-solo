@@ -14,9 +14,7 @@ interface SelectProps<T extends string> {
   onChange: (valor: T) => void;
   placeholder?: string;
   ariaLabel?: string;
-  /** Destaca em vermelho quando a validação do formulário falha. */
   invalido?: boolean;
-  /** "campo" acompanha os inputs de formulário; "compacto" é para barras de filtro. */
   variante?: 'campo' | 'compacto';
   className?: string;
 }
@@ -27,11 +25,6 @@ interface Posicao {
   width: number;
 }
 
-/**
- * Seletor próprio no lugar do <select> nativo, cuja lista aberta não aceita estilo.
- * A lista é renderizada num portal com posição fixa para não ser cortada por
- * containers com overflow (ex.: o modal).
- */
 export function Select<T extends string>({
   id,
   value,
@@ -128,7 +121,6 @@ export function Select<T extends string>({
         escolher(ativo);
         break;
       case 'Escape':
-        // Não deixa o Esc chegar ao modal: fecha só a lista
         evento.preventDefault();
         evento.stopPropagation();
         fechar();

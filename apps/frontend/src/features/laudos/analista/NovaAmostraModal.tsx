@@ -29,7 +29,6 @@ const OPCOES_TIPO_ANALISE = (Object.keys(ROTULOS_TIPO_ANALISE) as TipoAnalise[])
   rotulo: ROTULOS_TIPO_ANALISE[tipo],
 }));
 
-/** Validação feita no front, com mensagens próprias em cada campo (sem o balão nativo do navegador). */
 function validar(identificacao: Identificacao): ErrosCampos {
   const erros: ErrosCampos = {};
   const obrigatorio = 'Preencha este campo para continuar.';
@@ -89,7 +88,6 @@ export function NovaAmostraModal({
 
   function atualizar<K extends keyof Identificacao>(campo: K, valor: Identificacao[K]) {
     onChange({ ...identificacao, [campo]: valor });
-    // O erro do campo some assim que ele é corrigido
     if (campo in erros) setErros((atual) => ({ ...atual, [campo]: undefined }));
   }
 
@@ -135,7 +133,7 @@ export function NovaAmostraModal({
     >
       <form onSubmit={aoSubmeter} noValidate>
         {erro && (
-          <div className="form-alert-erro" role="alert" style={{ marginTop: 0, marginBottom: 'var(--espaco-md)' }}>
+          <div className="form-alert-erro" role="alert" style={{ marginTop: 0, marginBottom: 'calc(var(--u) * 2)' }}>
             <strong>Erro no cadastro:</strong> {erro}
           </div>
         )}

@@ -17,7 +17,6 @@ export interface Identificacao {
   protocolo: string;
   cpfCliente?: string;
   dataRecebimento: string;
-  /** Previsão de entrega do laudo: data de recebimento + 15 dias. */
   prazo: string;
   tipoAnalise: TipoAnalise | '';
   solicitante: string;
@@ -29,7 +28,6 @@ export interface Identificacao {
   profundidadeColeta: string;
   cultivo: string;
   culturaExistente: string;
-  /** Contato opcional — só aparece no laudo quando preenchido. */
   email: string;
   telefone: string;
 }
@@ -71,7 +69,6 @@ export interface DadosAnalise {
   calibracao: RegressaoLinear | null;
 }
 
-/** Estado inicial de uma análise, criada a partir do modal Nova Amostra. */
 export const DADOS_ANALISE_VAZIOS: DadosAnalise = {
   identificacao: IDENTIFICACAO_VAZIA,
   quimica: {
@@ -98,18 +95,12 @@ export const DADOS_ANALISE_VAZIOS: DadosAnalise = {
 
 export type StatusAmostra = 'nao_iniciado' | 'em_andamento' | 'concluido';
 
-/**
- * Um registro completo de amostra guardado na sessão do Analista — mantém o
- * DadosAnalise inteiro (não só a identificação) para permitir retomar uma
- * análise iniciada e não concluída.
- */
 export interface AmostraRegistro {
   dados: DadosAnalise;
   status: StatusAmostra;
   criadaEm: string;
 }
 
-/** Forma enxuta usada nos cards do painel — não carrega química/física. */
 export interface CartaoAmostra {
   protocolo: string;
   solicitante: string;

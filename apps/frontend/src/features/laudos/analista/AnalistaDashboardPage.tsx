@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useAnalista } from '@/context/AnalistaContext';
 import { analiseService } from '@/services/analiseService';
 import { ApiError } from '@/services/apiClient';
+import { LinhasVelocidade, SetaVelocidade } from '@/features/home/LayoutEntrada';
 import { FaixaPaginada } from './FaixaPaginada';
 import { NovaAmostraModal } from './NovaAmostraModal';
 import {
@@ -23,7 +24,6 @@ import {
 import { IDENTIFICACAO_VAZIA, type AmostraRegistro, type CartaoAmostra, type Identificacao } from './tipos';
 import './AnalistaDashboardPage.css';
 
-/** Minúsculas e sem acentos, para a busca ignorar "José" x "jose". */
 function normalizar(texto: string): string {
   return texto
     .normalize('NFD')
@@ -32,7 +32,6 @@ function normalizar(texto: string): string {
     .trim();
 }
 
-/** A busca também casa com os rótulos de status exibidos no cartão (ex.: "atrasado", "em andamento"). */
 function correspondeBusca(cartao: CartaoAmostra, busca: string, considerarPrazo: boolean): boolean {
   const termo = normalizar(busca);
   if (!termo) return true;
@@ -100,7 +99,6 @@ const compararPrazo = (a: CartaoAmostra, b: CartaoAmostra) => (a.prazo || '9999'
 const compararTexto = (campo: 'protocolo' | 'solicitante') => (a: CartaoAmostra, b: CartaoAmostra) =>
   a[campo].localeCompare(b[campo], 'pt-BR', { sensitivity: 'base', numeric: true });
 
-/** "X primeiro": quem atende ao critério sobe, e dentro de cada grupo mantém a ordem por prazo. */
 function primeiroQuem(criterio: (cartao: CartaoAmostra) => boolean) {
   return (a: CartaoAmostra, b: CartaoAmostra) =>
     Number(criterio(b)) - Number(criterio(a)) || compararPrazo(a, b);
@@ -121,7 +119,6 @@ function ordenarPendentes(cartoes: CartaoAmostra[], ordem: OrdemPendentes): Cart
   return [...cartoes].sort(comparadores[ordem]);
 }
 
-/** O histórico chega na ordem de cadastro; "recentes" inverte essa ordem. */
 function ordenarHistorico(cartoes: CartaoAmostra[], ordem: OrdemHistorico): CartaoAmostra[] {
   if (ordem === 'antigos') return cartoes;
   if (ordem === 'recentes') return [...cartoes].reverse();
@@ -248,7 +245,6 @@ export function AnalistaDashboardPage() {
   async function aoCriarAmostra() {
     setErroModal(null);
 
-    // Validação preventiva do CPF
     const cpfLimpo = (identificacaoModal.cpfCliente ?? '').replace(/\D/g, '');
     if (cpfLimpo.length !== 11) {
       setErroModal('O CPF do cliente é obrigatório e deve ter 11 dígitos.');
@@ -299,7 +295,6 @@ export function AnalistaDashboardPage() {
         token,
       );
 
-      // Previsão de entrega: data de recebimento + 15 dias
       const amostraFinal: Identificacao = {
         ...identificacaoModal,
         prazo: prazoCalculado,
@@ -326,12 +321,15 @@ export function AnalistaDashboardPage() {
 
   return (
     <>
+      <LinhasVelocidade className="painel-min__velocidade" />
       <Navbar titulo="Módulo do Analista" />
       <main className="page-container">
         <div className="page-header">
           <div>
             <span className="page-header__eyebrow">Laboratório de Solos &middot; Uso interno</span>
-            <h1>Painel do Analista</h1>
+            <h1>
+              <span>Painel do</span> <span className="painel-min__destaque">Analista</span>
+            </h1>
           </div>
         </div>
 
@@ -339,12 +337,15 @@ export function AnalistaDashboardPage() {
           <CardBody>
             <div className="dashboard-cta__conteudo">
               <h2>Registrar Nova Análise</h2>
-              <Button onClick={abrirModalNovaAmostra}>Registrar Nova Análise</Button>
+              <Button onClick={abrirModalNovaAmostra}>
+                Registrar Nova Análise
+                <SetaVelocidade />
+              </Button>
             </div>
           </CardBody>
         </Card>
 
-        <Card className="dashboard-secao">
+        <Card>
           <CardHeader
             title="Prazos para Entregar Laudos"
             action={
@@ -382,7 +383,7 @@ export function AnalistaDashboardPage() {
           </CardBody>
         </Card>
 
-        <Card className="dashboard-secao">
+        <Card>
           <CardHeader
             title="Histórico de Laudos"
             action={

@@ -16,7 +16,6 @@ interface CampoComBrancoInputProps {
   onChange: (proximo: CampoComBranco) => void;
 }
 
-/** Resultado calculado em destaque, separado dos campos de entrada. */
 function ResultadoCalculado({ rotulo, valor, unidade }: { rotulo: string; valor: string; unidade: string }) {
   return (
     <div className="form-field__liquido" aria-live="polite">
@@ -51,11 +50,9 @@ function CampoComBrancoInput({ idPrefix, legenda, unidade, valor, onChange }: Ca
   );
 }
 
-/** Campos exigidos para processar os cálculos (mesmas regras do backend). */
 export type CampoObrigatorioRegistro = 'tfsa' | 'calibracao';
 export type ErrosCamposRegistro = Partial<Record<CampoObrigatorioRegistro, string>>;
 
-/** Elemento que recebe o destaque/rolagem para cada campo com erro, na ordem em que aparecem na página. */
 const ALVO_POR_CAMPO: Record<CampoObrigatorioRegistro, string> = {
   calibracao: 'secao-calibracao',
   tfsa: 'bloco-tfsa',
@@ -70,7 +67,6 @@ export interface RegistroFormProps {
   statusSalvamento?: 'salvo' | 'salvando' | 'erro' | 'conflito' | 'idle';
   horarioSalvo?: string | null;
   errosProcessamento?: string[] | null;
-  /** Erros por campo; cada nova tentativa (contador) refaz a rolagem e a animação. */
   errosCampos?: ErrosCamposRegistro;
   tentativaValidacao?: number;
   onRecarregar?: () => void;
@@ -91,7 +87,6 @@ export function RegistroForm({
   const errosCamposRef = useRef(errosCampos);
   errosCamposRef.current = errosCampos;
 
-  // A cada tentativa com erro: rola suavemente até o primeiro campo pendente e faz todos "chamarem atenção"
   useEffect(() => {
     if (tentativaValidacao === 0) return;
     const pendentes = ORDEM_CAMPOS.filter((campo) => errosCamposRef.current[campo]);
@@ -106,13 +101,11 @@ export function RegistroForm({
     const reduzirMovimento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     primeiro.scrollIntoView({ behavior: reduzirMovimento ? 'auto' : 'smooth', block: 'center' });
 
-    // Reinicia a animação mesmo se a classe já estiver aplicada de uma tentativa anterior
     alvos.forEach((el) => {
       el.classList.remove('campo-alerta');
       void el.offsetWidth;
       el.classList.add('campo-alerta');
     });
-    // O pulso é a animação mais longa; quando ele termina, a classe sai para poder ser reaplicada
     const aoTerminar = (evento: AnimationEvent) => {
       if (evento.animationName !== 'campo-alerta-pulso') return;
       const el = evento.currentTarget as HTMLElement;
@@ -121,7 +114,6 @@ export function RegistroForm({
     };
     alvos.forEach((el) => el.addEventListener('animationend', aoTerminar));
 
-    // Foca o campo depois da rolagem, sem provocar um segundo salto
     const temporizador = window.setTimeout(() => {
       (primeiro.querySelector<HTMLElement>('[data-foco-validacao]') ?? primeiro.querySelector<HTMLElement>('input, button'))?.focus({
         preventScroll: true,
@@ -220,7 +212,7 @@ export function RegistroForm({
             />
           </div>
 
-          <div className="form-grid form-grid--branco" style={{ marginTop: 'var(--espaco-lg)' }}>
+          <div className="form-grid form-grid--branco" style={{ marginTop: 'calc(var(--u) * 3)' }}>
             <CampoComBrancoInput
               idPrefix="campo-ca"
               legenda="Cálcio (Ca)"
@@ -270,7 +262,7 @@ export function RegistroForm({
             <span className="dot"></span> Análise Física (Granulometria)
           </div>
 
-          <div className="form-grid" style={{ marginBottom: 'var(--espaco-md)' }}>
+          <div className="form-grid" style={{ marginBottom: 'calc(var(--u) * 2)' }}>
             <div id="bloco-tfsa" className="registro-alvo">
               <FormField
                 id="campo-tfsa"
@@ -353,7 +345,7 @@ export function RegistroForm({
             </div>
           </div>
 
-          <div className="calib-summary" style={{ marginTop: 'var(--espaco-md)' }}>
+          <div className="calib-summary" style={{ marginTop: 'calc(var(--u) * 2)' }}>
             <div className="calib-summary__item">
               <span>% Areia</span>
               <strong>{resultadoGranulometria.pctAreia !== null ? `${Math.round(resultadoGranulometria.pctAreia)}%` : '—'}</strong>

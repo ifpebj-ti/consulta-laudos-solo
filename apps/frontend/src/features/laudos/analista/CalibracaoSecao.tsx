@@ -157,7 +157,7 @@ export function CalibracaoSecao({
               data-foco-validacao
               onClick={() => onAplicar({ ...regressao, pontos })}
               disabled={aplicada}
-              style={{ marginTop: 'var(--espaco-md)' }}
+              style={{ marginTop: 'calc(var(--u) * 2)' }}
             >
               {aplicada ? 'Calibração já aplicada' : 'Aplicar Calibração'}
             </Button>
@@ -173,7 +173,7 @@ export function CalibracaoSecao({
                     y1={escalaY(tick)}
                     x2={PAD_DIR}
                     y2={escalaY(tick)}
-                    stroke="var(--cinza-200)"
+                    stroke="var(--filete)"
                     strokeWidth={1}
                     strokeDasharray={i === 0 ? undefined : '3 3'}
                   />
@@ -188,15 +188,15 @@ export function CalibracaoSecao({
                 </text>
               ))}
 
-              <line x1={PAD_ESQ} y1={PAD_TOPO} x2={PAD_ESQ} y2={PAD_BASE} stroke="var(--cinza-500)" strokeWidth={1.5} />
-              <line x1={PAD_ESQ} y1={PAD_BASE} x2={PAD_DIR} y2={PAD_BASE} stroke="var(--cinza-500)" strokeWidth={1.5} />
+              <line x1={PAD_ESQ} y1={PAD_TOPO} x2={PAD_ESQ} y2={PAD_BASE} stroke="var(--cinza-claro)" strokeWidth={1.5} />
+              <line x1={PAD_ESQ} y1={PAD_BASE} x2={PAD_DIR} y2={PAD_BASE} stroke="var(--cinza-claro)" strokeWidth={1.5} />
 
               <line
                 x1={escalaX(0)}
                 y1={escalaY(regressao.b)}
                 x2={escalaX(xMax)}
                 y2={escalaY(regressao.a * xMax + regressao.b)}
-                stroke="var(--if-vermelho)"
+                stroke="var(--vermelho)"
                 strokeWidth={2.5}
                 strokeLinecap="round"
               />

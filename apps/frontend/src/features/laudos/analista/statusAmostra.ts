@@ -32,12 +32,10 @@ function paraIsoLocal(data: Date): string {
   return `${ano}-${mes}-${dia}`;
 }
 
-/** Data de hoje (fuso local) no formato AAAA-MM-DD. */
 export function hojeIso(): string {
   return paraIsoLocal(new Date());
 }
 
-/** Previsão de entrega do laudo: data de recebimento + 15 dias (AAAA-MM-DD). */
 export function calcularPrevisaoEntrega(dataRecebimento: string): string {
   const [ano, mes, dia] = dataRecebimento.split('-').map(Number);
   if (!ano || !mes || !dia) return '';

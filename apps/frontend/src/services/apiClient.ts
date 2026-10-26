@@ -44,7 +44,6 @@ async function request<T>(path: string, { method = 'GET', body, token }: Request
       const payload = (await response.json()) as { detail?: ApiErrorBody | ErroValidacaoFastApi[] } | ApiErrorBody;
       const detalhe = 'detail' in payload ? payload.detail : undefined;
 
-      // Erro de validação automática do FastAPI: `detail` vem como lista de campos inválidos
       if (Array.isArray(detalhe)) {
         const erros = detalhe.map((item) => `${item.loc.filter((p) => p !== 'body').join('.')}: ${item.msg}`);
         throw new ApiError(response.status, 'Alguns campos enviados são inválidos.', 'VALIDATION_ERROR', erros);

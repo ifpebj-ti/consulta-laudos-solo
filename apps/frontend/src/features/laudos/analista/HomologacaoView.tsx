@@ -16,7 +16,6 @@ import './HomologacaoView.css';
 
 interface HomologacaoViewProps {
   dados: DadosAnalise;
-  /** Laudo já homologado: apenas visualização, sem opção de editar ou liberar de novo. */
   jaLiberado?: boolean;
   onVoltarParaEdicao: () => void;
   onLiberarLaudo: () => void;
@@ -58,7 +57,7 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
       <div className="laudo-doc">
         <div className="laudo-doc__topo">
           <div className="laudo-doc__marca">
-            <BrandMark dark={false} />
+            <BrandMark />
           </div>
           <div className="laudo-doc__protocolo">
             Protocolo
@@ -67,7 +66,6 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
         </div>
 
         <div className="laudo-doc__grid-info">
-          {/* Sem contato informado, o solicitante ocupa o espaço do bloco de contato. */}
           <div className={`info-box ${temContato ? '' : 'info-box--largo'}`.trim()}>
             <span>Proprietário/Solicitante</span>
             <strong>{identificacao.solicitante || '—'}</strong>

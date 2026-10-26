@@ -11,7 +11,6 @@ interface AuthSession {
   nome?: string;
   email?: string;
   protocolo?: string;
-  /** Laudo retornado no login do cliente — hoje o backend só expõe consulta por login, sem endpoint de releitura. */
   laudo?: LaudoDetalhe;
 }
 

@@ -1,8 +1,8 @@
 .nova-amostra-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--espaco-md);
-  margin-bottom: var(--espaco-lg);
+  gap: calc(var(--u) * 3) calc(var(--u) * 4);
+  margin-bottom: calc(var(--u) * 4);
 }
 
 .nova-amostra-grid__largo {
@@ -10,11 +10,12 @@
 }
 
 .form-field input.nova-amostra-calculado {
-  background: var(--cinza-100);
   border-style: dashed;
-  color: var(--cinza-900);
-  font-weight: 700;
+  color: var(--texto);
   cursor: default;
+  font-weight: 600;
+  background: transparent;
+  border-bottom-style: dashed;
 }
 
 @media (max-width: 560px) {
@@ -23,7 +24,6 @@
   }
 }
 
-/* Botão de dados de teste (somente em desenvolvimento) fica separado à esquerda */
 .nova-amostra-teste {
   margin-right: auto;
 }
