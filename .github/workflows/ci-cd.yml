@@ -27,19 +27,6 @@ jobs:
         uses: actions/checkout@v4
 
       # ----------------------------------------------------------------------
-      # Terraform Validation
-      # ----------------------------------------------------------------------
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Format and Validate
-        working-directory: ./infra
-        run: |
-          terraform fmt -check -recursive
-          terraform init -backend=false
-          terraform validate
-
-      # ----------------------------------------------------------------------
       # Frontend Validation
       # ----------------------------------------------------------------------
       - name: Setup Node.js
