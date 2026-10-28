@@ -1,10 +1,11 @@
 import html
+import math
 import re
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,8 +22,13 @@ from src.schemas.analise import (
     CriarLaudoResponse,
     DadosBancadaSchema,
     GranulometriaRascunhoSchema,
+    HomologarAnaliseDataSchema,
+    HomologarAnaliseResponse,
+    LaudoResumoSchema,
+    ListarLaudosResponse,
     ObterAnaliseDataSchema,
     ObterAnaliseResponse,
+    PaginacaoSchema,
     PontoCalibracaoSchema,
     ProcessarAnaliseDataSchema,
     ProcessarAnaliseInput,
@@ -41,6 +47,74 @@ from src.services.calculos_service import (
     converter_k_para_cmolc,
     converter_na_para_cmolc,
 )
+
+# Status que permitem edição de rascunho
+_STATUS_EDITAVEIS = {"PENDENTE", "EM_ANALISE"}
+
+
+def _mapear_bancada_de_payload(bancada: AnaliseBancada, payload: Any) -> None:
+    """
+    Extrai a lógica duplicada de mapeamento dos campos de bancada a partir de
+    RascunhoAnaliseInput ou ProcessarAnaliseInput para o ORM AnaliseBancada.
+    """
+    if payload.quimica is not None:
+        q = payload.quimica
+        if hasattr(q, "ph") and q.ph is not None:
+            bancada.ph = q.ph
+        if hasattr(q, "fosforoAbsBruta") and q.fosforoAbsBruta is not None:
+            bancada.fosforo_abs = q.fosforoAbsBruta
+        if hasattr(q, "sodioMgL") and q.sodioMgL is not None:
+            bancada.sodio_mg_l = q.sodioMgL
+        if hasattr(q, "potassioMgL") and q.potassioMgL is not None:
+            bancada.potassio_mg_l = q.potassioMgL
+        if hasattr(q, "calcio") and q.calcio is not None:
+            if q.calcio.medido is not None:
+                bancada.ca_medido = q.calcio.medido
+            if q.calcio.branco is not None:
+                bancada.ca_branco = q.calcio.branco
+        if hasattr(q, "magnesio") and q.magnesio is not None:
+            if q.magnesio.medido is not None:
+                bancada.mg_medido = q.magnesio.medido
+            if q.magnesio.branco is not None:
+                bancada.mg_branco = q.magnesio.branco
+        if hasattr(q, "aluminio") and q.aluminio is not None:
+            if q.aluminio.medido is not None:
+                bancada.al_medido = q.aluminio.medido
+            if q.aluminio.branco is not None:
+                bancada.al_branco = q.aluminio.branco
+        if hasattr(q, "acidezPotencial") and q.acidezPotencial is not None:
+            if q.acidezPotencial.medido is not None:
+                bancada.h_al_medido = q.acidezPotencial.medido
+            if q.acidezPotencial.branco is not None:
+                bancada.h_al_branco = q.acidezPotencial.branco
+
+    if payload.granulometria is not None:
+        g = payload.granulometria
+        if hasattr(g, "tfsa") and g.tfsa is not None:
+            bancada.tfsa = g.tfsa
+        if hasattr(g, "areiaBecker") and g.areiaBecker is not None:
+            bancada.areia_becker = g.areiaBecker
+        if hasattr(g, "areiaBeckerVazio") and g.areiaBeckerVazio is not None:
+            bancada.areia_vazio = g.areiaBeckerVazio
+        if hasattr(g, "argilaBecker") and g.argilaBecker is not None:
+            bancada.argila_becker = g.argilaBecker
+        if hasattr(g, "argilaBeckerVazio") and g.argilaBeckerVazio is not None:
+            bancada.argila_vazio = g.argilaBeckerVazio
+        if hasattr(g, "naohBecker") and g.naohBecker is not None:
+            bancada.naoh_becker = g.naohBecker
+        if hasattr(g, "naohBeckerVazio") and g.naohBeckerVazio is not None:
+            bancada.naoh_vazio = g.naohBeckerVazio
+
+    if hasattr(payload, "calibracao") and payload.calibracao is not None:
+        c = payload.calibracao
+        if c.a is not None:
+            bancada.calib_a = c.a
+        if c.b is not None:
+            bancada.calib_b = c.b
+        if c.r2 is not None:
+            bancada.calib_r2 = c.r2
+        if c.pontos is not None:
+            bancada.calib_pontos = [p.model_dump() for p in c.pontos]
 
 
 class AnaliseService:
@@ -231,6 +305,17 @@ class AnaliseService:
                 },
             )
 
+        # Bloqueia edição de laudos em status final
+        if laudo.status not in _STATUS_EDITAVEIS:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "sucesso": False,
+                    "mensagem": f"Não é possível editar um laudo com status '{laudo.status}'. Apenas laudos em análise podem ser modificados.",
+                    "codigoErro": "STATUS_FINAL",
+                },
+            )
+
         # Bloqueio Concorrente Otimista (409 Conflict)
         if laudo.versao != payload.versaoEsperada:
             raise HTTPException(
@@ -247,67 +332,8 @@ class AnaliseService:
             bancada = AnaliseBancada(laudo_id=laudo.id)
             db.add(bancada)
 
-        # Atualizações Incrementais da Química
-        if payload.quimica is not None:
-            q = payload.quimica
-            if q.ph is not None:
-                bancada.ph = q.ph
-            if q.fosforoAbsBruta is not None:
-                bancada.fosforo_abs = q.fosforoAbsBruta
-            if q.sodioMgL is not None:
-                bancada.sodio_mg_l = q.sodioMgL
-            if q.potassioMgL is not None:
-                bancada.potassio_mg_l = q.potassioMgL
-            if q.calcio is not None:
-                if q.calcio.medido is not None:
-                    bancada.ca_medido = q.calcio.medido
-                if q.calcio.branco is not None:
-                    bancada.ca_branco = q.calcio.branco
-            if q.magnesio is not None:
-                if q.magnesio.medido is not None:
-                    bancada.mg_medido = q.magnesio.medido
-                if q.magnesio.branco is not None:
-                    bancada.mg_branco = q.magnesio.branco
-            if q.aluminio is not None:
-                if q.aluminio.medido is not None:
-                    bancada.al_medido = q.aluminio.medido
-                if q.aluminio.branco is not None:
-                    bancada.al_branco = q.aluminio.branco
-            if q.acidezPotencial is not None:
-                if q.acidezPotencial.medido is not None:
-                    bancada.h_al_medido = q.acidezPotencial.medido
-                if q.acidezPotencial.branco is not None:
-                    bancada.h_al_branco = q.acidezPotencial.branco
-
-        # Atualizações Incrementais da Granulometria
-        if payload.granulometria is not None:
-            g = payload.granulometria
-            if g.tfsa is not None:
-                bancada.tfsa = g.tfsa
-            if g.areiaBecker is not None:
-                bancada.areia_becker = g.areiaBecker
-            if g.areiaBeckerVazio is not None:
-                bancada.areia_vazio = g.areiaBeckerVazio
-            if g.argilaBecker is not None:
-                bancada.argila_becker = g.argilaBecker
-            if g.argilaBeckerVazio is not None:
-                bancada.argila_vazio = g.argilaBeckerVazio
-            if g.naohBecker is not None:
-                bancada.naoh_becker = g.naohBecker
-            if g.naohBeckerVazio is not None:
-                bancada.naoh_vazio = g.naohBeckerVazio
-
-        # Atualizações da Curva de Calibração
-        if payload.calibracao is not None:
-            c = payload.calibracao
-            if c.a is not None:
-                bancada.calib_a = c.a
-            if c.b is not None:
-                bancada.calib_b = c.b
-            if c.r2 is not None:
-                bancada.calib_r2 = c.r2
-            if c.pontos is not None:
-                bancada.calib_pontos = [p.model_dump() for p in c.pontos]
+        # Usa helper centralizado para evitar duplicação de lógica de mapeamento
+        _mapear_bancada_de_payload(bancada, payload)
 
         agora = datetime.now(timezone.utc)
         bancada.atualizado_em = agora
@@ -444,38 +470,13 @@ class AnaliseService:
         )
         fosforo_final = fosforo_calc["fosforo"] if fosforo_calc else 0.0
 
-        # Persistência na Bancada
+        # Persistência na Bancada — usa helper centralizado (elimina duplicação com salvar_rascunho)
         bancada = laudo.bancada
         if not bancada:
             bancada = AnaliseBancada(laudo_id=laudo.id)
             db.add(bancada)
 
-        bancada.ph = payload.quimica.ph
-        bancada.fosforo_abs = payload.quimica.fosforoAbsBruta
-        bancada.sodio_mg_l = payload.quimica.sodioMgL
-        bancada.potassio_mg_l = payload.quimica.potassioMgL
-        bancada.ca_medido = payload.quimica.calcio.medido
-        bancada.ca_branco = payload.quimica.calcio.branco
-        bancada.mg_medido = payload.quimica.magnesio.medido
-        bancada.mg_branco = payload.quimica.magnesio.branco
-        bancada.al_medido = payload.quimica.aluminio.medido
-        bancada.al_branco = payload.quimica.aluminio.branco
-        bancada.h_al_medido = payload.quimica.acidezPotencial.medido
-        bancada.h_al_branco = payload.quimica.acidezPotencial.branco
-
-        bancada.tfsa = payload.granulometria.tfsa
-        bancada.areia_becker = payload.granulometria.areiaBecker
-        bancada.areia_vazio = payload.granulometria.areiaBeckerVazio
-        bancada.argila_becker = payload.granulometria.argilaBecker
-        bancada.argila_vazio = payload.granulometria.argilaBeckerVazio
-        bancada.naoh_becker = payload.granulometria.naohBecker
-        bancada.naoh_vazio = payload.granulometria.naohBeckerVazio
-
-        bancada.calib_a = payload.calibracao.a
-        bancada.calib_b = payload.calibracao.b
-        bancada.calib_r2 = payload.calibracao.r2
-        if payload.calibracao.pontos:
-            bancada.calib_pontos = [p.model_dump() for p in payload.calibracao.pontos]
+        _mapear_bancada_de_payload(bancada, payload)
 
         agora = datetime.now(timezone.utc)
         bancada.atualizado_em = agora
@@ -598,5 +599,108 @@ class AnaliseService:
                 calculosOficiais=calculos_oficiais,
                 processadoEm=agora.isoformat(),
                 processadoPor=laudo.atualizado_por,
+            ),
+        )
+
+    @staticmethod
+    async def listar_laudos(
+        pagina: int,
+        por_pagina: int,
+        status_filtro: str | None,
+        db: AsyncSession,
+    ) -> ListarLaudosResponse:
+        """Lista todos os laudos com paginação e filtro opcional por status."""
+        query = select(Laudo)
+        if status_filtro:
+            query = query.where(Laudo.status == status_filtro.upper())
+
+        # Conta total
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar_one()
+
+        # Aplica paginação e ordena pelo mais recente
+        offset = (pagina - 1) * por_pagina
+        query = query.order_by(Laudo.criado_em.desc()).offset(offset).limit(por_pagina)
+        result = await db.execute(query)
+        laudos = result.scalars().all()
+
+        total_paginas = math.ceil(total / por_pagina) if total > 0 else 1
+
+        return ListarLaudosResponse(
+            sucesso=True,
+            dados=[
+                LaudoResumoSchema(
+                    protocolo=laudo.protocolo,
+                    cliente_nome=laudo.cliente_nome,
+                    propriedade=laudo.propriedade,
+                    status=laudo.status,
+                    versao=laudo.versao,
+                    criadoEm=laudo.criado_em.isoformat(),
+                    atualizadoEm=laudo.atualizado_em.isoformat(),
+                    atualizadoPor=laudo.atualizado_por,
+                )
+                for laudo in laudos
+            ],
+            paginacao=PaginacaoSchema(
+                pagina=pagina,
+                por_pagina=por_pagina,
+                total=total,
+                total_paginas=total_paginas,
+            ),
+        )
+
+    @staticmethod
+    async def homologar_analise(
+        protocolo: str,
+        usuario: dict[str, Any],
+        db: AsyncSession,
+    ) -> HomologarAnaliseResponse:
+        """
+        Homologa a análise: avança o status de AGUARDANDO_HOMOLOGACAO para CONCLUIDO
+        e registra o responsável pela homologação.
+        """
+        query = select(Laudo).where(Laudo.protocolo == protocolo)
+        result = await db.execute(query)
+        laudo = result.scalar_one_or_none()
+
+        if not laudo:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "sucesso": False,
+                    "mensagem": "Laudo ou amostra não localizada para o protocolo informado.",
+                },
+            )
+
+        if laudo.status != "AGUARDANDO_HOMOLOGACAO":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "sucesso": False,
+                    "mensagem": f"Não é possível homologar um laudo com status '{laudo.status}'. O laudo precisa estar em 'AGUARDANDO_HOMOLOGACAO'.",
+                    "codigoErro": "STATUS_INVALIDO_PARA_HOMOLOGACAO",
+                },
+            )
+
+        agora = datetime.now(timezone.utc)
+        analista = usuario.get("email") or usuario.get("sub") or "analista"
+
+        laudo.status = "CONCLUIDO"
+        laudo.versao += 1
+        laudo.atualizado_em = agora
+        laudo.atualizado_por = analista
+
+        await db.commit()
+        await db.refresh(laudo)
+
+        return HomologarAnaliseResponse(
+            sucesso=True,
+            mensagem="Laudo homologado com sucesso.",
+            dados=HomologarAnaliseDataSchema(
+                protocolo=laudo.protocolo,
+                status=laudo.status,
+                homologadoEm=agora.isoformat(),
+                homologadoPor=analista,
             ),
         )

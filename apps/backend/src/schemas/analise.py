@@ -3,6 +3,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+# Regex unificada de protocolo — usada tanto no schema de entrada quanto no router de PDF
+PROTOCOLO_PATTERN = r"^[A-Z0-9.\-]{4,30}$"
+
 
 class PontoCalibracaoSchema(BaseModel):
     x: float
@@ -160,7 +163,7 @@ class ProcessarAnaliseResponse(BaseModel):
 # Schemas para Cadastro de Nova Amostra (Laudo)
 class CriarLaudoInput(BaseModel):
     protocolo: str = Field(
-        ..., min_length=3, max_length=32, pattern=r"^[A-Za-z0-9\.\-_/]+$"
+        ..., min_length=4, max_length=30, pattern=PROTOCOLO_PATTERN
     )
     cpf_cliente: str = Field(..., min_length=11, max_length=14)
     cliente_nome: str = Field(..., min_length=2, max_length=255)
@@ -193,3 +196,42 @@ class CriarLaudoResponse(BaseModel):
     sucesso: bool = True
     mensagem: str = "Amostra/laudo cadastrado com sucesso."
     dados: CriarLaudoDataSchema
+
+
+# Schemas de Listagem de Laudos
+class LaudoResumoSchema(BaseModel):
+    protocolo: str
+    cliente_nome: str
+    propriedade: str
+    status: str
+    versao: int
+    criadoEm: str
+    atualizadoEm: str
+    atualizadoPor: str | None = None
+
+
+class PaginacaoSchema(BaseModel):
+    pagina: int
+    por_pagina: int
+    total: int
+    total_paginas: int
+
+
+class ListarLaudosResponse(BaseModel):
+    sucesso: bool = True
+    dados: list[LaudoResumoSchema]
+    paginacao: PaginacaoSchema
+
+
+# Schemas de Homologação
+class HomologarAnaliseDataSchema(BaseModel):
+    protocolo: str
+    status: str
+    homologadoEm: str
+    homologadoPor: str | None = None
+
+
+class HomologarAnaliseResponse(BaseModel):
+    sucesso: bool = True
+    mensagem: str = "Laudo homologado com sucesso."
+    dados: HomologarAnaliseDataSchema

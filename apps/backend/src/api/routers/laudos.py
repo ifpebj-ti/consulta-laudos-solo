@@ -7,11 +7,12 @@ from fastapi.responses import FileResponse
 from src.api.deps import authorize_laudo_access, pdf_download_semaphore
 from src.core.config import settings
 from src.core.limiter import limiter
+from src.schemas.analise import PROTOCOLO_PATTERN
 
 router = APIRouter(prefix="/laudos", tags=["Laudos"])
 
-# Regex para validação estrita do formato de protocolo (apenas alfanuméricos, ponto e hífen)
-PROTOCOLO_REGEX = re.compile(r"^[A-Z0-9.-]{4,30}$")
+# Regex compilada a partir da constante unificada de validação de protocolo
+PROTOCOLO_REGEX = re.compile(PROTOCOLO_PATTERN)
 
 
 @router.get("/{protocolo}/pdf")

@@ -2,6 +2,8 @@ import re
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.schemas.analise import PROTOCOLO_PATTERN
+
 
 def validar_digitos_cpf(cpf: str) -> bool:
     """Valida os dígitos verificadores do CPF (módulo 11)."""
@@ -44,7 +46,7 @@ class LoginGoogleResponse(BaseModel):
 class LoginClienteRequest(BaseModel):
     protocolo: str = Field(
         ...,
-        min_length=8,
+        min_length=4,
         max_length=30,
         description="Número identificador do protocolo",
     )
@@ -54,8 +56,8 @@ class LoginClienteRequest(BaseModel):
     @classmethod
     def validate_protocolo_format(cls, v: str) -> str:
         protocolo = v.strip().upper()
-        # Regex estrito: apenas letras, números e traço/ponto para mitigar Path Traversal e Injeção
-        if not re.match(r"^[A-Z0-9.-]{8,30}$", protocolo):
+        # Usa a mesma regex unificada de PROTOCOLO_PATTERN (src.schemas.analise)
+        if not re.match(PROTOCOLO_PATTERN, protocolo):
             raise ValueError(
                 "Formato de protocolo inválido. Use caracteres alfanuméricos, pontos ou traços."
             )
@@ -71,7 +73,7 @@ class LoginClienteRequest(BaseModel):
 
 
 class UsuarioMeResponse(BaseModel):
-    sub: str
+    sub: str  # garantido como str: decode_access_token exige "sub" via options={"require": [...]}
     role: str
     nome: str | None = None
     email: str | None = None
