@@ -11,7 +11,6 @@ interface FormFieldProps {
   value: number;
   onChange: (numero: number) => void;
   placeholder?: string;
-  /** Mensagem de validação exibida abaixo do campo. */
   erro?: string | null;
   required?: boolean;
   className?: string;

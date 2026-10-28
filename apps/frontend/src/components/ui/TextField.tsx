@@ -10,7 +10,6 @@ interface TextFieldProps {
   placeholder?: string;
   type?: 'text' | 'date' | 'email' | 'tel';
   required?: boolean;
-  /** Mensagem de validação própria, exibida no lugar do balão nativo do navegador. */
   erro?: string | null;
   className?: string;
 }

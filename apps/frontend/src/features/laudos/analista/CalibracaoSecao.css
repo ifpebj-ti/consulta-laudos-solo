@@ -12,7 +12,7 @@
 .calib-secao-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  gap: var(--espaco-lg);
+  gap: calc(var(--u) * 3);
   align-items: start;
 }
 
@@ -23,12 +23,12 @@
 }
 
 .calib-secao-titulo {
-  font-size: 11.5px;
-  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--cinza-700);
-  margin-bottom: var(--espaco-sm);
+  margin-bottom: var(--u);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--cinza);
 }
 
 table.calib-table {
@@ -39,48 +39,59 @@ table.calib-table {
 
 table.calib-table th,
 table.calib-table td {
-  border: 1px solid var(--cinza-200);
   padding: 8px;
   text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--filete);
 }
 
 table.calib-table thead th {
-  background: var(--cinza-100);
-  font-weight: 700;
-  font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--cinza-700);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--cinza);
+  background: transparent;
+  border-bottom: 1px solid var(--texto);
 }
 
 table.calib-table tbody td:first-child {
-  font-weight: 700;
   text-align: center;
-  background: var(--cinza-50);
   width: 42px;
+  font-weight: 600;
+  color: var(--cinza);
+  background: transparent;
+  font-variant-numeric: tabular-nums;
 }
 
 .calib-input {
-  font-family: var(--fonte);
-  font-size: 13.5px;
-  padding: 8px 9px;
-  border: 1.5px solid var(--cinza-300);
-  border-radius: var(--raio-sm);
-  background: var(--branco);
   width: 100%;
+  padding: var(--u) 0;
+  font-family: var(--fonte);
+  font-size: 15px;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--texto);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .calib-input:focus {
-  border-color: var(--if-verde);
+  border-color: var(--verde);
   outline: none;
+  background: transparent;
+  border-bottom-color: var(--verde);
+  box-shadow: 0 1px 0 0 var(--verde);
 }
 
 .calib-grafico-wrap {
-  background: var(--cinza-50);
-  border: 1px solid var(--cinza-200);
-  border-radius: var(--raio-md);
-  padding: var(--espaco-md);
+  padding: calc(var(--u) * 2);
   height: 100%;
+  background: var(--branco);
+  border: 1px solid var(--filete);
+  border-radius: 0;
 }
 
 .calib-svg {
@@ -91,79 +102,82 @@ table.calib-table tbody td:first-child {
 
 .calib-svg__tick {
   font-size: 9px;
-  fill: var(--cinza-500);
+  fill: var(--cinza-claro);
   font-family: var(--fonte);
 }
 
 .calib-svg__eixo-titulo {
   font-size: 10px;
-  font-weight: 700;
-  fill: var(--cinza-700);
-  font-family: var(--fonte);
+  font-weight: 600;
+  fill: var(--cinza);
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  font-family: var(--fonte);
 }
 
 .calib-ponto {
-  fill: var(--if-verde);
   stroke: var(--branco);
   stroke-width: 1.5;
+  fill: var(--verde);
 }
 
 .calib-coef-row {
   display: flex;
   align-items: center;
-  gap: var(--espaco-sm);
+  gap: var(--u);
   flex-wrap: wrap;
-  margin-top: var(--espaco-md);
+  margin-top: calc(var(--u) * 2);
 }
 
 .calib-coef {
   flex: 1;
   min-width: 72px;
-  background: var(--if-verde-claro);
-  border: 1px solid #cdeacf;
-  border-radius: var(--raio-sm);
   padding: 8px;
   text-align: center;
+  background: var(--branco);
+  border: 1px solid var(--filete);
+  border-radius: 0;
 }
 
 .calib-coef span {
   display: block;
   font-size: 10.5px;
-  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--if-verde-escuro);
   margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--cinza);
 }
 
 .calib-coef strong {
   font-size: 16px;
-  color: var(--if-preto);
+  color: var(--texto);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .calib-calculadora {
-  margin-top: var(--espaco-lg);
-  background: var(--if-verde-claro);
-  border: 1px solid var(--if-verde);
-  border-radius: var(--raio-md);
-  padding: var(--espaco-md);
+  margin-top: calc(var(--u) * 3);
+  padding: calc(var(--u) * 2);
+  background: transparent;
+  border: 0;
+  border-left: 2px solid var(--verde);
+  border-radius: 0;
 }
 
 .calib-calculadora__titulo {
   font-size: 12.5px;
-  font-weight: 700;
-  color: var(--if-verde-escuro);
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: var(--espaco-sm);
+  margin-bottom: var(--u);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--verde-escuro);
 }
 
 .calib-calculadora__linha {
   display: flex;
   align-items: flex-end;
-  gap: var(--espaco-md);
+  gap: calc(var(--u) * 2);
   flex-wrap: wrap;
 }
 
@@ -177,8 +191,8 @@ table.calib-table tbody td:first-child {
 
 .calib-calculadora__campo label {
   font-size: 11.5px;
-  font-weight: 700;
-  color: var(--cinza-900);
+  font-weight: 600;
+  color: var(--cinza);
 }
 
 .calib-calculadora__resultado {
@@ -189,17 +203,19 @@ table.calib-table tbody td:first-child {
 .calib-calculadora__resultado span {
   display: block;
   font-size: 11.5px;
-  font-weight: 700;
-  color: var(--cinza-900);
   margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--cinza);
 }
 
 .calib-calculadora__valor {
   font-size: 18px;
-  font-weight: 800;
-  color: var(--if-verde-escuro);
-  background: var(--branco);
-  border: 1.5px solid var(--if-verde);
-  border-radius: var(--raio-sm);
+  color: var(--verde-escuro);
   padding: 9px 11px;
+  font-weight: 600;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--verde);
+  border-radius: 0;
+  font-variant-numeric: tabular-nums;
 }

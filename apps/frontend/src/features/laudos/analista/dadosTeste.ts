@@ -1,10 +1,6 @@
 import { hojeIso } from './statusAmostra';
 import type { Identificacao } from './tipos';
 
-/**
- * Dados fictícios para agilizar testes manuais do fluxo até o laudo.
- * Usado apenas em desenvolvimento (import.meta.env.DEV) — não aparece no build de produção.
- */
 export function gerarIdentificacaoTeste(): Identificacao {
   const sufixo = Date.now().toString().slice(-6);
   return {

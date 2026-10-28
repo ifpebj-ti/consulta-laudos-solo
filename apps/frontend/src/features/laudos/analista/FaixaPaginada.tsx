@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import './FaixaPaginada.css';
 
-/** No modo expandido cada página é uma grade de até 3x3 cartões. */
 const CARTOES_POR_PAGINA_EXPANDIDA = 9;
 
 interface FaixaPaginadaProps {
-  /** Um item por cartão. */
   itens: ReactNode[];
-  /** Muda quando a lista é refiltrada/reordenada, para voltar à primeira página. */
   chaveReinicio?: string;
-  /** Expandida: grade de até 3x3 por página. Retraída: uma linha com rolagem horizontal. */
   expandida?: boolean;
 }
 
@@ -21,11 +17,6 @@ function prefereMenosMovimento() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
-/**
- * Rolagem animada própria (em vez de scrollTo smooth), para a troca de página
- * ter sempre a mesma duração e curva. O snap fica desligado durante a animação
- * para não "puxar" o trilho no meio do caminho.
- */
 function animarRolagem(trilho: HTMLDivElement, destino: number, aoTerminar: () => void) {
   const inicio = trilho.scrollLeft;
   const distancia = destino - inicio;
@@ -54,7 +45,6 @@ function animarRolagem(trilho: HTMLDivElement, destino: number, aoTerminar: () =
   };
 }
 
-/** Quantos cartões cabem na largura visível e quanto rolar para avançar uma página. */
 function medirPaginacao(trilho: HTMLDivElement) {
   const primeiro = trilho.firstElementChild as HTMLElement | null;
   if (!primeiro) return { porPagina: 1, passo: trilho.clientWidth };
@@ -107,11 +97,9 @@ export function FaixaPaginada({ itens, chaveReinicio, expandida = false }: Faixa
   const trilhoRef = useRef<HTMLDivElement>(null);
   const cancelarAnimacaoRef = useRef<() => void>(() => undefined);
 
-  // Modo retraído: página derivada da posição de rolagem
   const [paginaFaixa, setPaginaFaixa] = useState(1);
   const [totalPaginasFaixa, setTotalPaginasFaixa] = useState(1);
 
-  // Modo expandido: página da grade 3x3
   const [paginaGrade, setPaginaGrade] = useState(1);
   const [direcaoGrade, setDirecaoGrade] = useState<'proxima' | 'anterior' | null>(null);
   const totalPaginasGrade = Math.max(1, Math.ceil(itens.length / CARTOES_POR_PAGINA_EXPANDIDA));
@@ -143,7 +131,6 @@ export function FaixaPaginada({ itens, chaveReinicio, expandida = false }: Faixa
     atualizarFaixa();
   }, [chaveReinicio, atualizarFaixa]);
 
-  // Se a lista encolher, não deixa a grade presa numa página que não existe mais
   useEffect(() => {
     setPaginaGrade((atual) => Math.min(atual, totalPaginasGrade));
   }, [totalPaginasGrade]);
@@ -171,7 +158,6 @@ export function FaixaPaginada({ itens, chaveReinicio, expandida = false }: Faixa
     return (
       <div className="faixa-paginada">
         <div className="faixa-paginada__janela">
-          {/* A key nova a cada página reinicia a animação de entrada */}
           <div
             key={paginaGrade}
             className={`faixa-paginada__grade ${direcaoGrade ? `faixa-paginada__grade--${direcaoGrade}` : ''}`.trim()}

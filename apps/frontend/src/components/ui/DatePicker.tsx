@@ -19,7 +19,6 @@ const MESES = [
 const DIAS_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const DIAS_SEMANA_EXTENSO = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
-/** Datas trafegam como AAAA-MM-DD (mesmo formato do input date nativo). */
 function paraIso(data: Date): string {
   return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
 }
@@ -36,7 +35,6 @@ function formatarExibicao(valor: string): string {
   return `${String(data.getDate()).padStart(2, '0')}/${String(data.getMonth() + 1).padStart(2, '0')}/${data.getFullYear()}`;
 }
 
-/** 6 semanas fixas (42 dias) começando no domingo anterior ao dia 1, para o calendário não "pular" de altura. */
 function diasDoMes(ano: number, mes: number): Date[] {
   const primeiro = new Date(ano, mes, 1);
   const inicio = new Date(ano, mes, 1 - primeiro.getDay());
@@ -60,7 +58,6 @@ interface Posicao {
 const LARGURA_CALENDARIO = 296;
 const ALTURA_CALENDARIO = 352;
 
-/** Calendário próprio no lugar do pop-up nativo do input date. */
 export function DatePicker({
   id,
   value,
@@ -75,7 +72,6 @@ export function DatePicker({
   const gradeRef = useRef<HTMLDivElement>(null);
   const [aberto, setAberto] = useState(false);
   const [posicao, setPosicao] = useState<Posicao | null>(null);
-  // Dia com foco do teclado; também define o mês exibido
   const [foco, setFoco] = useState<Date>(() => deIso(value) ?? new Date());
 
   const hoje = paraIso(new Date());
@@ -96,7 +92,6 @@ export function DatePicker({
   useLayoutEffect(() => {
     if (!aberto || !botaoRef.current) return;
     const ret = botaoRef.current.getBoundingClientRect();
-    // Abre para cima quando não couber abaixo do campo
     const cabeAbaixo = ret.bottom + 6 + ALTURA_CALENDARIO <= window.innerHeight;
     const top = cabeAbaixo ? ret.bottom + 6 : Math.max(8, ret.top - 6 - ALTURA_CALENDARIO);
     const left = Math.min(ret.left, window.innerWidth - LARGURA_CALENDARIO - 8);
@@ -125,7 +120,6 @@ export function DatePicker({
     };
   }, [aberto, fechar]);
 
-  // Mantém o foco do teclado no dia ativo enquanto navega
   useEffect(() => {
     if (!aberto) return;
     const alvo = gradeRef.current?.querySelector<HTMLButtonElement>(`[data-dia="${paraIso(foco)}"]`);

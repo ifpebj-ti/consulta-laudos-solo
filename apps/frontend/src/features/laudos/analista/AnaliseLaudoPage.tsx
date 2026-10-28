@@ -18,7 +18,6 @@ type StatusSalvamento = 'salvo' | 'salvando' | 'erro' | 'conflito' | 'idle';
 
 const PROTOCOLO_PADRAO = 'LAB-2026-0142';
 
-/** Status devolvido pela API, em texto legível; um status desconhecido aparece como veio. */
 const ROTULOS_STATUS_ANALISE: Record<string, string> = {
   EM_ANALISE: 'Em análise',
   AGUARDANDO_HOMOLOGACAO: 'Aguardando homologação',
@@ -29,7 +28,6 @@ export function AnaliseLaudoPage() {
   const token = session?.token;
   const navigate = useNavigate();
   const { amostraAtual, statusAmostraAtual, atualizarAmostraAtual, concluirAmostraAtual } = useAnalista();
-  // Laudo já homologado (aberto pelo Histórico): mostra direto o laudo, sem voltar para edição
   const laudoConcluido = statusAmostraAtual === 'concluido';
 
   const protocoloAlvo = amostraAtual?.identificacao?.protocolo || PROTOCOLO_PADRAO;
@@ -54,7 +52,6 @@ export function AnaliseLaudoPage() {
   const timerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ultimoDadosSalvosRef = useRef<string>('');
 
-  // 1. Carregamento inicial da bancada via GET
   const carregarDados = useCallback(async () => {
     if (!token) return;
     setCarregando(true);
@@ -107,7 +104,6 @@ export function AnaliseLaudoPage() {
             naohBeckerVazio: bancada.granulometria.naohBeckerVazio ?? DADOS_ANALISE_VAZIOS.granulometria.naohBeckerVazio,
           },
           calibracao:
-            // A API devolve a/b/r2 como null enquanto a curva não foi aplicada
             bancada.calibracao?.a != null && bancada.calibracao?.b != null && bancada.calibracao?.r2 != null
               ? {
                   a: bancada.calibracao.a,
@@ -133,9 +129,6 @@ export function AnaliseLaudoPage() {
     carregarDados();
   }, [carregarDados]);
 
-  // 2. Auto-Save com Debounce (~1500ms)
-  // Guarda os dados ainda não enviados para que um rascunho pendente nunca se perca
-  // (ex.: o timer é cancelado ao clicar em "Salvar e Processar").
   const pendenteRef = useRef<DadosAnalise | null>(null);
 
   const salvarRascunhoAgora = useCallback(
@@ -187,7 +180,6 @@ export function AnaliseLaudoPage() {
       if (!token) return;
       cancelarAutoSave();
 
-      // Voltou exatamente ao que já está salvo: nada a enviar
       if (JSON.stringify(proximo) === ultimoDadosSalvosRef.current) {
         pendenteRef.current = null;
         setStatusSalvamento((atual) => (atual === 'salvando' ? 'salvo' : atual));
@@ -204,14 +196,12 @@ export function AnaliseLaudoPage() {
     [token, salvarRascunhoAgora],
   );
 
-  /** Se havia um rascunho esperando o debounce, envia agora. */
   function enviarRascunhoPendente() {
     const pendente = pendenteRef.current;
     if (pendente) void salvarRascunhoAgora(pendente);
   }
 
   function handleDadosChange(proximo: DadosAnalise) {
-    // Tira o destaque de erro assim que o campo pendente é resolvido
     setErrosCampos((atual) => {
       if (!atual.tfsa && !atual.calibracao) return atual;
       const restante = { ...atual };
@@ -224,16 +214,13 @@ export function AnaliseLaudoPage() {
     dispararAutoSave(proximo);
   }
 
-  // 3. Processamento Oficial de Cálculos Agronômicos
   async function handleProcessar() {
     if (!token) return;
 
-    // Segura o auto-save durante o processamento (os dois mexem na versão da análise)
     cancelarAutoSave();
 
     setErrosProcessamento(null);
 
-    // Validação no front, campo a campo, com as mesmas regras do backend
     const pendentes: ErrosCamposRegistro = {};
     if (!dados.calibracao || !dados.calibracao.a) {
       pendentes.calibracao = 'Aplique a curva de calibração de fósforo antes de processar.';
@@ -275,7 +262,6 @@ export function AnaliseLaudoPage() {
         if (e.status === 409) {
           setStatusSalvamento('conflito');
         } else if (e.erros && e.erros.length > 0) {
-          // Erros que o backend associa a um campo viram destaque no próprio campo
           const doBackend: ErrosCamposRegistro = {};
           const gerais = e.erros.filter((msg) => {
             if (/tfsa/i.test(msg)) doBackend.tfsa = 'Informe o peso da amostra (TFSA) para processar.';
@@ -292,7 +278,6 @@ export function AnaliseLaudoPage() {
       } else {
         setErrosProcessamento(['Ocorreu um erro inesperado ao processar os cálculos agronômicos.']);
       }
-      // O processamento falhou, então o que foi digitado ainda não foi gravado
       if (!(e instanceof ApiError && e.status === 409)) enviarRascunhoPendente();
     } finally {
       setProcessando(false);
@@ -304,7 +289,6 @@ export function AnaliseLaudoPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Ficha da amostra no cabeçalho: só entram os dados que de fato foram informados
   const identificacao = dados.identificacao;
   const solicitante = amostraInfo?.solicitante || identificacao.solicitante;
   const detalhesAmostra = [
@@ -315,14 +299,12 @@ export function AnaliseLaudoPage() {
     { rotulo: 'Cultivo', valor: identificacao.cultivo },
     { rotulo: 'Tipo de análise', valor: identificacao.tipoAnalise ? ROTULOS_TIPO_ANALISE[identificacao.tipoAnalise] : '' },
     { rotulo: 'Recebimento', valor: identificacao.dataRecebimento ? formatarData(identificacao.dataRecebimento) : '' },
-    // Sem a data de recebimento, vale a data em que a amostra foi registrada (é o que a API guarda)
     {
       rotulo: 'Registrada em',
       valor: !identificacao.dataRecebimento && amostraInfo?.dataColeta ? formatarData(amostraInfo.dataColeta) : '',
     },
     { rotulo: 'Prazo do laudo', valor: identificacao.prazo ? formatarData(identificacao.prazo) : '' },
   ].filter((detalhe) => detalhe.valor);
-  // A API só guarda solicitante e propriedade; o restante do cadastro vive na sessão aberta pelo Painel
   const semCadastroNaSessao = !amostraAtual;
 
   return (
@@ -380,7 +362,7 @@ export function AnaliseLaudoPage() {
         </div>
 
         {carregando ? (
-          <div style={{ padding: 'var(--espaco-xl)', textAlign: 'center', color: 'var(--cinza-600)' }}>
+          <div style={{ padding: 'calc(var(--u) * 5)', textAlign: 'center', color: 'var(--cinza)' }}>
             Carregando dados da amostra...
           </div>
         ) : aba === 'registro' ? (

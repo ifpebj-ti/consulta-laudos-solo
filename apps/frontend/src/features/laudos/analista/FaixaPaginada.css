@@ -1,21 +1,20 @@
 .faixa-paginada__trilho {
   display: flex;
-  gap: var(--espaco-md);
+  gap: calc(var(--u) * 2);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scroll-padding-left: 0;
-  padding-bottom: var(--espaco-sm);
+  padding-bottom: var(--u);
   scrollbar-width: thin;
 }
 
-/* Cada página mostra um número inteiro de cartões, sem cartão cortado na borda */
 .faixa-paginada__trilho {
   --cartoes-por-pagina: 4;
 }
 
 .faixa-paginada__trilho > * {
   flex: 0 0
-    calc((100% - (var(--cartoes-por-pagina) - 1) * var(--espaco-md)) / var(--cartoes-por-pagina));
+    calc((100% - (var(--cartoes-por-pagina) - 1) * calc(var(--u) * 2)) / var(--cartoes-por-pagina));
   scroll-snap-align: start;
 }
 
@@ -41,7 +40,6 @@
   scroll-snap-type: none;
 }
 
-/* Troca de página da grade: a página nova entra deslizando no sentido da navegação */
 .faixa-paginada__janela {
   overflow: hidden;
 }
@@ -83,11 +81,10 @@
   }
 }
 
-/* Modo expandido: grade de até 3x3 cartões por página */
 .faixa-paginada__grade {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--espaco-md);
+  gap: calc(var(--u) * 2);
 }
 
 @media (max-width: 760px) {
@@ -106,26 +103,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--espaco-md);
-  margin-top: var(--espaco-sm);
+  gap: calc(var(--u) * 2);
+  margin-top: var(--u);
 }
 
 .faixa-paginada__seta {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1.5px solid var(--cinza-300);
-  background: var(--branco);
-  color: var(--cinza-900);
+  color: var(--texto);
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
   transition: border-color 0.12s ease, color 0.12s ease;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--filete);
+  border-radius: 0;
+  background: transparent;
 }
 
 .faixa-paginada__seta:hover:not(:disabled) {
-  border-color: var(--if-verde);
-  color: var(--if-verde-escuro);
+  color: var(--verde-escuro);
+  border-color: var(--texto);
 }
 
 .faixa-paginada__seta:disabled {
@@ -134,9 +131,10 @@
 }
 
 .faixa-paginada__indicador {
-  font-size: 12.5px;
   font-weight: 600;
-  color: var(--cinza-700);
   min-width: 110px;
   text-align: center;
+  font-size: 13px;
+  color: var(--cinza);
+  font-variant-numeric: tabular-nums;
 }

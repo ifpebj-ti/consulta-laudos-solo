@@ -1,6 +1,5 @@
 import './FormField.css';
 
-/** Mensagem de validação abaixo de um campo (substitui o "Preencha este campo" nativo). */
 export function MensagemErroCampo({ id, mensagem }: { id: string; mensagem?: string | null }) {
   if (!mensagem) return null;
   return (

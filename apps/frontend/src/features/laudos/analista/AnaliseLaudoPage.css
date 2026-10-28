@@ -1,42 +1,38 @@
 .subnav {
   display: flex;
-  gap: var(--espaco-sm);
-  margin-bottom: var(--espaco-lg);
   flex-wrap: wrap;
+  gap: calc(var(--u) * 4);
+  margin-bottom: calc(var(--u) * 5);
 }
 
 .subnav__btn {
-  border: 1.5px solid var(--cinza-300);
-  background: var(--branco);
-  color: var(--cinza-900);
-  font-size: 13.5px;
-  font-weight: 600;
-  padding: 10px 18px;
-  border-radius: var(--raio-md);
   display: flex;
   align-items: center;
   gap: 8px;
   transition: all 0.15s ease;
+  padding: 4px 0;
+  font-family: var(--fonte);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--texto);
+  border-radius: 0;
 }
 
 .subnav__btn:hover {
-  border-color: var(--if-verde);
+  color: var(--verde-escuro);
+  border-color: var(--verde);
 }
 
-.subnav__btn.is-active {
-  background: var(--if-verde);
-  border-color: var(--if-verde);
-  color: var(--branco);
-}
-
-/* Cabeçalho: título da página + ficha da amostra em um único bloco */
 .analise-cabecalho {
-  background: var(--branco);
-  border: 1px solid var(--cinza-300);
-  border-top: 3px solid var(--if-verde);
-  border-radius: var(--raio-md);
-  margin-bottom: var(--espaco-lg);
-  overflow: hidden;
+  margin-bottom: calc(var(--u) * 4);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--texto);
+  border-radius: 0;
+  overflow: visible;
 }
 
 .analise-cabecalho__topo {
@@ -44,61 +40,67 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--espaco-sm) var(--espaco-md);
-  padding: 10px 20px;
-  background: var(--cinza-50);
-  border-bottom: 1px solid var(--cinza-200);
+  gap: var(--u) calc(var(--u) * 2);
+  padding: calc(var(--u) * 3) 0;
+  background: transparent;
+  border-bottom: 1px solid var(--filete);
 }
 
 .analise-cabecalho__topo .page-header__eyebrow {
   font-size: 11px;
-  margin-bottom: 0;
+  margin-bottom: var(--u);
 }
 
 .analise-cabecalho__topo h1 {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--cinza-900);
+  font-family: var(--fonte);
+  font-size: clamp(26px, 2.6vw, 36px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--texto);
 }
 
 .analise-amostra {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) 2.2fr;
+  border-bottom: 1px solid var(--filete);
 }
 
-/* Para quem é a análise: o que o analista confere ao retomar o preenchimento */
 .analise-amostra__quem {
   display: flex;
   flex-direction: column;
-  padding: 16px 20px;
-  border-left: 4px solid var(--if-verde);
-  background: var(--if-verde-claro);
+  position: relative;
+  padding: calc(var(--u) * 3);
+  background: var(--branco);
+  border-left: 4px solid var(--verde);
+  box-shadow: -10px 0 0 -6px rgba(47, 158, 65, 0.4), -18px 0 0 -6px rgba(47, 158, 65, 0.16);
 }
 
 .analise-amostra__rotulo,
 .analise-amostra__detalhes dt {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
   text-transform: uppercase;
-  color: var(--cinza-700);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--cinza);
 }
 
 .analise-amostra__solicitante {
-  font-size: 24px;
-  font-weight: 800;
   line-height: 1.2;
-  color: var(--if-preto);
-  margin: 2px 0 12px;
   overflow-wrap: anywhere;
+  margin: var(--u) 0 calc(var(--u) * 2);
+  font-size: clamp(26px, 2.4vw, 34px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--texto);
 }
 
 .analise-amostra__protocolo {
-  font-size: 17px;
-  font-weight: 700;
   letter-spacing: 0.3px;
-  color: var(--if-verde-escuro);
   margin-top: 2px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--verde-escuro);
+  font-variant-numeric: tabular-nums;
 }
 
 .analise-amostra__dados {
@@ -106,31 +108,36 @@
   flex-direction: column;
   justify-content: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: calc(var(--u) * 3);
 }
 
 .analise-amostra__detalhes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 14px var(--espaco-lg);
   margin: 0;
+  gap: calc(var(--u) * 2) calc(var(--u) * 4);
 }
 
 .analise-amostra__aviso {
-  font-size: 12.5px;
-  color: var(--cinza-700);
+  font-size: 13px;
+  color: var(--marrom);
 }
 
 .analise-amostra__detalhes dd {
   margin: 2px 0 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--cinza-900);
   overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--texto);
 }
 
 @media (max-width: 800px) {
   .analise-amostra {
     grid-template-columns: 1fr;
   }
+}
+
+.subnav__btn:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 4px;
 }

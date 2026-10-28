@@ -1,8 +1,10 @@
 .page-container {
-  max-width: 1520px;
   margin: 0 auto;
-  padding: var(--espaco-lg);
   width: 100%;
+  max-width: 1280px;
+  padding: calc(var(--u) * 7) calc(var(--u) * 8) calc(var(--u) * 6);
+  counter-reset: modulo;
+  animation: painel-entrar 0.5s cubic-bezier(0.12, 0.9, 0.2, 1) both;
 }
 
 .page-header {
@@ -10,53 +12,61 @@
   align-items: flex-end;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--espaco-md);
-  margin-bottom: var(--espaco-lg);
+  gap: calc(var(--u) * 2);
+  margin-bottom: calc(var(--u) * 6);
 }
 
 .page-header__eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--if-verde-escuro);
-  margin-bottom: 4px;
   display: block;
+  margin-bottom: calc(var(--u) * 2);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--cinza);
 }
 
 .page-header h1 {
-  font-size: 24px;
-  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--fonte);
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: var(--texto);
 }
 
 .page-header p {
-  color: var(--cinza-700);
+  color: var(--cinza);
   font-size: 13.5px;
   margin-top: 4px;
 }
 
-.section-heading {
-  font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--cinza-700);
-  margin: var(--espaco-lg) 0 var(--espaco-sm);
-}
-
-.alerta-erro {
-  background: var(--if-vermelho-claro);
-  border: 1px solid #f5c6c8;
-  color: var(--if-vermelho);
-  font-size: 12.5px;
-  font-weight: 600;
-  border-radius: var(--raio-sm);
-  padding: 10px 12px;
-  margin-top: var(--espaco-md);
-}
-
-@media (max-width: 480px) {
+@media (max-width: 900px) {
   .page-container {
-    padding: var(--espaco-md);
+    padding: calc(var(--u) * 4) calc(var(--u) * 3);
+  }
+  .page-header {
+    margin-bottom: calc(var(--u) * 4);
+  }
+}
+
+@media (max-width: 560px) {
+  .page-header h1 {
+    font-size: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-container {
+    animation: none;
+  }
+}
+
+@keyframes painel-entrar {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
   }
 }
