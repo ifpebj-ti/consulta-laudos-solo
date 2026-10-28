@@ -61,7 +61,7 @@ export function LoginAnalistaPage() {
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
         <span>
-          Restrito a contas <strong>@ifpe.edu.br</strong> de professores e técnicos do Laboratório de Solos.
+      Restrito a contas <strong>@ifpe.edu.br</strong> e <strong>@discente.ifpe.edu.br</strong> de professores e técnicos do Laboratório de Solos.
         </span>
       </div>
 

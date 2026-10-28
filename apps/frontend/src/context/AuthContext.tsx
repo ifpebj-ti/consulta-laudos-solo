@@ -1,5 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
+import { registrarCallbackSessaoExpirada } from '@/services/apiClient';
 import type { LaudoDetalhe } from '@/types/laudo';
 import type { Role } from '@/types/auth';
 
@@ -35,6 +37,24 @@ function lerSessaoArmazenada(): AuthSession | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(lerSessaoArmazenada);
+  const navigate = useNavigate();
+
+  const sair = useCallback(() => {
+    sessionStorage.removeItem(STORAGE_KEY);
+    setSession(null);
+  }, []);
+
+  // Registra o interceptor de 401 no apiClient assim que o provider monta.
+  // Quando qualquer requisição retornar 401 (token expirado), limpa a sessão
+  // e redireciona o usuário para a tela de login correspondente ao seu role.
+  useEffect(() => {
+    registrarCallbackSessaoExpirada(() => {
+      const sessaoAtual = lerSessaoArmazenada();
+      const destino = sessaoAtual?.role === 'CLIENTE' ? '/' : '/analista/login';
+      sair();
+      navigate(destino, { replace: true });
+    });
+  }, [sair, navigate]);
 
   const salvarSessao = useCallback((proxima: AuthSession) => {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(proxima));
@@ -67,11 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [salvarSessao],
   );
-
-  const sair = useCallback(() => {
-    sessionStorage.removeItem(STORAGE_KEY);
-    setSession(null);
-  }, []);
 
   const value = useMemo(
     () => ({ session, entrarComGoogle, entrarComProtocolo, sair }),

@@ -14,9 +14,7 @@ import { formatarData } from './statusAmostra';
 import './AnaliseLaudoPage.css';
 
 type Aba = 'registro' | 'homologacao';
-type StatusSalvamento = 'salvo' | 'salvando' | 'erro' | 'conflito' | 'idle';
-
-const PROTOCOLO_PADRAO = 'LAB-2026-0142';
+type StatusSalvamento = 'salvo' | 'salvando' | 'pendente' | 'erro' | 'conflito' | 'idle';
 
 const ROTULOS_STATUS_ANALISE: Record<string, string> = {
   EM_ANALISE: 'Em análise',
@@ -30,7 +28,15 @@ export function AnaliseLaudoPage() {
   const { amostraAtual, statusAmostraAtual, atualizarAmostraAtual, concluirAmostraAtual } = useAnalista();
   const laudoConcluido = statusAmostraAtual === 'concluido';
 
-  const protocoloAlvo = amostraAtual?.identificacao?.protocolo || PROTOCOLO_PADRAO;
+  // Redireciona para o dashboard se nenhuma amostra estiver selecionada,
+  // evitando carregar dados de um protocolo arbitrário como fallback silencioso.
+  const protocoloAlvo = amostraAtual?.identificacao?.protocolo ?? null;
+
+  useEffect(() => {
+    if (!protocoloAlvo) {
+      navigate('/analista', { replace: true });
+    }
+  }, [protocoloAlvo, navigate]);
 
   const [aba, setAba] = useState<Aba>(laudoConcluido ? 'homologacao' : 'registro');
   const [dados, setDados] = useState<DadosAnalise>(amostraAtual ?? DADOS_ANALISE_VAZIOS);
@@ -53,7 +59,7 @@ export function AnaliseLaudoPage() {
   const ultimoDadosSalvosRef = useRef<string>('');
 
   const carregarDados = useCallback(async () => {
-    if (!token) return;
+    if (!token || !protocoloAlvo) return;
     setCarregando(true);
     setStatusSalvamento('idle');
     setErrosProcessamento(null);
@@ -182,12 +188,12 @@ export function AnaliseLaudoPage() {
 
       if (JSON.stringify(proximo) === ultimoDadosSalvosRef.current) {
         pendenteRef.current = null;
-        setStatusSalvamento((atual) => (atual === 'salvando' ? 'salvo' : atual));
+        setStatusSalvamento((atual) => (atual === 'salvando' || atual === 'pendente' ? 'salvo' : atual));
         return;
       }
 
       pendenteRef.current = proximo;
-      setStatusSalvamento('salvando');
+      setStatusSalvamento('pendente');
       timerDebounceRef.current = setTimeout(() => {
         timerDebounceRef.current = null;
         void salvarRascunhoAgora(proximo);

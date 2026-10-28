@@ -27,6 +27,16 @@ interface RequestOptions {
   token?: string;
 }
 
+/**
+ * Callback para tratamento global de sessão expirada (401).
+ * Registrado pelo AuthProvider para limpar sessão e redirecionar para login.
+ */
+let onUnauthorized: (() => void) | null = null;
+
+export function registrarCallbackSessaoExpirada(callback: () => void): void {
+  onUnauthorized = callback;
+}
+
 async function request<T>(path: string, { method = 'GET', body, token }: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -39,6 +49,12 @@ async function request<T>(path: string, { method = 'GET', body, token }: Request
   });
 
   if (!response.ok) {
+    // Interceptor 401: sessão expirada — limpa a sessão e redireciona para login
+    if (response.status === 401 && onUnauthorized) {
+      onUnauthorized();
+      throw new ApiError(401, 'Sessão expirada. Por favor, faça login novamente.', 'SESSION_EXPIRED');
+    }
+
     const contentType = response.headers.get('content-type') ?? '';
     if (contentType.includes('application/json')) {
       const payload = (await response.json()) as { detail?: ApiErrorBody | ErroValidacaoFastApi[] } | ApiErrorBody;
@@ -64,6 +80,11 @@ async function requestBlob(path: string, token: string): Promise<Blob> {
   });
 
   if (!response.ok) {
+    if (response.status === 401 && onUnauthorized) {
+      onUnauthorized();
+      throw new ApiError(401, 'Sessão expirada. Por favor, faça login novamente.', 'SESSION_EXPIRED');
+    }
+
     const payload = (await response.json().catch(() => null)) as { detail?: ApiErrorBody } | null;
     const mensagem = payload?.detail?.mensagem ?? 'Não foi possível baixar o arquivo.';
     throw new ApiError(response.status, mensagem, payload?.detail?.codigoErro);

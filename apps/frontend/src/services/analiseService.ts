@@ -60,8 +60,8 @@ export interface ProcessarAnaliseApiResponse {
     calculosOficiais: {
       valoresLiquidos: Record<string, number>;
       conversoes: Record<string, number>;
-      complexoSortivo: Record<string, any>;
-      granulometria: Record<string, any>;
+      complexoSortivo: Record<string, number | null>;
+      granulometria: Record<string, number | string | null>;
       fosforo: Record<string, number>;
     };
     processadoEm: string;
@@ -96,6 +96,17 @@ export interface CriarAmostraApiResponse {
     status: string;
     versao: number;
     criadoEm: string;
+  };
+}
+
+export interface HomologarApiResponse {
+  sucesso: boolean;
+  mensagem: string;
+  dados: {
+    protocolo: string;
+    status: string;
+    homologadoEm: string;
+    homologadoPor?: string;
   };
 }
 
@@ -140,6 +151,16 @@ export const analiseService = {
       {
         method: 'POST',
         body: payload,
+        token,
+      },
+    );
+  },
+
+  async homologarAnalise(protocolo: string, token: string): Promise<HomologarApiResponse> {
+    return apiClient.request<HomologarApiResponse>(
+      `/laudos/${encodeURIComponent(protocolo)}/analise/homologar`,
+      {
+        method: 'POST',
         token,
       },
     );
