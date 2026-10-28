@@ -42,6 +42,7 @@ export function AnalistaProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(CHAVE_PERSISTENCIA_DEV, JSON.stringify(amostras));
     } catch {
+      // Ignora erros de quota/acesso ao localStorage em dev
     }
   }, [amostras]);
 

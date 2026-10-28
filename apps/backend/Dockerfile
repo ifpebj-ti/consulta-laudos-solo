@@ -24,9 +24,10 @@ WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
-COPY . .
-
+# Cria o usuário antes de copiar os arquivos para que o chown seja aplicado corretamente
 RUN useradd --create-home --shell /bin/bash appuser
+
+COPY --chown=appuser:appuser . .
 
 USER appuser
 
