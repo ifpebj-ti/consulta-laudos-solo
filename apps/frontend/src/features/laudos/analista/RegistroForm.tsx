@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { FormField } from '@/components/ui/FormField';
+import { MensagemErroCampo } from '@/components/ui/MensagemErroCampo';
 import { Button } from '@/components/ui/Button';
 import { DecimalInput } from '@/components/ui/DecimalInput';
 import { CalibracaoSecao } from './CalibracaoSecao';
@@ -12,6 +14,19 @@ interface CampoComBrancoInputProps {
   unidade: string;
   valor: CampoComBranco;
   onChange: (proximo: CampoComBranco) => void;
+}
+
+/** Resultado calculado em destaque, separado dos campos de entrada. */
+function ResultadoCalculado({ rotulo, valor, unidade }: { rotulo: string; valor: string; unidade: string }) {
+  return (
+    <div className="form-field__liquido" aria-live="polite">
+      <span className="form-field__liquido-rotulo">{rotulo}</span>
+      <div className="form-field__liquido-valor">
+        <strong>{valor}</strong>
+        <span>{unidade}</span>
+      </div>
+    </div>
+  );
 }
 
 function CampoComBrancoInput({ idPrefix, legenda, unidade, valor, onChange }: CampoComBrancoInputProps) {
@@ -31,12 +46,21 @@ function CampoComBrancoInput({ idPrefix, legenda, unidade, valor, onChange }: Ca
           <DecimalInput id={`${idPrefix}-branco`} value={valor.branco} onChange={(branco) => onChange({ ...valor, branco })} />
         </div>
       </div>
-      <p className="form-field__liquido">
-        Valor líquido: <strong>{liquido.toFixed(2)}</strong> {unidade}
-      </p>
+      <ResultadoCalculado rotulo="Valor líquido" valor={liquido.toFixed(2)} unidade={unidade} />
     </div>
   );
 }
+
+/** Campos exigidos para processar os cálculos (mesmas regras do backend). */
+export type CampoObrigatorioRegistro = 'tfsa' | 'calibracao';
+export type ErrosCamposRegistro = Partial<Record<CampoObrigatorioRegistro, string>>;
+
+/** Elemento que recebe o destaque/rolagem para cada campo com erro, na ordem em que aparecem na página. */
+const ALVO_POR_CAMPO: Record<CampoObrigatorioRegistro, string> = {
+  calibracao: 'secao-calibracao',
+  tfsa: 'bloco-tfsa',
+};
+const ORDEM_CAMPOS: CampoObrigatorioRegistro[] = ['calibracao', 'tfsa'];
 
 export interface RegistroFormProps {
   dados: DadosAnalise;
@@ -46,6 +70,9 @@ export interface RegistroFormProps {
   statusSalvamento?: 'salvo' | 'salvando' | 'erro' | 'conflito' | 'idle';
   horarioSalvo?: string | null;
   errosProcessamento?: string[] | null;
+  /** Erros por campo; cada nova tentativa (contador) refaz a rolagem e a animação. */
+  errosCampos?: ErrosCamposRegistro;
+  tentativaValidacao?: number;
   onRecarregar?: () => void;
 }
 
@@ -57,8 +84,52 @@ export function RegistroForm({
   statusSalvamento = 'idle',
   horarioSalvo = null,
   errosProcessamento = null,
+  errosCampos = {},
+  tentativaValidacao = 0,
   onRecarregar,
 }: RegistroFormProps) {
+  const errosCamposRef = useRef(errosCampos);
+  errosCamposRef.current = errosCampos;
+
+  // A cada tentativa com erro: rola suavemente até o primeiro campo pendente e faz todos "chamarem atenção"
+  useEffect(() => {
+    if (tentativaValidacao === 0) return;
+    const pendentes = ORDEM_CAMPOS.filter((campo) => errosCamposRef.current[campo]);
+    if (pendentes.length === 0) return;
+
+    const alvos = pendentes
+      .map((campo) => document.getElementById(ALVO_POR_CAMPO[campo]))
+      .filter((el): el is HTMLElement => el !== null);
+    const primeiro = alvos[0];
+    if (!primeiro) return;
+
+    const reduzirMovimento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    primeiro.scrollIntoView({ behavior: reduzirMovimento ? 'auto' : 'smooth', block: 'center' });
+
+    // Reinicia a animação mesmo se a classe já estiver aplicada de uma tentativa anterior
+    alvos.forEach((el) => {
+      el.classList.remove('campo-alerta');
+      void el.offsetWidth;
+      el.classList.add('campo-alerta');
+    });
+    // O pulso é a animação mais longa; quando ele termina, a classe sai para poder ser reaplicada
+    const aoTerminar = (evento: AnimationEvent) => {
+      if (evento.animationName !== 'campo-alerta-pulso') return;
+      const el = evento.currentTarget as HTMLElement;
+      el.classList.remove('campo-alerta');
+      el.removeEventListener('animationend', aoTerminar);
+    };
+    alvos.forEach((el) => el.addEventListener('animationend', aoTerminar));
+
+    // Foca o campo depois da rolagem, sem provocar um segundo salto
+    const temporizador = window.setTimeout(() => {
+      (primeiro.querySelector<HTMLElement>('[data-foco-validacao]') ?? primeiro.querySelector<HTMLElement>('input, button'))?.focus({
+        preventScroll: true,
+      });
+    }, reduzirMovimento ? 0 : 450);
+    return () => window.clearTimeout(temporizador);
+  }, [tentativaValidacao]);
+
   const { quimica, granulometria } = dados;
   const resultadoGranulometria = calcularGranulometria(granulometria);
 
@@ -82,7 +153,6 @@ export function RegistroForm({
       <div className="card__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h2>Formulário de Entrada de Dados Laboratoriais</h2>
-          <span className="card__subtitle">Preencha os resultados de bancada da amostra selecionada</span>
         </div>
         <div>
           {statusSalvamento === 'salvando' && (
@@ -182,12 +252,18 @@ export function RegistroForm({
           </div>
         </div>
 
-        <CalibracaoSecao
-          calibracaoAplicada={dados.calibracao}
-          onAplicar={(coef) => onChange({ ...dados, calibracao: coef })}
-          leituraAmostra={quimica.fosforoAbsBruta}
-          onLeituraAmostraChange={(numero) => atualizarQuimica('fosforoAbsBruta', numero)}
-        />
+        <div
+          id="secao-calibracao"
+          className={`registro-alvo registro-alvo--secao ${errosCampos.calibracao ? 'registro-alvo--invalido' : ''}`.trim()}
+        >
+          <CalibracaoSecao
+            calibracaoAplicada={dados.calibracao}
+            onAplicar={(coef) => onChange({ ...dados, calibracao: coef })}
+            leituraAmostra={quimica.fosforoAbsBruta}
+            onLeituraAmostraChange={(numero) => atualizarQuimica('fosforoAbsBruta', numero)}
+          />
+          <MensagemErroCampo id="secao-calibracao-erro" mensagem={errosCampos.calibracao} />
+        </div>
 
         <div className="form-section form-section--fisica">
           <div className="form-section__title">
@@ -195,13 +271,17 @@ export function RegistroForm({
           </div>
 
           <div className="form-grid" style={{ marginBottom: 'var(--espaco-md)' }}>
-            <FormField
-              id="campo-tfsa"
-              label="Peso da amostra (TFSA)"
-              unit="g"
-              value={granulometria.tfsa}
-              onChange={(numero) => atualizarGranulometria('tfsa', numero)}
-            />
+            <div id="bloco-tfsa" className="registro-alvo">
+              <FormField
+                id="campo-tfsa"
+                label="Peso da amostra (TFSA)"
+                unit="g"
+                required
+                erro={errosCampos.tfsa}
+                value={granulometria.tfsa}
+                onChange={(numero) => atualizarGranulometria('tfsa', numero)}
+              />
+            </div>
           </div>
 
           <p className="form-subsecao-titulo">Cálculos da Fração Areia, Silte e Argila</p>
@@ -222,9 +302,7 @@ export function RegistroForm({
                   onChange={(numero) => atualizarGranulometria('areiaBeckerVazio', numero)}
                 />
               </div>
-              <p className="form-field__liquido">
-                Peso areia: <strong>{resultadoGranulometria.pesoAreia.toFixed(4)}</strong> g
-              </p>
+              <ResultadoCalculado rotulo="Peso areia" valor={resultadoGranulometria.pesoAreia.toFixed(4)} unidade="g" />
             </div>
 
             <div className="form-field form-field--com-branco">
@@ -243,11 +321,16 @@ export function RegistroForm({
                   onChange={(numero) => atualizarGranulometria('argilaBeckerVazio', numero)}
                 />
               </div>
-              <p className="form-field__liquido">
-                Argila em 10 ml (corrigida): <strong>{resultadoGranulometria.argila10mlCorrigido.toFixed(4)}</strong> g
-                <br />
-                Argila em 1000 ml: <strong>{resultadoGranulometria.argila1000ml.toFixed(2)}</strong> g
-              </p>
+              <ResultadoCalculado
+                rotulo="Argila em 10 ml"
+                valor={resultadoGranulometria.argila10mlCorrigido.toFixed(4)}
+                unidade="g"
+              />
+              <ResultadoCalculado
+                rotulo="Argila em 1000 ml"
+                valor={resultadoGranulometria.argila1000ml.toFixed(2)}
+                unidade="g"
+              />
             </div>
 
             <div className="form-field form-field--com-branco">
@@ -266,9 +349,7 @@ export function RegistroForm({
                   onChange={(numero) => atualizarGranulometria('naohBeckerVazio', numero)}
                 />
               </div>
-              <p className="form-field__liquido">
-                Peso seco do NaOH: <strong>{resultadoGranulometria.pesoSecoNaoh.toFixed(4)}</strong> g
-              </p>
+              <ResultadoCalculado rotulo="Peso seco do NaOH" valor={resultadoGranulometria.pesoSecoNaoh.toFixed(4)} unidade="g" />
             </div>
           </div>
 
@@ -287,10 +368,6 @@ export function RegistroForm({
             </div>
           </div>
 
-          <p className="form-field--help" style={{ marginTop: 8 }}>
-            Silte calculado automaticamente por diferença. Informe o peso da amostra (TFSA) para habilitar os
-            percentuais.
-          </p>
         </div>
 
         {errosProcessamento && errosProcessamento.length > 0 && (

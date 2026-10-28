@@ -5,10 +5,21 @@ export interface CampoComBranco {
   branco: number;
 }
 
+export type TipoAnalise = 'fisica' | 'quimica' | 'fisico_quimica';
+
+export const ROTULOS_TIPO_ANALISE: Record<TipoAnalise, string> = {
+  fisica: 'Física',
+  quimica: 'Química',
+  fisico_quimica: 'Física/Química',
+};
+
 export interface Identificacao {
   protocolo: string;
   cpfCliente?: string;
+  dataRecebimento: string;
+  /** Previsão de entrega do laudo: data de recebimento + 15 dias. */
   prazo: string;
+  tipoAnalise: TipoAnalise | '';
   solicitante: string;
   dataEmissao: string;
   propriedade: string;
@@ -17,12 +28,18 @@ export interface Identificacao {
   areaHectares: string;
   profundidadeColeta: string;
   cultivo: string;
+  culturaExistente: string;
+  /** Contato opcional — só aparece no laudo quando preenchido. */
+  email: string;
+  telefone: string;
 }
 
 export const IDENTIFICACAO_VAZIA: Identificacao = {
   protocolo: '',
   cpfCliente: '',
+  dataRecebimento: '',
   prazo: '',
+  tipoAnalise: '',
   solicitante: '',
   dataEmissao: '',
   propriedade: '',
@@ -31,6 +48,9 @@ export const IDENTIFICACAO_VAZIA: Identificacao = {
   areaHectares: '',
   profundidadeColeta: '',
   cultivo: '',
+  culturaExistente: '',
+  email: '',
+  telefone: '',
 };
 
 export interface DadosQuimica {

@@ -28,3 +28,109 @@
   border-color: var(--if-verde);
   color: var(--branco);
 }
+
+/* Cabeçalho: título da página + ficha da amostra em um único bloco */
+.analise-cabecalho {
+  background: var(--branco);
+  border: 1px solid var(--cinza-300);
+  border-top: 3px solid var(--if-verde);
+  border-radius: var(--raio-md);
+  margin-bottom: var(--espaco-lg);
+  overflow: hidden;
+}
+
+.analise-cabecalho__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espaco-sm) var(--espaco-md);
+  padding: 10px 20px;
+  background: var(--cinza-50);
+  border-bottom: 1px solid var(--cinza-200);
+}
+
+.analise-cabecalho__topo .page-header__eyebrow {
+  font-size: 11px;
+  margin-bottom: 0;
+}
+
+.analise-cabecalho__topo h1 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--cinza-900);
+}
+
+.analise-amostra {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 2.2fr;
+}
+
+/* Para quem é a análise: o que o analista confere ao retomar o preenchimento */
+.analise-amostra__quem {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+  border-left: 4px solid var(--if-verde);
+  background: var(--if-verde-claro);
+}
+
+.analise-amostra__rotulo,
+.analise-amostra__detalhes dt {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--cinza-700);
+}
+
+.analise-amostra__solicitante {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--if-preto);
+  margin: 2px 0 12px;
+  overflow-wrap: anywhere;
+}
+
+.analise-amostra__protocolo {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--if-verde-escuro);
+  margin-top: 2px;
+}
+
+.analise-amostra__dados {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.analise-amostra__detalhes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px var(--espaco-lg);
+  margin: 0;
+}
+
+.analise-amostra__aviso {
+  font-size: 12.5px;
+  color: var(--cinza-700);
+}
+
+.analise-amostra__detalhes dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cinza-900);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 800px) {
+  .analise-amostra {
+    grid-template-columns: 1fr;
+  }
+}

@@ -9,12 +9,6 @@
   gap: 10px;
 }
 
-.calib-secao-subtitulo {
-  font-size: 12.5px;
-  color: var(--cinza-700);
-  margin: -6px 0 var(--espaco-md);
-}
-
 .calib-secao-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
@@ -208,10 +202,4 @@ table.calib-table tbody td:first-child {
   border: 1.5px solid var(--if-verde);
   border-radius: var(--raio-sm);
   padding: 9px 11px;
-}
-
-.calib-calculadora__aviso {
-  font-size: 11px;
-  color: var(--cinza-700);
-  margin-top: var(--espaco-sm);
 }

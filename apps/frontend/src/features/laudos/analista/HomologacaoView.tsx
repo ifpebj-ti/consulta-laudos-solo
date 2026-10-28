@@ -10,25 +10,22 @@ import {
   converterKParaCmolc,
   converterNaParaCmolc,
 } from './calculos';
-import type { DadosAnalise } from './tipos';
+import { formatarData, hojeIso } from './statusAmostra';
+import { ROTULOS_TIPO_ANALISE, type DadosAnalise } from './tipos';
 import './HomologacaoView.css';
 
 interface HomologacaoViewProps {
   dados: DadosAnalise;
+  /** Laudo já homologado: apenas visualização, sem opção de editar ou liberar de novo. */
+  jaLiberado?: boolean;
   onVoltarParaEdicao: () => void;
   onLiberarLaudo: () => void;
 }
 
-function formatarData(data: string): string {
-  if (!data) return '—';
-  const [ano, mes, dia] = data.split('-');
-  if (!ano || !mes || !dia) return data;
-  return `${dia}/${mes}/${ano}`;
-}
-
-export function HomologacaoView({ dados, onVoltarParaEdicao, onLiberarLaudo }: HomologacaoViewProps) {
-  const [liberado, setLiberado] = useState(false);
+export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao, onLiberarLaudo }: HomologacaoViewProps) {
+  const [liberado, setLiberado] = useState(jaLiberado);
   const { identificacao, quimica, granulometria, calibracao } = dados;
+  const temContato = Boolean(identificacao.email || identificacao.telefone);
 
   const granulometriaCalc = calcularGranulometria(granulometria);
   const resultadoFosforo = calibracao ? calcularConcentracaoFosforo(quimica.fosforoAbsBruta, calibracao, 1) : null;
@@ -70,17 +67,25 @@ export function HomologacaoView({ dados, onVoltarParaEdicao, onLiberarLaudo }: H
         </div>
 
         <div className="laudo-doc__grid-info">
-          <div className="info-box">
+          {/* Sem contato informado, o solicitante ocupa o espaço do bloco de contato. */}
+          <div className={`info-box ${temContato ? '' : 'info-box--largo'}`.trim()}>
             <span>Proprietário/Solicitante</span>
             <strong>{identificacao.solicitante || '—'}</strong>
           </div>
-          <div className="info-box">
-            <span>Data de Emissão</span>
-            <strong>{formatarData(identificacao.dataEmissao || new Date().toISOString().slice(0, 10))}</strong>
-          </div>
+          {temContato && (
+            <div className="info-box info-box--contato">
+              <span>Contato</span>
+              {identificacao.email && <strong>{identificacao.email}</strong>}
+              {identificacao.telefone && <strong>{identificacao.telefone}</strong>}
+            </div>
+          )}
           <div className="info-box">
             <span>Ref. do Laboratório</span>
             <strong>{identificacao.protocolo || '—'}</strong>
+          </div>
+          <div className="info-box">
+            <span>Tipo da Análise</span>
+            <strong>{identificacao.tipoAnalise ? ROTULOS_TIPO_ANALISE[identificacao.tipoAnalise] : '—'}</strong>
           </div>
           <div className="info-box">
             <span>Nome e Localização da Propriedade</span>
@@ -102,8 +107,20 @@ export function HomologacaoView({ dados, onVoltarParaEdicao, onLiberarLaudo }: H
             <strong>{identificacao.profundidadeColeta || '—'}</strong>
           </div>
           <div className="info-box">
+            <span>Recebimento da Amostra</span>
+            <strong>{formatarData(identificacao.dataRecebimento)}</strong>
+          </div>
+          <div className="info-box">
+            <span>Data de Emissão</span>
+            <strong>{formatarData(identificacao.dataEmissao || hojeIso())}</strong>
+          </div>
+          <div className="info-box">
             <span>Cultivo</span>
             <strong>{identificacao.cultivo || '—'}</strong>
+          </div>
+          <div className="info-box">
+            <span>Cultura Existente</span>
+            <strong>{identificacao.culturaExistente || '—'}</strong>
           </div>
         </div>
 
@@ -224,10 +241,6 @@ export function HomologacaoView({ dados, onVoltarParaEdicao, onLiberarLaudo }: H
               </tr>
             </tbody>
           </table>
-          <p className="laudo-doc__nota">
-            Na⁺ e K⁺ convertidos de mg/L para cmolc/dm³ considerando extração Mehlich-1 (proporção solo:extrator
-            1:10) — fatores 230 e 391, conforme planilha de cálculo do laboratório.
-          </p>
         </div>
 
         <div className="laudo-table-wrap">
@@ -265,21 +278,7 @@ export function HomologacaoView({ dados, onVoltarParaEdicao, onLiberarLaudo }: H
               </tr>
             </tbody>
           </table>
-          {classeTextural && (
-            <p className="laudo-doc__nota">
-              Classe textural calculada pelo triângulo textural de referência do laboratório.
-            </p>
-          )}
         </div>
-
-        <p className="laudo-title" style={{ marginBottom: 6 }}>
-          Metodologias e Referências
-        </p>
-        <p className="laudo-doc__referencias">
-          Análises realizadas conforme metodologia Embrapa (Manual de Métodos de Análise de Solo) e recomendações do
-          Boletim Técnico IAC 100. Valores de referência de interpretação de fertilidade adaptados às classes de solo
-          da região.
-        </p>
 
         <div className="laudo-doc__rodape">
           <div className="resp-tecnico">
@@ -303,9 +302,11 @@ export function HomologacaoView({ dados, onVoltarParaEdicao, onLiberarLaudo }: H
             disponível na área de consulta pública do cliente.
           </p>
         )}
-        <Button variant="ghost" lg onClick={onVoltarParaEdicao}>
-          Voltar para Edição
-        </Button>
+        {!jaLiberado && (
+          <Button variant="ghost" lg onClick={onVoltarParaEdicao}>
+            Voltar para Edição
+          </Button>
+        )}
         <Button
           variant="danger"
           lg

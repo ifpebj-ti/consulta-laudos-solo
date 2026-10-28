@@ -36,6 +36,60 @@
   outline: none;
 }
 
+/* Validação própria (o formulário usa noValidate para não mostrar o balão do navegador) */
+.form-field__obrigatorio {
+  color: var(--if-vermelho);
+  font-weight: 700;
+}
+
+.form-field--invalido input,
+.form-field--invalido input:focus {
+  border-color: var(--if-vermelho);
+  background: var(--if-vermelho-claro);
+}
+
+.form-field__erro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--if-vermelho);
+  animation: form-field-erro-surgir 0.15s ease-out;
+}
+
+.form-field__erro svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+@keyframes form-field-erro-surgir {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Campo de data: ícone do calendário nativo mais discreto e alinhado ao tema */
+.form-field input[type='date'] {
+  cursor: pointer;
+}
+
+.form-field input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+
+.form-field input[type='date']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
 .form-field--help {
   font-size: 11px;
   color: var(--cinza-500);
