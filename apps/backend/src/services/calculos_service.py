@@ -18,6 +18,12 @@ def calcular_regressao_linear(pontos: list[dict[str, float]]) -> dict[str, float
     if n == 0:
         return {"a": 0.0, "b": 0.0, "r2": 0.0}
 
+    if n < 2:
+        # Um único ponto não é suficiente para calcular uma reta de calibração confiável.
+        # Retornamos coeficiente angular 0 para sinalizar ao chamador que o resultado
+        # é inválido (calcular_concentracao_fosforo retorna None quando a == 0).
+        return {"a": 0.0, "b": pontos[0]["y"], "r2": 1.0}
+
     soma_x = sum(p["x"] for p in pontos)
     soma_y = sum(p["y"] for p in pontos)
     soma_xy = sum(p["x"] * p["y"] for p in pontos)
