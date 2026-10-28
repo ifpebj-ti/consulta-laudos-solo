@@ -1,61 +1,56 @@
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime
 
-# Base de dados simulada em memória (mock temporário até camada de persistência/banco)
-BASE_LAUDOS_MOCK: dict[str, dict] = {
-    "20101.2306": {
-        "protocolo": "20101.2306",
-        "cpf": "52998224725",
-        "status": "CONCLUIDO",
-        "cliente_nome": "João da Silva",
-        "propriedade": "Fazenda Boa Vista",
-        "data_emissao": datetime(2026, 9, 1, 10, 0, 0, tzinfo=timezone.utc),
-        "parametros": {
-            "ph": 6.2,
-            "materiaOrganica": "2.8%",
-            "fosforo": "15 mg/dm³",
-            "potassio": "0.35 cmolc/dm³",
-        },
-        "tem_pdf": True,
-    },
-    "2026-SOLO-00123": {
-        "protocolo": "2026-SOLO-00123",
-        "cpf": "52998224725",
-        "status": "CONCLUIDO",
-        "cliente_nome": "Maria Santos",
-        "propriedade": "Sítio Primavera",
-        "data_emissao": datetime(2026, 9, 5, 14, 30, 0, tzinfo=timezone.utc),
-        "parametros": {
-            "ph": 5.8,
-            "materiaOrganica": "3.1%",
-            "fosforo": "12 mg/dm³",
-            "potassio": "0.40 cmolc/dm³",
-        },
-        "tem_pdf": True,
-    },
-}
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.models.laudo import Laudo
 
 
 class LaudoAuthService:
     @staticmethod
-    def autenticar_cliente(protocolo: str, cpf_limpo: str) -> dict | None:
+    async def autenticar_cliente(
+        protocolo: str, cpf_limpo: str, db: AsyncSession
+    ) -> dict | None:
         """
-        Valida a consulta do cliente.
+        Valida a consulta do cliente buscando no banco de dados.
         Mitigação de timing attacks e enumeração (VULN-02):
         Usa secrets.compare_digest para comparar o CPF em tempo constante.
-        Retorna o laudo se tudo bater ou None se inválido/inexistente.
+        Retorna os dados do laudo se tudo bater ou None se inválido/inexistente.
         """
-        laudo = BASE_LAUDOS_MOCK.get(protocolo)
+        stmt = select(Laudo).where(Laudo.protocolo == protocolo)
+        result = await db.execute(stmt)
+        laudo = result.scalar_one_or_none()
+
         if not laudo:
-            # Timing mitigation: executa comparação dummy para manter o tempo equivalente
+            # Timing mitigation: executa comparação dummy para manter tempo equivalente
+            secrets.compare_digest(cpf_limpo, "00000000000")
+            return None
+
+        # Laudo existe mas não está concluído — cliente não pode consultar ainda
+        if laudo.status not in ("CONCLUIDO", "AGUARDANDO_HOMOLOGACAO"):
             secrets.compare_digest(cpf_limpo, "00000000000")
             return None
 
         # Comparação em tempo constante
-        if not secrets.compare_digest(laudo["cpf"], cpf_limpo):
+        if not secrets.compare_digest(laudo.cpf_cliente, cpf_limpo):
             return None
 
-        return laudo
+        return {
+            "protocolo": laudo.protocolo,
+            "cpf": laudo.cpf_cliente,
+            "status": laudo.status,
+            "cliente_nome": laudo.cliente_nome,
+            "propriedade": laudo.propriedade,
+            "data_emissao": laudo.atualizado_em or laudo.criado_em,
+            "parametros": {
+                "ph": None,
+                "materiaOrganica": None,
+                "fosforo": None,
+                "potassio": None,
+            },
+            "tem_pdf": False,
+        }
 
     @staticmethod
     def mascarar_cpf(cpf: str) -> str:

@@ -56,7 +56,7 @@ AMOSTRAS_SEED = [
         "cpf_cliente": "52998224725",
         "cliente_nome": "João da Silva",
         "propriedade": "Fazenda Boa Vista",
-        "status": "PENDENTE",
+        "status": "CONCLUIDO",
         "versao": 1,
     },
     {
@@ -64,7 +64,7 @@ AMOSTRAS_SEED = [
         "cpf_cliente": "52998224725",
         "cliente_nome": "Maria Santos",
         "propriedade": "Sítio Primavera",
-        "status": "PENDENTE",
+        "status": "CONCLUIDO",
         "versao": 1,
     },
 ]

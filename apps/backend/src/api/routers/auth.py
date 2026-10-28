@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user
+from src.core.database import get_db
 from src.core.limiter import limiter
 from src.core.security import create_access_token
 from src.schemas.auth import (
@@ -66,13 +68,14 @@ async def login_analista_google(
 async def login_cliente_laudo(
     request: Request,
     payload: LoginClienteRequest,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Autenticação do Cliente via Protocolo + CPF.
     Rate limit de 5 req/min por IP.
     Retorna os dados do laudo e o JWT para download do PDF.
     """
-    laudo = LaudoAuthService.autenticar_cliente(payload.protocolo, payload.cpf)
+    laudo = await LaudoAuthService.autenticar_cliente(payload.protocolo, payload.cpf, db)
 
     if not laudo:
         # VULN-02: Resposta unificada neutra para impedir enumeração e timing attack
@@ -125,8 +128,8 @@ async def checar_sessao_atual(
     Retorna informações da sessão ativa decodificadas do JWT.
     """
     return UsuarioMeResponse(
-        sub=current_user.get("sub"),
-        role=current_user.get("role"),
+        sub=current_user["sub"],
+        role=current_user["role"],
         nome=current_user.get("nome"),
         email=current_user.get("email"),
         protocolo=current_user.get("protocolo"),
