@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Badge, type BadgeVariant } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
 import { DecimalInput } from '@/components/ui/DecimalInput';
 import {
   calcularConcentracaoFosforo,
@@ -26,12 +26,6 @@ const PAD_DIR = 336;
 const PAD_TOPO = 16;
 const PAD_BASE = 210;
 const N_TICKS = 5;
-
-function qualidadeR2(r2: number): { variant: BadgeVariant; rotulo: string } {
-  if (r2 >= 0.99) return { variant: 'adequado', rotulo: 'Excelente ajuste' };
-  if (r2 >= 0.95) return { variant: 'medio', rotulo: 'Ajuste aceitável' };
-  return { variant: 'baixo', rotulo: 'Ajuste fraco' };
-}
 
 interface CalibracaoSecaoProps {
   calibracaoAplicada: RegressaoLinear | null;
@@ -88,7 +82,6 @@ export function CalibracaoSecao({
 
   const ticksX = Array.from({ length: N_TICKS + 1 }, (_, i) => (xMax / N_TICKS) * i);
   const ticksY = Array.from({ length: N_TICKS + 1 }, (_, i) => (yMax / N_TICKS) * i);
-  const qualidade = qualidadeR2(regressao.r2);
 
   const aplicada = calibracaoAplicada !== null && calibracaoAplicada.a === regressao.a && calibracaoAplicada.b === regressao.b;
 
@@ -106,7 +99,6 @@ export function CalibracaoSecao({
           {aplicada ? 'Calibração aplicada' : 'Calibração pendente'}
         </Badge>
       </div>
-      <p className="calib-secao-subtitulo">Informe as leituras dos 5 pontos padrão e confirme a equação y = a·x + b</p>
 
       <div>
         <div className="calib-secao-grid">
@@ -156,16 +148,16 @@ export function CalibracaoSecao({
                 <span>R&sup2;</span>
                 <strong>{regressao.r2.toFixed(4)}</strong>
               </div>
-              <Badge variant={qualidade.variant}>{qualidade.rotulo}</Badge>
             </div>
 
             <Button
               type="button"
               variant="primary"
               block
+              data-foco-validacao
               onClick={() => onAplicar({ ...regressao, pontos })}
               disabled={aplicada}
-              style={{ marginTop: 'var(--espaco-md)' }}
+              style={{ marginTop: 'calc(var(--u) * 2)' }}
             >
               {aplicada ? 'Calibração já aplicada' : 'Aplicar Calibração'}
             </Button>
@@ -181,7 +173,7 @@ export function CalibracaoSecao({
                     y1={escalaY(tick)}
                     x2={PAD_DIR}
                     y2={escalaY(tick)}
-                    stroke="var(--cinza-200)"
+                    stroke="var(--filete)"
                     strokeWidth={1}
                     strokeDasharray={i === 0 ? undefined : '3 3'}
                   />
@@ -196,15 +188,15 @@ export function CalibracaoSecao({
                 </text>
               ))}
 
-              <line x1={PAD_ESQ} y1={PAD_TOPO} x2={PAD_ESQ} y2={PAD_BASE} stroke="var(--cinza-500)" strokeWidth={1.5} />
-              <line x1={PAD_ESQ} y1={PAD_BASE} x2={PAD_DIR} y2={PAD_BASE} stroke="var(--cinza-500)" strokeWidth={1.5} />
+              <line x1={PAD_ESQ} y1={PAD_TOPO} x2={PAD_ESQ} y2={PAD_BASE} stroke="var(--cinza-claro)" strokeWidth={1.5} />
+              <line x1={PAD_ESQ} y1={PAD_BASE} x2={PAD_DIR} y2={PAD_BASE} stroke="var(--cinza-claro)" strokeWidth={1.5} />
 
               <line
                 x1={escalaX(0)}
                 y1={escalaY(regressao.b)}
                 x2={escalaX(xMax)}
                 y2={escalaY(regressao.a * xMax + regressao.b)}
-                stroke="var(--if-vermelho)"
+                stroke="var(--vermelho)"
                 strokeWidth={2.5}
                 strokeLinecap="round"
               />
@@ -274,10 +266,6 @@ export function CalibracaoSecao({
               <div className="calib-calculadora__valor">{resultadoAmostra ? resultadoAmostra.fosforo.toFixed(2) : '—'}</div>
             </div>
           </div>
-          <p className="calib-calculadora__aviso">
-            Curva já aplica a multiplicação padrão por 10. Deixe o Fator de diluição em 1 quando não houver diluição
-            adicional. Sem calibração aplicada, o laudo bloqueia o cálculo de Fósforo.
-          </p>
         </div>
       </div>
     </div>

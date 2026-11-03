@@ -5,10 +5,20 @@ export interface CampoComBranco {
   branco: number;
 }
 
+export type TipoAnalise = 'fisica' | 'quimica' | 'fisico_quimica';
+
+export const ROTULOS_TIPO_ANALISE: Record<TipoAnalise, string> = {
+  fisica: 'Física',
+  quimica: 'Química',
+  fisico_quimica: 'Física/Química',
+};
+
 export interface Identificacao {
   protocolo: string;
   cpfCliente?: string;
+  dataRecebimento: string;
   prazo: string;
+  tipoAnalise: TipoAnalise | '';
   solicitante: string;
   dataEmissao: string;
   propriedade: string;
@@ -17,12 +27,17 @@ export interface Identificacao {
   areaHectares: string;
   profundidadeColeta: string;
   cultivo: string;
+  culturaExistente: string;
+  email: string;
+  telefone: string;
 }
 
 export const IDENTIFICACAO_VAZIA: Identificacao = {
   protocolo: '',
   cpfCliente: '',
+  dataRecebimento: '',
   prazo: '',
+  tipoAnalise: '',
   solicitante: '',
   dataEmissao: '',
   propriedade: '',
@@ -31,6 +46,9 @@ export const IDENTIFICACAO_VAZIA: Identificacao = {
   areaHectares: '',
   profundidadeColeta: '',
   cultivo: '',
+  culturaExistente: '',
+  email: '',
+  telefone: '',
 };
 
 export interface DadosQuimica {
@@ -51,7 +69,6 @@ export interface DadosAnalise {
   calibracao: RegressaoLinear | null;
 }
 
-/** Estado inicial de uma análise, criada a partir do modal Nova Amostra. */
 export const DADOS_ANALISE_VAZIOS: DadosAnalise = {
   identificacao: IDENTIFICACAO_VAZIA,
   quimica: {
@@ -78,18 +95,12 @@ export const DADOS_ANALISE_VAZIOS: DadosAnalise = {
 
 export type StatusAmostra = 'nao_iniciado' | 'em_andamento' | 'concluido';
 
-/**
- * Um registro completo de amostra guardado na sessão do Analista — mantém o
- * DadosAnalise inteiro (não só a identificação) para permitir retomar uma
- * análise iniciada e não concluída.
- */
 export interface AmostraRegistro {
   dados: DadosAnalise;
   status: StatusAmostra;
   criadaEm: string;
 }
 
-/** Forma enxuta usada nos cards do painel — não carrega química/física. */
 export interface CartaoAmostra {
   protocolo: string;
   solicitante: string;

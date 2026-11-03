@@ -23,7 +23,7 @@ export function Modal({ isOpen, onClose, title, subtitle, children }: ModalProps
 
   return (
     <div
-      className="modal-overlay is-open"
+      className="modal-overlay"
       onClick={(evento) => {
         if (evento.target === evento.currentTarget) onClose();
       }}

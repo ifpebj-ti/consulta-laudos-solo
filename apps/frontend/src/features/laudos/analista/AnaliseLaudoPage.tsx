@@ -7,9 +7,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useAnalista } from '@/context/AnalistaContext';
 import { analiseService, type AmostraMetadata } from '@/services/analiseService';
 import { ApiError } from '@/services/apiClient';
-import { DADOS_ANALISE_VAZIOS, type DadosAnalise } from './tipos';
-import { RegistroForm } from './RegistroForm';
+import { DADOS_ANALISE_VAZIOS, ROTULOS_TIPO_ANALISE, type DadosAnalise } from './tipos';
+import { RegistroForm, type ErrosCamposRegistro } from './RegistroForm';
 import { HomologacaoView } from './HomologacaoView';
+import { formatarData } from './statusAmostra';
 import './AnaliseLaudoPage.css';
 
 type Aba = 'registro' | 'homologacao';
@@ -17,15 +18,21 @@ type StatusSalvamento = 'salvo' | 'salvando' | 'erro' | 'conflito' | 'idle';
 
 const PROTOCOLO_PADRAO = 'LAB-2026-0142';
 
+const ROTULOS_STATUS_ANALISE: Record<string, string> = {
+  EM_ANALISE: 'Em análise',
+  AGUARDANDO_HOMOLOGACAO: 'Aguardando homologação',
+};
+
 export function AnaliseLaudoPage() {
   const { session } = useAuth();
   const token = session?.token;
   const navigate = useNavigate();
-  const { amostraAtual, atualizarAmostraAtual, concluirAmostraAtual } = useAnalista();
+  const { amostraAtual, statusAmostraAtual, atualizarAmostraAtual, concluirAmostraAtual } = useAnalista();
+  const laudoConcluido = statusAmostraAtual === 'concluido';
 
   const protocoloAlvo = amostraAtual?.identificacao?.protocolo || PROTOCOLO_PADRAO;
 
-  const [aba, setAba] = useState<Aba>('registro');
+  const [aba, setAba] = useState<Aba>(laudoConcluido ? 'homologacao' : 'registro');
   const [dados, setDados] = useState<DadosAnalise>(amostraAtual ?? DADOS_ANALISE_VAZIOS);
   const [versao, setVersao] = useState<number>(1);
   const [statusAmostra, setStatusAmostra] = useState<string>('EM_ANALISE');
@@ -36,6 +43,8 @@ export function AnaliseLaudoPage() {
   const [statusSalvamento, setStatusSalvamento] = useState<StatusSalvamento>('idle');
   const [horarioSalvo, setHorarioSalvo] = useState<string | null>(null);
   const [errosProcessamento, setErrosProcessamento] = useState<string[] | null>(null);
+  const [errosCampos, setErrosCampos] = useState<ErrosCamposRegistro>({});
+  const [tentativaValidacao, setTentativaValidacao] = useState(0);
 
   const versaoRef = useRef(versao);
   versaoRef.current = versao;
@@ -43,7 +52,6 @@ export function AnaliseLaudoPage() {
   const timerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ultimoDadosSalvosRef = useRef<string>('');
 
-  // 1. Carregamento inicial da bancada via GET
   const carregarDados = useCallback(async () => {
     if (!token) return;
     setCarregando(true);
@@ -96,7 +104,7 @@ export function AnaliseLaudoPage() {
             naohBeckerVazio: bancada.granulometria.naohBeckerVazio ?? DADOS_ANALISE_VAZIOS.granulometria.naohBeckerVazio,
           },
           calibracao:
-            bancada.calibracao?.a !== undefined && bancada.calibracao?.b !== undefined && bancada.calibracao?.r2 !== undefined
+            bancada.calibracao?.a != null && bancada.calibracao?.b != null && bancada.calibracao?.r2 != null
               ? {
                   a: bancada.calibracao.a,
                   b: bancada.calibracao.b,
@@ -121,77 +129,113 @@ export function AnaliseLaudoPage() {
     carregarDados();
   }, [carregarDados]);
 
-  // 2. Disparo do Auto-Save com Debounce (~1500ms)
-  const dispararAutoSave = useCallback(
-    (proximo: DadosAnalise) => {
+  const pendenteRef = useRef<DadosAnalise | null>(null);
+
+  const salvarRascunhoAgora = useCallback(
+    async (proximo: DadosAnalise) => {
       if (!token) return;
-
-      const serializado = JSON.stringify(proximo);
-      if (serializado === ultimoDadosSalvosRef.current) return;
-
-      if (timerDebounceRef.current) {
-        clearTimeout(timerDebounceRef.current);
-      }
-
+      pendenteRef.current = null;
       setStatusSalvamento('salvando');
+      try {
+        const res = await analiseService.salvarRascunho(
+          protocoloAlvo,
+          {
+            versaoEsperada: versaoRef.current,
+            quimica: proximo.quimica,
+            granulometria: proximo.granulometria,
+            calibracao: proximo.calibracao,
+          },
+          token,
+        );
 
-      timerDebounceRef.current = setTimeout(async () => {
-        try {
-          const res = await analiseService.salvarRascunho(
-            protocoloAlvo,
-            {
-              versaoEsperada: versaoRef.current,
-              quimica: proximo.quimica,
-              granulometria: proximo.granulometria,
-              calibracao: proximo.calibracao,
-            },
-            token,
-          );
-
-          if (res.sucesso && res.dados) {
-            setVersao(res.dados.novaVersao);
-            setStatusAmostra(res.dados.status);
-            setStatusSalvamento('salvo');
-            setHorarioSalvo(new Date().toLocaleTimeString('pt-BR'));
-            ultimoDadosSalvosRef.current = JSON.stringify(proximo);
-          }
-        } catch (e) {
-          if (e instanceof ApiError && e.status === 409) {
-            setStatusSalvamento('conflito');
-          } else {
-            setStatusSalvamento('erro');
-          }
+        if (res.sucesso && res.dados) {
+          setVersao(res.dados.novaVersao);
+          setStatusAmostra(res.dados.status);
+          setStatusSalvamento('salvo');
+          setHorarioSalvo(new Date().toLocaleTimeString('pt-BR'));
+          ultimoDadosSalvosRef.current = JSON.stringify(proximo);
+        } else {
+          setStatusSalvamento('erro');
         }
-      }, 1500);
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 409) {
+          setStatusSalvamento('conflito');
+        } else {
+          setStatusSalvamento('erro');
+        }
+      }
     },
     [token, protocoloAlvo],
   );
 
+  function cancelarAutoSave() {
+    if (timerDebounceRef.current) {
+      clearTimeout(timerDebounceRef.current);
+      timerDebounceRef.current = null;
+    }
+  }
+
+  const dispararAutoSave = useCallback(
+    (proximo: DadosAnalise) => {
+      if (!token) return;
+      cancelarAutoSave();
+
+      if (JSON.stringify(proximo) === ultimoDadosSalvosRef.current) {
+        pendenteRef.current = null;
+        setStatusSalvamento((atual) => (atual === 'salvando' ? 'salvo' : atual));
+        return;
+      }
+
+      pendenteRef.current = proximo;
+      setStatusSalvamento('salvando');
+      timerDebounceRef.current = setTimeout(() => {
+        timerDebounceRef.current = null;
+        void salvarRascunhoAgora(proximo);
+      }, 1500);
+    },
+    [token, salvarRascunhoAgora],
+  );
+
+  function enviarRascunhoPendente() {
+    const pendente = pendenteRef.current;
+    if (pendente) void salvarRascunhoAgora(pendente);
+  }
+
   function handleDadosChange(proximo: DadosAnalise) {
+    setErrosCampos((atual) => {
+      if (!atual.tfsa && !atual.calibracao) return atual;
+      const restante = { ...atual };
+      if (proximo.granulometria.tfsa > 0) delete restante.tfsa;
+      if (proximo.calibracao?.a) delete restante.calibracao;
+      return restante;
+    });
     setDados(proximo);
     atualizarAmostraAtual(proximo);
     dispararAutoSave(proximo);
   }
 
-  // 3. Processamento Oficial de Cálculos Agronômicos
   async function handleProcessar() {
     if (!token) return;
 
-    if (timerDebounceRef.current) {
-      clearTimeout(timerDebounceRef.current);
+    cancelarAutoSave();
+
+    setErrosProcessamento(null);
+
+    const pendentes: ErrosCamposRegistro = {};
+    if (!dados.calibracao || !dados.calibracao.a) {
+      pendentes.calibracao = 'Aplique a curva de calibração de fósforo antes de processar.';
+    }
+    if (!(dados.granulometria.tfsa > 0)) {
+      pendentes.tfsa = 'Informe o peso da amostra (TFSA) para processar.';
+    }
+    setErrosCampos(pendentes);
+    if (pendentes.calibracao || pendentes.tfsa || !dados.calibracao) {
+      setTentativaValidacao((n) => n + 1);
+      enviarRascunhoPendente();
+      return;
     }
 
     setProcessando(true);
-    setErrosProcessamento(null);
-
-    // Validação preventiva de calibração no front
-    if (!dados.calibracao || dados.calibracao.a === 0) {
-      setErrosProcessamento([
-        'A curva de calibração de fósforo deve ser calculada e aplicada antes do processamento.',
-      ]);
-      setProcessando(false);
-      return;
-    }
 
     try {
       const res = await analiseService.processarAnalise(
@@ -210,6 +254,7 @@ export function AnaliseLaudoPage() {
         setStatusAmostra(res.dados.status);
         setStatusSalvamento('salvo');
         ultimoDadosSalvosRef.current = JSON.stringify(dados);
+        pendenteRef.current = null;
         irParaAba('homologacao');
       }
     } catch (e) {
@@ -217,13 +262,23 @@ export function AnaliseLaudoPage() {
         if (e.status === 409) {
           setStatusSalvamento('conflito');
         } else if (e.erros && e.erros.length > 0) {
-          setErrosProcessamento(e.erros);
+          const doBackend: ErrosCamposRegistro = {};
+          const gerais = e.erros.filter((msg) => {
+            if (/tfsa/i.test(msg)) doBackend.tfsa = 'Informe o peso da amostra (TFSA) para processar.';
+            else if (/calibra/i.test(msg)) doBackend.calibracao = 'Aplique a curva de calibração de fósforo antes de processar.';
+            else return true;
+            return false;
+          });
+          setErrosCampos(doBackend);
+          setErrosProcessamento(gerais.length > 0 ? gerais : null);
+          if (doBackend.tfsa || doBackend.calibracao) setTentativaValidacao((n) => n + 1);
         } else {
           setErrosProcessamento([e.message]);
         }
       } else {
         setErrosProcessamento(['Ocorreu um erro inesperado ao processar os cálculos agronômicos.']);
       }
+      if (!(e instanceof ApiError && e.status === 409)) enviarRascunhoPendente();
     } finally {
       setProcessando(false);
     }
@@ -234,32 +289,72 @@ export function AnaliseLaudoPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  const identificacao = dados.identificacao;
+  const solicitante = amostraInfo?.solicitante || identificacao.solicitante;
+  const detalhesAmostra = [
+    { rotulo: 'Propriedade', valor: amostraInfo?.propriedade || identificacao.propriedade },
+    { rotulo: 'Localização', valor: identificacao.localizacao },
+    { rotulo: 'Identificação da área', valor: identificacao.areaIdentificacao },
+    { rotulo: 'Profundidade da coleta', valor: identificacao.profundidadeColeta },
+    { rotulo: 'Cultivo', valor: identificacao.cultivo },
+    { rotulo: 'Tipo de análise', valor: identificacao.tipoAnalise ? ROTULOS_TIPO_ANALISE[identificacao.tipoAnalise] : '' },
+    { rotulo: 'Recebimento', valor: identificacao.dataRecebimento ? formatarData(identificacao.dataRecebimento) : '' },
+    {
+      rotulo: 'Registrada em',
+      valor: !identificacao.dataRecebimento && amostraInfo?.dataColeta ? formatarData(amostraInfo.dataColeta) : '',
+    },
+    { rotulo: 'Prazo do laudo', valor: identificacao.prazo ? formatarData(identificacao.prazo) : '' },
+  ].filter((detalhe) => detalhe.valor);
+  const semCadastroNaSessao = !amostraAtual;
+
   return (
     <>
       <Navbar titulo="Módulo do Analista" />
       <main className="page-container">
-        <div className="page-header">
-          <div>
-            <span className="page-header__eyebrow">Laboratório de Solos &middot; Uso interno</span>
-            <h1>Gestão de Análises Laboratoriais</h1>
-            <p>
-              {amostraInfo
-                ? `${amostraInfo.solicitante} — ${amostraInfo.propriedade}`
-                : dados.identificacao.solicitante
-                ? `${dados.identificacao.solicitante} — ${dados.identificacao.propriedade}`
-                : 'Registro de dados de bancada, cálculos automáticos e homologação de laudos técnicos.'}
-            </p>
+        <header className="analise-cabecalho">
+          <div className="analise-cabecalho__topo">
+            <div>
+              <span className="page-header__eyebrow">Laboratório de Solos &middot; Uso interno</span>
+              <h1>Gestão de Análises Laboratoriais</h1>
+            </div>
+            <Badge variant={statusAmostra === 'AGUARDANDO_HOMOLOGACAO' ? 'status-homologacao' : 'status-processamento'}>
+              {ROTULOS_STATUS_ANALISE[statusAmostra] ?? statusAmostra}
+            </Badge>
           </div>
-          <Badge variant={statusAmostra === 'AGUARDANDO_HOMOLOGACAO' ? 'status-homologacao' : 'status-processamento'}>
-            Amostra: {protocoloAlvo} ({statusAmostra})
-          </Badge>
-        </div>
+
+          <div className="analise-amostra">
+            <div className="analise-amostra__quem">
+              <span className="analise-amostra__rotulo">Solicitante</span>
+              <strong className="analise-amostra__solicitante">{solicitante || 'Não informado'}</strong>
+              <span className="analise-amostra__rotulo">Protocolo da amostra</span>
+              <span className="analise-amostra__protocolo">{protocoloAlvo}</span>
+            </div>
+            <div className="analise-amostra__dados">
+              {detalhesAmostra.length > 0 && (
+                <dl className="analise-amostra__detalhes">
+                  {detalhesAmostra.map((detalhe) => (
+                    <div key={detalhe.rotulo}>
+                      <dt>{detalhe.rotulo}</dt>
+                      <dd>{detalhe.valor}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {semCadastroNaSessao && !carregando && (
+                <p className="analise-amostra__aviso">
+                  Os demais dados do cadastro (localização, área, cultivo, prazo) só aparecem quando a amostra é aberta pelo
+                  Painel do Analista.
+                </p>
+              )}
+            </div>
+          </div>
+        </header>
 
         <div className="subnav" role="tablist" aria-label="Etapas do processo laboratorial">
           <button type="button" className="subnav__btn" onClick={() => navigate('/analista')}>
             &larr; Voltar para o Painel do Analista
           </button>
-          {aba === 'homologacao' && (
+          {aba === 'homologacao' && !laudoConcluido && (
             <button type="button" className="subnav__btn" onClick={() => irParaAba('registro')}>
               &larr; Voltar para Registrar Dados
             </button>
@@ -267,7 +362,7 @@ export function AnaliseLaudoPage() {
         </div>
 
         {carregando ? (
-          <div style={{ padding: 'var(--espaco-xl)', textAlign: 'center', color: 'var(--cinza-600)' }}>
+          <div style={{ padding: 'calc(var(--u) * 5)', textAlign: 'center', color: 'var(--cinza)' }}>
             Carregando dados da amostra...
           </div>
         ) : aba === 'registro' ? (
@@ -279,11 +374,14 @@ export function AnaliseLaudoPage() {
             statusSalvamento={statusSalvamento}
             horarioSalvo={horarioSalvo}
             errosProcessamento={errosProcessamento}
+            errosCampos={errosCampos}
+            tentativaValidacao={tentativaValidacao}
             onRecarregar={carregarDados}
           />
         ) : (
           <HomologacaoView
             dados={dados}
+            jaLiberado={laudoConcluido}
             onVoltarParaEdicao={() => irParaAba('registro')}
             onLiberarLaudo={concluirAmostraAtual}
           />

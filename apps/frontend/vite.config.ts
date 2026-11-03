@@ -10,11 +10,11 @@ export default defineConfig({
     },
   },
   server: {
-    host: true, // Necessário para expor o servidor para fora do container Docker
+    host: true,
     port: 5173,
     strictPort: true,
     watch: {
-      usePolling: true, // Garante que o HMR funcione em volumes montados no Docker
+      usePolling: true,
     }
   }
-})
+})

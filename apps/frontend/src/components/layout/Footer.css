@@ -1,7 +1,15 @@
 .footer-institucional {
-  text-align: center;
-  font-size: 11.5px;
-  color: var(--cinza-500);
-  padding: var(--espaco-lg) var(--espaco-md);
   margin-top: auto;
+  padding: calc(var(--u) * 3) calc(var(--u) * 8);
+  text-align: left;
+  font-family: var(--fonte);
+  font-size: 11.5px;
+  color: var(--cinza);
+  border-top: 1px solid var(--filete);
+}
+
+@media (max-width: 900px) {
+  .footer-institucional {
+    padding: calc(var(--u) * 3);
+  }
 }

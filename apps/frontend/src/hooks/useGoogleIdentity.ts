@@ -40,12 +40,6 @@ function carregarScriptGoogle(): Promise<void> {
   });
 }
 
-/**
- * Inicializa o Google Identity Services e renderiza o botão oficial do Google
- * (estilizado o mais próximo possível do protótipo) dentro do container retornado.
- * Sem um GOOGLE_CLIENT_ID configurado, o login real é indisponível — reportamos
- * isso como erro em vez de simular um token falso.
- */
 export function useGoogleIdentity(clientId: string, onCredential: (idToken: string) => void) {
   const containerRef = useRef<HTMLDivElement>(null);
   const onCredentialRef = useRef(onCredential);
