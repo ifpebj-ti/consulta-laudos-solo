@@ -21,6 +21,7 @@ ANALISTAS_AUTORIZADOS = {
     "analista@instituto.edu.br",
     "inrp@discente.ifpe.edu.br",
     "glos@discente.ifpe.edu.br",
+    "gscb@discente.ifpe.edu.br",
 }
 
 
