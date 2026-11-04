@@ -7,12 +7,6 @@ function normalizarParaNumero(bruto: string): number | null {
   return Number.isNaN(numero) ? null : numero;
 }
 
-/**
- * Campo numérico decimal que aceita "," ou "." e não força o valor para 0
- * enquanto o usuário ainda está digitando (ex.: "6", depois "6.", depois "6.4").
- * Um <input type="number"> controlado por número teria seu texto sobrescrito
- * a cada tecla nesses estados intermediários, atrapalhando a digitação em bancada (RNF04).
- */
 export function useDecimalField(valor: number, onChange: (numero: number) => void) {
   const [texto, setTexto] = useState(() => String(valor));
 
@@ -20,7 +14,6 @@ export function useDecimalField(valor: number, onChange: (numero: number) => voi
     if (normalizarParaNumero(texto) !== valor) {
       setTexto(String(valor));
     }
-    // Só resincroniza quando o valor externo muda (ex.: "Limpar Formulário").
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valor]);
 

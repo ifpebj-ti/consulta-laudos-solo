@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import './Button.css';
 
-type Variant = 'primary' | 'ghost' | 'danger' | 'google' | 'download';
+type Variant = 'primary' | 'ghost' | 'danger' | 'download';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
