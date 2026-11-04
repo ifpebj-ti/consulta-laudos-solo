@@ -1,8 +1,8 @@
 import './BrandMark.css';
 
-export function BrandMark({ dark = true }: { dark?: boolean }) {
+export function BrandMark() {
   return (
-    <div className={`brand-mark ${dark ? 'brand-mark--dark' : ''}`.trim()}>
+    <div className="brand-mark">
       <div className="brand-mark__logo" aria-hidden="true">
         <div className="brand-mark__logo-grid">
           <span></span>

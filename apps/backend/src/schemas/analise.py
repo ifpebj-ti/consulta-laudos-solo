@@ -1,4 +1,5 @@
-from typing import Any
+from datetime import date
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -169,6 +170,14 @@ class CriarLaudoInput(BaseModel):
     areaHectares: str | None = Field(None, max_length=50)
     profundidadeColeta: str | None = Field(None, max_length=50)
     cultivo: str | None = Field(None, max_length=100)
+    dataRecebimento: date | None = None
+    tipoAnalise: Literal["fisica", "quimica", "fisico_quimica"] | None = None
+    culturaExistente: str | None = Field(None, max_length=100)
+    # Contato opcional do solicitante
+    email: str | None = Field(
+        None, max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    )
+    telefone: str | None = Field(None, pattern=r"^\d{10,11}$")
 
 
 class CriarLaudoDataSchema(BaseModel):
