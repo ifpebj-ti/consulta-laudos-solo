@@ -87,10 +87,11 @@ table.calib-table tbody td:first-child {
 }
 
 .calib-grafico-wrap {
-  padding: calc(var(--u) * 2);
+  padding: calc(var(--u) * 2) 0 0;
   height: 100%;
-  background: var(--branco);
-  border: 1px solid var(--filete);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--texto);
   border-radius: 0;
 }
 
@@ -130,18 +131,39 @@ table.calib-table tbody td:first-child {
 }
 
 .calib-coef {
+  position: relative;
   flex: 1;
   min-width: 72px;
-  padding: 8px;
-  text-align: center;
-  background: var(--branco);
-  border: 1px solid var(--filete);
+  padding: calc(var(--u) * 1.5) 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--filete);
+  border-bottom: 1px solid var(--filete);
   border-radius: 0;
+}
+
+.calib-coef::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: calc(var(--u) * 3);
+  height: 2px;
+  background: var(--verde);
+}
+
+.calib-coef-row {
+  column-gap: calc(var(--u) * 3);
+}
+
+.calib-secao-grid .btn--block {
+  justify-content: space-between;
 }
 
 .calib-coef span {
   display: block;
-  font-size: 10.5px;
+  font-size: 11px;
   text-transform: uppercase;
   margin-bottom: 4px;
   font-weight: 600;

@@ -3,6 +3,7 @@ import { FormField } from '@/components/ui/FormField';
 import { MensagemErroCampo } from '@/components/ui/MensagemErroCampo';
 import { Button } from '@/components/ui/Button';
 import { DecimalInput } from '@/components/ui/DecimalInput';
+import { SetaVelocidade } from '@/features/home/LayoutEntrada';
 import { CalibracaoSecao } from './CalibracaoSecao';
 import { calcularGranulometria, calcularValorLiquido } from './calculos';
 import type { CampoComBranco, DadosAnalise } from './tipos';
@@ -376,6 +377,7 @@ export function RegistroForm({
         <div className="form-actions">
           <Button type="submit" disabled={processando}>
             {processando ? 'Processando Cálculos...' : 'Salvar e Processar Cálculos'}
+            <SetaVelocidade />
           </Button>
         </div>
       </div>

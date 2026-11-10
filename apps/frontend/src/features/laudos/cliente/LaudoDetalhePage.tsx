@@ -47,6 +47,11 @@ export function LaudoDetalhePage() {
         navigate('/cliente', { replace: true });
         return;
       }
+      if (import.meta.env.DEV && erro instanceof ApiError && erro.status === 404) {
+        const { baixarPdfLaudoTeste } = await import('./pdfDev');
+        baixarPdfLaudoTeste(laudo, rotulo);
+        return;
+      }
       setErroDownload(erro instanceof ApiError ? erro.message : 'Não foi possível baixar o PDF agora.');
     } finally {
       setBaixando(false);

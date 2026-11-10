@@ -92,6 +92,21 @@ export function ConsultaLaudoPage() {
           {carregando ? 'Consultando...' : 'Consultar Laudo'}
           <SetaVelocidade />
         </Button>
+        {/* TEMPORARIO: preenche o laudo mockado do backend (laudo_service.py); remover antes de publicar. */}
+        {import.meta.env.DEV && (
+          <button
+            type="button"
+            className="entrada-teste"
+            onClick={() => {
+              setProtocolo('20101.2306');
+              setCpf('529.982.247-25');
+              setErros({});
+            }}
+            disabled={carregando}
+          >
+            Preencher dados de teste
+          </button>
+        )}
       </form>
     </LayoutEntrada>
   );

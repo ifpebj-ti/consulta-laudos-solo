@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DecimalInput } from '@/components/ui/DecimalInput';
+import { SetaVelocidade } from '@/features/home/LayoutEntrada';
 import {
   calcularConcentracaoFosforo,
   calcularRegressaoLinear,
@@ -160,6 +161,7 @@ export function CalibracaoSecao({
               style={{ marginTop: 'calc(var(--u) * 2)' }}
             >
               {aplicada ? 'Calibração já aplicada' : 'Aplicar Calibração'}
+              {!aplicada && <SetaVelocidade />}
             </Button>
           </div>
 

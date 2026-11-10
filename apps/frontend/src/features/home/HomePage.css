@@ -480,6 +480,31 @@
   outline-offset: 3px;
 }
 
+/* TEMPORARIO: botão de dados de teste da consulta do cliente (só em dev). */
+.entrada-teste {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cinza);
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed var(--filete);
+  border-radius: 0;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.entrada-teste:hover:not(:disabled) {
+  color: var(--verde-escuro);
+  border-color: var(--verde);
+}
+
+.entrada-teste:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .entrada-google {
   display: flex;
   align-items: center;
