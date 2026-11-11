@@ -2,21 +2,14 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { BrandMark } from '@/components/layout/BrandMark';
 import { Footer } from '@/components/layout/Footer';
+import { doisDigitos } from '@/lib/formatos';
 import './HomePage.css';
 
 
-const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}?w=1400&q=75&auto=format&fit=crop`;
-const FOTOS = [
-  '1642952273588-ed6fa28870ac',
-  '1654035627370-f31753ad0bce',
-  '1532187863486-abf9dbad1b69',
-  '1613036582025-ba1d4ccb3226',
-  '1618212624319-3cd9681707e2',
-  '1560493676-04071c5f467b',
-].map(unsplash);
+const FOTOS = [1, 2, 3, 4, 5, 6].map((n) => `/fotos/laboratorio-${n}.webp`);
 const INTERVALO_MS = 5000;
 
-export const doisDigitos = (n: number) => String(n).padStart(2, '0');
+
 
 export function Seta({ direcao = 'direita' }: { direcao?: 'direita' | 'esquerda' }) {
   return (
@@ -54,15 +47,32 @@ export function LinhasVelocidade({ className = 'home-velocidade' }: { className?
   );
 }
 
+function IconePausar() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden="true">
+      <path d="M9 6v12M15 6v12" />
+    </svg>
+  );
+}
+
+function IconeTocar() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden="true">
+      <path d="M8 5l11 7-11 7z" />
+    </svg>
+  );
+}
+
 function Carrossel() {
   const [atual, setAtual] = useState(0);
   const [pausado, setPausado] = useState(false);
+  const [pausadoManual, setPausadoManual] = useState(false);
 
   useEffect(() => {
-    if (pausado || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (pausado || pausadoManual || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const id = window.setInterval(() => setAtual((i) => (i + 1) % FOTOS.length), INTERVALO_MS);
     return () => window.clearInterval(id);
-  }, [pausado]);
+  }, [pausado, pausadoManual]);
 
   const ir = (passo: number) => setAtual((i) => (i + passo + FOTOS.length) % FOTOS.length);
 
@@ -97,6 +107,15 @@ function Carrossel() {
         <span className="home-visual__contador" aria-live="polite">
           {doisDigitos(atual + 1)} <span aria-hidden="true">/</span> {doisDigitos(FOTOS.length)}
         </span>
+        <button
+          type="button"
+          className="home-visual__seta"
+          aria-label="Pausar troca automática de fotos"
+          aria-pressed={pausadoManual}
+          onClick={() => setPausadoManual((v) => !v)}
+        >
+          {pausadoManual ? <IconeTocar /> : <IconePausar />}
+        </button>
         <button type="button" className="home-visual__seta" aria-label="Foto anterior" onClick={() => ir(-1)}>
           <Seta direcao="esquerda" />
         </button>
@@ -116,7 +135,7 @@ type Props = {
 
 export function LayoutEntrada({ children, tituloId, voltar = false }: Props) {
   return (
-    <main className="home-shell">
+    <main id="conteudo" className="home-shell" tabIndex={-1}>
       <div className="home-tela">
         <LinhasVelocidade />
         <div className="home-identidade">
