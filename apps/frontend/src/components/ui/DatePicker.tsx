@@ -184,7 +184,6 @@ export function DatePicker({
         aria-haspopup="dialog"
         aria-expanded={aberto}
         aria-controls={aberto ? idDialogo : undefined}
-        aria-invalid={invalido || undefined}
         aria-describedby={ariaDescribedBy}
         onClick={() => (aberto ? fechar() : abrir())}
         onKeyDown={aoTeclarBotao}
@@ -201,6 +200,7 @@ export function DatePicker({
       {aberto &&
         posicao &&
         createPortal(
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape fecha o calendário (padrão WAI-ARIA de diálogo)
           <div
             ref={painelRef}
             id={idDialogo}
@@ -235,7 +235,7 @@ export function DatePicker({
               ))}
             </div>
 
-            <div ref={gradeRef} className="datepicker__grade" role="grid" onKeyDown={aoTeclarGrade}>
+            <div ref={gradeRef} className="datepicker__grade" role="grid" tabIndex={-1} onKeyDown={aoTeclarGrade}>
               {dias.map((dia) => {
                 const iso = paraIso(dia);
                 const foraDoMes = dia.getMonth() !== mesExibido;

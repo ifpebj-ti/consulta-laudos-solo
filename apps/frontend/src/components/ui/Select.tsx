@@ -179,6 +179,7 @@ export function Select<T extends string>({
             {opcoes.map((opcao, indice) => {
               const marcada = opcao.valor === value;
               return (
+                // eslint-disable-next-line jsx-a11y/click-events-have-key-events -- teclado é tratado no combobox via aria-activedescendant
                 <li
                   key={opcao.valor}
                   id={`${idLista}-${indice}`}
