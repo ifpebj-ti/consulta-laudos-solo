@@ -19,7 +19,7 @@
   flex-wrap: wrap;
 }
 
-.painel-min--cliente .detalhe-cabecalho h2 {
+.painel-min--cliente .detalhe-cabecalho h1 {
   display: flex;
   flex-direction: column;
   font-family: var(--fonte);
@@ -29,13 +29,6 @@
   letter-spacing: -0.035em;
   color: var(--texto);
   overflow-wrap: anywhere;
-}
-
-.painel-min--cliente .detalhe-cabecalho__sub {
-  margin-top: calc(var(--u) * 2);
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--cinza);
 }
 
 .painel-min--cliente .detalhe-cabecalho .badge {
@@ -71,112 +64,28 @@
   font-variant-numeric: tabular-nums;
 }
 
-.painel-min--cliente .indicadores-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-top: 1px solid var(--filete);
-}
-
-@media (min-width: 620px) {
-  .painel-min--cliente .indicadores-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.painel-min--cliente .indicador-item {
-  position: relative;
-  padding: calc(var(--u) * 2.5) calc(var(--u) * 2) calc(var(--u) * 2.5) 0;
-  border-bottom: 1px solid var(--filete);
-}
-
-.painel-min--cliente .indicador-item::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: 0;
-  width: calc(var(--u) * 4);
-  height: 2px;
-  background: var(--verde);
-}
-
-.painel-min--cliente .indicador-nome {
-  display: block;
-  margin-bottom: var(--u);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--cinza);
-}
-
-.painel-min--cliente .indicador-valor {
-  display: block;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--texto);
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.painel-min--cliente .download-bar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: calc(var(--u) * 3);
-  flex-wrap: wrap;
-}
-
-.painel-min--cliente .download-bar .detalhe-modulo__titulo {
-  margin-bottom: var(--u);
-}
-
-.painel-min--cliente .download-bar p {
+.painel-min--cliente .detalhe-situacao {
+  margin-top: calc(var(--u) * 3);
+  padding-left: calc(var(--u) * 2);
   font-size: 14px;
-  color: var(--cinza);
+  line-height: 1.6;
+  color: var(--texto);
+  border-left: 2px solid var(--marrom);
 }
 
-.painel-min--cliente .download-bar .btn {
-  gap: calc(var(--u) * 2);
-  padding: calc(var(--u) * 2) calc(var(--u) * 3);
-  font-size: 15px;
-}
-
-.painel-min--cliente .download-bar .btn--download svg {
-  transition: transform 0.25s ease;
-}
-
-.painel-min--cliente .download-bar .btn--download:hover:not(:disabled) svg {
-  transform: translateX(6px);
-}
-
-.painel-min--cliente .alerta-erro {
-  margin-top: 0;
-  padding: var(--u) 0 var(--u) calc(var(--u) * 2);
+.painel-min--cliente .download-status {
+  margin-bottom: calc(var(--u) * 4);
   font-size: 13px;
-  font-weight: 600;
-  color: var(--vermelho);
-  background: transparent;
-  border: 0;
-  border-left: 2px solid var(--vermelho);
-  border-radius: 0;
+  color: var(--verde-escuro);
+}
+
+.painel-min--cliente .estado-bloco {
+  margin-bottom: calc(var(--u) * 4);
 }
 
 @media (max-width: 560px) {
-  .painel-min--cliente .detalhe-cabecalho h2 {
+  .painel-min--cliente .detalhe-cabecalho h1 {
     font-size: 32px;
-  }
-  .painel-min--cliente .indicador-valor {
-    font-size: 19px;
-  }
-  .painel-min--cliente .download-bar .btn {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .painel-min--cliente .download-bar .btn--download svg {
-    transition: none;
   }
 }
 
@@ -186,8 +95,10 @@
     background: #fff;
   }
   .painel-min--cliente .painel-min__velocidade,
-  .painel-min--cliente .navbar__conta,
-  .painel-min--cliente .download-bar .btn {
+.painel-min--cliente .navbar__conta,
+.painel-min--cliente .estado-bloco,
+.painel-min--cliente .download-status,
+.pular-conteudo {
     display: none;
   }
   .painel-min--cliente .navbar {
@@ -201,11 +112,361 @@
     padding: calc(var(--u) * 3) 0 0;
     animation: none;
   }
-  .painel-min--cliente .detalhe-modulo,
-  .painel-min--cliente .indicador-item {
+  .painel-min--cliente .detalhe-modulo {
     break-inside: avoid;
   }
   .painel-min--cliente .footer-institucional {
     padding: calc(var(--u) * 2) 0 0;
+  }
+}
+
+.painel-min--cliente .dados-laudo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-top: 1px solid var(--filete);
+}
+
+.painel-min--cliente .dados-laudo__item {
+  position: relative;
+  padding: calc(var(--u) * 2.5) calc(var(--u) * 2) calc(var(--u) * 2.5) 0;
+  border-bottom: 1px solid var(--filete);
+}
+
+.painel-min--cliente .dados-laudo__item::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: calc(var(--u) * 4);
+  height: 2px;
+  background: var(--verde);
+}
+
+.painel-min--cliente .dados-laudo__item dt {
+  margin-bottom: var(--u);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cinza);
+}
+
+.painel-min--cliente .dados-laudo__item dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.painel-min--cliente .dados-laudo__item--destaque {
+  grid-column: span 2;
+}
+
+.painel-min--cliente .dados-laudo__item--destaque dd {
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+
+.painel-min--cliente .download-laudo__corpo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--u) * 3);
+  padding: calc(var(--u) * 3) 0;
+}
+
+.painel-min--cliente .download-laudo__texto {
+  flex: 1 1 280px;
+  max-width: 460px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--cinza);
+}
+
+.painel-min--cliente .download-laudo__botao {
+  gap: calc(var(--u) * 1.5);
+  min-width: 280px;
+  padding: calc(var(--u) * 2.5) calc(var(--u) * 4);
+  font-size: 16px;
+}
+
+.painel-min--cliente .download-laudo__botao.btn--download svg {
+  transition: transform 0.25s ease;
+}
+
+.painel-min--cliente .download-laudo__botao.btn--download:hover:not(:disabled) svg {
+  transform: translateY(3px);
+}
+
+@media (max-width: 760px) {
+  .painel-min--cliente .dados-laudo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .painel-min--cliente .dados-laudo {
+    grid-template-columns: 1fr;
+  }
+  .painel-min--cliente .dados-laudo__item--destaque {
+    grid-column: auto;
+  }
+  .painel-min--cliente .dados-laudo__item--destaque dd {
+    font-size: 24px;
+  }
+  .painel-min--cliente .download-laudo__botao {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .painel-min--cliente .download-laudo__botao.btn--download svg {
+    transition: none;
+  }
+}
+
+@media print {
+  .painel-min--cliente .download-laudo {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .painel-min--cliente .dados-laudo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .painel-min--cliente .dados-laudo__item {
+    padding: calc(var(--u) * 1.5) var(--u) calc(var(--u) * 1.5) 0;
+  }
+  .painel-min--cliente .dados-laudo__item--destaque {
+    grid-column: 1 / -1;
+  }
+  .painel-min--cliente .dados-laudo__item dt {
+    margin-bottom: 4px;
+    font-size: 10.5px;
+  }
+  .painel-min--cliente .dados-laudo__item dd {
+    font-size: 16px;
+  }
+  .painel-min--cliente .dados-laudo__item--destaque dd {
+    font-size: 22px;
+  }
+  .painel-min--cliente .detalhe-cabecalho {
+    margin-bottom: calc(var(--u) * 3);
+  }
+  .painel-min--cliente .detalhe-modulo {
+    margin-bottom: calc(var(--u) * 3);
+  }
+  .painel-min--cliente .download-laudo__corpo {
+    padding: calc(var(--u) * 2) 0;
+    gap: calc(var(--u) * 2);
+  }
+}
+
+.painel-min--cliente .detalhe-cabecalho {
+  margin-bottom: calc(var(--u) * 4);
+}
+
+.painel-min--cliente .detalhe-modulo {
+  margin-bottom: calc(var(--u) * 4);
+}
+
+.painel-min--cliente .dados-laudo__item {
+  padding-top: calc(var(--u) * 2);
+  padding-bottom: calc(var(--u) * 2);
+}
+
+.painel-min--cliente .download-laudo__corpo {
+  padding: calc(var(--u) * 2) 0;
+}
+
+@media (max-width: 560px) {
+  .painel-min--cliente .page-container {
+    padding-top: calc(var(--u) * 3);
+  }
+  .painel-min--cliente .detalhe-cabecalho {
+    margin-bottom: calc(var(--u) * 2);
+  }
+  .painel-min--cliente .detalhe-modulo {
+    padding-top: calc(var(--u) * 2);
+  }
+  .painel-min--cliente .detalhe-modulo__titulo {
+    margin-bottom: calc(var(--u) * 2);
+  }
+  .painel-min--cliente .dados-laudo__item {
+    padding-top: calc(var(--u) * 1.5);
+    padding-bottom: calc(var(--u) * 1.5);
+  }
+  .painel-min--cliente .download-laudo__texto {
+    font-size: 13px;
+  }
+}
+
+.painel-min--cliente .detalhe-versao {
+  margin-top: calc(var(--u) * 2);
+  font-size: 13px;
+  color: var(--verde-escuro);
+}
+
+.painel-min--cliente .detalhe-offline {
+  margin-bottom: calc(var(--u) * 3);
+}
+
+.painel-min--cliente .situacao-laudo {
+  margin-bottom: calc(var(--u) * 4);
+  padding: calc(var(--u) * 2) 0 calc(var(--u) * 2) calc(var(--u) * 2);
+  border-left: 2px solid var(--verde);
+}
+
+.painel-min--cliente .situacao-laudo--bloqueado {
+  border-left-color: var(--vermelho);
+}
+
+.painel-min--cliente .situacao-laudo--neutro {
+  border-left-color: var(--marrom);
+}
+
+.painel-min--cliente .situacao-laudo__titulo {
+  margin: 0 0 var(--u);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.painel-min--cliente .situacao-laudo--bloqueado .situacao-laudo__titulo {
+  color: var(--vermelho);
+}
+
+.painel-min--cliente .situacao-laudo__texto {
+  max-width: 620px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--cinza);
+}
+
+.painel-min--cliente .situacao-laudo__previsao {
+  margin-top: calc(var(--u) * 2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.painel-min--cliente .situacao-laudo__previsao--atrasada {
+  color: var(--marrom);
+}
+
+.painel-min--cliente .etapas-laudo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(var(--u) * 1.5);
+  margin: calc(var(--u) * 2.5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.painel-min--cliente .etapas-laudo__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--cinza-claro);
+}
+
+.painel-min--cliente .etapas-laudo__marca {
+  display: block;
+  height: 2px;
+  background: var(--filete);
+}
+
+.painel-min--cliente .etapas-laudo__item--concluida {
+  color: var(--verde-escuro);
+}
+
+.painel-min--cliente .etapas-laudo__item--concluida .etapas-laudo__marca {
+  background: var(--verde);
+}
+
+.painel-min--cliente .etapas-laudo__item--atual {
+  color: var(--texto);
+}
+
+.painel-min--cliente .etapas-laudo__item--atual .etapas-laudo__marca {
+  background: linear-gradient(90deg, var(--verde) 50%, var(--filete) 50%);
+}
+
+.painel-min--cliente .etapas-laudo__nome {
+  overflow-wrap: anywhere;
+}
+
+.painel-min--cliente .dados-laudo__item dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--u) calc(var(--u) * 1.5);
+}
+
+.painel-min--cliente .dados-laudo__copiar {
+  padding: 0 0 2px;
+  font-family: var(--fonte);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--cinza);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--filete);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.painel-min--cliente .dados-laudo__copiar:hover {
+  color: var(--verde-escuro);
+  border-color: var(--verde);
+}
+
+.painel-min--cliente .detalhe-atualizacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--u) calc(var(--u) * 2);
+  font-size: 12.5px;
+  color: var(--cinza);
+}
+
+.painel-min--cliente .detalhe-atualizacao__erro {
+  flex-basis: 100%;
+  color: var(--vermelho);
+}
+
+.painel-min--cliente .estado-bloco:focus {
+  outline: 2px solid var(--verde);
+  outline-offset: 4px;
+}
+
+@media (max-width: 560px) {
+  .painel-min--cliente .etapas-laudo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .painel-min--cliente .situacao-laudo {
+    margin-bottom: calc(var(--u) * 3);
+  }
+}
+
+@media print {
+  .painel-min--cliente .detalhe-atualizacao,
+  .painel-min--cliente .dados-laudo__copiar,
+  .painel-min--cliente .detalhe-offline {
+    display: none;
   }
 }
