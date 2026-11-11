@@ -56,6 +56,17 @@ export function calcularValorLiquido(medido: number, branco: number): number {
   return medido - branco;
 }
 
+export const FATOR_NAOH_PADRAO = 1;
+
+export function fatorNaohValido(fator: number): boolean {
+  return Number.isFinite(fator) && fator > 0;
+}
+
+export function calcularAcidezPotencial(leitura: number, branco: number, fator: number = FATOR_NAOH_PADRAO): number {
+  const fatorAplicado = fatorNaohValido(fator) ? fator : FATOR_NAOH_PADRAO;
+  return leitura * fatorAplicado - branco;
+}
+
 export interface EntradaGranulometria {
   tfsa: number;
   areiaBecker: number;
@@ -94,34 +105,85 @@ export function calcularGranulometria(entrada: EntradaGranulometria): ResultadoG
   return { pesoAreia, pesoSecoNaoh, argila10mlCorrigido, argila1000ml, pctAreia, pctSilte, pctArgila };
 }
 
-export function classificarTextura(pctAreia: number, pctSilte: number, pctArgila: number): string {
-  const areia = pctAreia;
-  const silte = pctSilte;
-  const argila = pctArgila;
+export type ClasseTextural =
+  | 'Areia'
+  | 'Areia Franca'
+  | 'Franco Arenoso'
+  | 'Franco'
+  | 'Franco Siltoso'
+  | 'Silte'
+  | 'Franco Argilo Arenoso'
+  | 'Franco Argiloso'
+  | 'Franco Argilo Siltoso'
+  | 'Argilo Arenoso'
+  | 'Argilo Siltoso'
+  | 'Argila'
+  | 'Muito Argiloso';
 
-  if (areia >= 85 && silte <= 15 && argila <= 10) return 'Areia';
-  if (areia >= 70 && areia < 90 && silte <= 30 && argila <= 15) return 'Areia Franca';
-  if (areia >= 45 && areia < 85 && silte <= 50 && argila <= 20) return 'Franco Arenoso';
-  if (areia >= 45 && areia < 80 && silte <= 28 && argila >= 20 && argila <= 35) return 'Franco Argilo Arenoso';
-  if (areia >= 45 && areia < 65 && silte <= 20 && argila >= 35 && argila <= 55) return 'Argilo Arenoso';
-  if (areia >= 23 && areia < 55 && silte >= 28 && silte <= 50 && argila >= 5 && argila <= 28) return 'Franco';
-  if (areia < 50 && silte >= 50 && silte <= 90 && argila <= 28) return 'Franco Siltoso';
-  if (areia < 20 && silte >= 80 && argila <= 10) return 'Silte';
-  if (areia >= 20 && areia < 45 && silte >= 15 && silte <= 53 && argila >= 28 && argila <= 40) return 'Franco Argiloso';
-  if (areia < 20 && silte >= 40 && silte <= 73 && argila >= 28 && argila <= 40) return 'Franco Argilo Siltoso';
-  if (areia < 45 && silte <= 40 && argila >= 40 && argila <= 60) return 'Argila';
-  if (areia < 20 && silte >= 40 && silte <= 60 && argila >= 40 && argila <= 60) return 'Argilo Siltoso';
-  if (areia < 40 && silte <= 40 && argila >= 60) return 'Muito Argiloso';
+type Fracoes = { areia: number; silte: number; argila: number };
 
-  return 'Franco';
+export const REGRAS_TRIANGULO_TEXTURAL: ReadonlyArray<{ classe: ClasseTextural; pertence: (f: Fracoes) => boolean }> = [
+  { classe: 'Muito Argiloso', pertence: ({ argila }) => argila >= 60 },
+  { classe: 'Argilo Siltoso', pertence: ({ argila, silte }) => argila >= 40 && argila < 60 && silte >= 40 },
+  { classe: 'Argilo Arenoso', pertence: ({ argila, areia }) => argila >= 35 && argila < 60 && areia > 45 },
+  {
+    classe: 'Argila',
+    pertence: ({ argila, silte, areia }) => argila >= 40 && argila < 60 && silte < 40 && areia <= 45,
+  },
+  {
+    classe: 'Franco Argilo Siltoso',
+    pertence: ({ argila, areia }) => argila >= 27 && argila < 40 && areia <= 20,
+  },
+  {
+    classe: 'Franco Argiloso',
+    pertence: ({ argila, areia }) => argila >= 27 && argila < 40 && areia > 20 && areia <= 45,
+  },
+  {
+    classe: 'Franco Argilo Arenoso',
+    pertence: ({ argila, silte, areia }) => argila >= 20 && argila < 35 && silte < 28 && areia > 45,
+  },
+  {
+    classe: 'Franco',
+    pertence: ({ argila, silte, areia }) => argila >= 7 && argila < 27 && silte >= 28 && silte < 50 && areia <= 52,
+  },
+  { classe: 'Silte', pertence: ({ argila, silte }) => silte >= 80 && argila < 12 },
+  {
+    classe: 'Franco Siltoso',
+    pertence: ({ argila, silte }) => (silte >= 50 && argila >= 12 && argila < 27) || (silte >= 50 && silte < 80 && argila < 12),
+  },
+  { classe: 'Areia', pertence: ({ argila, silte }) => silte + 1.5 * argila < 15 },
+  {
+    classe: 'Areia Franca',
+    pertence: ({ argila, silte }) => silte + 1.5 * argila >= 15 && silte + 2 * argila < 30,
+  },
+  {
+    classe: 'Franco Arenoso',
+    pertence: ({ argila, silte, areia }) =>
+      silte + 2 * argila >= 30 &&
+      ((argila >= 7 && argila < 20 && areia > 52) || (argila < 7 && silte < 50)),
+  },
+];
+
+export const TOLERANCIA_SOMA_FRACOES = 1;
+
+export function classificarTextura(pctAreia: number, pctSilte: number, pctArgila: number): ClasseTextural | null {
+  const fracoes = { areia: pctAreia, silte: pctSilte, argila: pctArgila };
+  const valores = Object.values(fracoes);
+  if (valores.some((valor) => !Number.isFinite(valor) || valor < 0 || valor > 100)) return null;
+  if (Math.abs(pctAreia + pctSilte + pctArgila - 100) > TOLERANCIA_SOMA_FRACOES) return null;
+  return REGRAS_TRIANGULO_TEXTURAL.find((regra) => regra.pertence(fracoes))?.classe ?? null;
 }
 
+export const FATOR_NA_MG_L_PARA_CMOLC = 230;
+
+export const FATOR_K_MG_L_PARA_CMOLC = 391;
+
 export function converterNaParaCmolc(mgPorLitro: number): number {
-  return mgPorLitro / 230;
+  return mgPorLitro / FATOR_NA_MG_L_PARA_CMOLC;
 }
 
 export function converterKParaCmolc(mgPorLitro: number): number {
-  return mgPorLitro / 391;
+  return mgPorLitro / FATOR_K_MG_L_PARA_CMOLC;
 }
 
 export interface ComplexoSortivo {

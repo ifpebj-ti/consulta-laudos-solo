@@ -5,7 +5,7 @@
   gap: var(--u);
   font-family: 'Inter', var(--fonte);
   color: var(--texto);
-  background: transparent;
+  background-color: transparent;
   border: 0;
   border-bottom: 1px solid var(--texto);
   border-radius: 0;
@@ -21,7 +21,7 @@
   font-size: 15px;
   color: var(--texto);
   font-variant-numeric: tabular-nums;
-  background: transparent;
+  background-color: transparent;
   border: 0;
   border-bottom: 1px solid var(--texto);
   border-radius: 0;
@@ -34,7 +34,7 @@
   font-family: var(--fonte);
   font-size: 13px;
   padding: var(--u) 0;
-  background: transparent;
+  background-color: transparent;
   border: 0;
   border-bottom: 1px solid var(--texto);
   border-radius: 0;
@@ -54,7 +54,7 @@
 .select--invalido,
 .select--invalido:hover {
   border-bottom-color: var(--vermelho);
-  background: rgba(205, 25, 30, 0.04);
+  background-color: rgba(205, 25, 30, 0.04);
   box-shadow: 0 1px 0 0 var(--vermelho);
 }
 
@@ -128,7 +128,7 @@
 }
 
 .select__opcao--ativa {
-  background: rgba(47, 158, 65, 0.07);
+  background-color: rgba(47, 158, 65, 0.07);
 }
 
 .select__opcao--marcada {
@@ -167,13 +167,13 @@
 .select--campo:focus-visible,
 .select--campo.select--aberto {
   outline: none;
-  background: transparent;
+  background-color: transparent;
   border-bottom-color: var(--verde);
   box-shadow: 0 1px 0 0 var(--verde);
 }
 
 .select--invalido {
-  background: rgba(205, 25, 30, 0.04);
+  background-color: rgba(205, 25, 30, 0.04);
   border-bottom-color: var(--vermelho);
   box-shadow: 0 1px 0 0 var(--vermelho);
 }

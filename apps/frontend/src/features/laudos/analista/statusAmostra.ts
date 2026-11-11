@@ -7,6 +7,8 @@ export function rotuloStatus(status: StatusAmostra): string {
       return 'Não iniciado';
     case 'em_andamento':
       return 'Em andamento';
+    case 'aguardando_homologacao':
+      return 'Aguardando homologação';
     case 'concluido':
       return 'Concluído';
   }
@@ -18,6 +20,8 @@ export function variantStatus(status: StatusAmostra): BadgeVariant {
       return 'status-processamento';
     case 'em_andamento':
       return 'medio';
+    case 'aguardando_homologacao':
+      return 'status-homologacao';
     case 'concluido':
       return 'status-concluido';
   }

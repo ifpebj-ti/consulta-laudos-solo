@@ -67,42 +67,27 @@
   }
 }
 
-.form-grid--branco {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-@media (max-width: 1300px) {
-  .form-grid--branco {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 700px) {
-  .form-grid--branco {
-    grid-template-columns: 1fr;
-  }
-}
-
-.form-grid--granulometria {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-@media (max-width: 900px) {
-  .form-grid--granulometria {
-    grid-template-columns: 1fr;
-  }
-}
-
 .form-field--com-branco {
-  padding: calc(var(--u) * 2);
-  background: var(--branco);
-  border: 1px solid var(--filete);
+  position: relative;
+  padding: calc(var(--u) * 2) 0 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--filete);
   border-radius: 0;
 }
 
-.form-field__linha-branco {
-  display: flex;
-  gap: var(--u);
+.form-field--com-branco::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: calc(var(--u) * 4);
+  height: 2px;
+  background: var(--verde);
+}
+
+.form-section--fisica .form-field--com-branco::before {
+  background: var(--marrom);
 }
 
 .form-field__sub {
@@ -117,52 +102,6 @@
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.06em;
-  color: var(--cinza);
-}
-
-.form-field__liquido {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: calc(var(--u) * 2);
-  margin-top: calc(var(--u) * 2);
-  padding: var(--u) calc(var(--u) * 1.5);
-  background: rgba(47, 158, 65, 0.06);
-  border: 0;
-  border-left: 2px solid var(--verde);
-  border-radius: 0;
-}
-
-.form-field__liquido-rotulo {
-  text-transform: uppercase;
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--verde-escuro);
-}
-
-.form-field__liquido + .form-field__liquido {
-  margin-top: var(--u);
-}
-
-.form-field__liquido-valor {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.form-field__liquido-valor strong {
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--verde-escuro);
-}
-
-.form-field__liquido-valor span {
-  font-size: 12px;
-  font-weight: 600;
   color: var(--cinza);
 }
 
@@ -186,31 +125,45 @@
 
 .calib-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--u);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 calc(var(--u) * 3);
   margin-bottom: calc(var(--u) * 2);
 }
 
 .calib-summary__item {
-  padding: 10px 8px;
-  text-align: center;
-  background: var(--branco);
-  border: 1px solid var(--filete);
+  position: relative;
+  padding: calc(var(--u) * 2) 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--texto);
+  border-bottom: 1px solid var(--filete);
   border-radius: 0;
+}
+
+.calib-summary__item::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: calc(var(--u) * 4);
+  height: 2px;
+  background: var(--marrom);
 }
 
 .calib-summary__item span {
   display: block;
-  font-size: 10.5px;
+  font-size: 11.5px;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: var(--u);
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--cinza);
 }
 
 .calib-summary__item strong {
-  font-size: 17px;
+  font-size: 22px;
+  letter-spacing: -0.01em;
   color: var(--texto);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -380,3 +333,169 @@
     flex-wrap: wrap;
   }
 }
+
+.form-grid--complexo {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--u) * 4) calc(var(--u) * 3);
+  margin-bottom: calc(var(--u) * 4);
+}
+
+@media (max-width: 1100px) {
+  .form-grid--complexo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid--complexo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.campo-elemento {
+  min-width: 0;
+  margin: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+}
+
+.campo-elemento__legenda {
+  float: left;
+  width: 100%;
+  margin-bottom: calc(var(--u) * 1.5);
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--texto);
+}
+
+.campo-elemento__subcampos {
+  clear: both;
+  display: grid;
+  gap: calc(var(--u) * 2);
+}
+
+.campo-elemento__subcampos--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.campo-elemento__subcampos--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.campo-elemento .form-field__sub-label {
+  font-size: 11px;
+}
+
+.campo-elemento .form-field__erro {
+  margin-top: var(--u);
+}
+
+.calib-summary--complexo {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+}
+
+.calib-summary--complexo .calib-summary__item::before {
+  background: var(--verde);
+}
+
+.calib-summary__item dt {
+  display: block;
+  margin-bottom: var(--u);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--cinza);
+}
+
+.calib-summary__item dd {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+  .calib-summary--complexo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .calib-summary--complexo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .calib-summary {
+    gap: 0 calc(var(--u) * 2);
+  }
+}
+
+.form-subsecao-titulo--resultados {
+  margin-top: calc(var(--u) * 3);
+}
+
+.calib-summary--fisica {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr);
+}
+
+.calib-summary__item--texto dd {
+  font-size: 18px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .calib-summary--fisica {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .calib-summary--fisica .calib-summary__item--texto {
+    grid-column: 1 / -1;
+  }
+}
+
+.form-grid--fisica {
+  grid-template-columns: minmax(0, 0.7fr) repeat(3, minmax(0, 1fr));
+  gap: calc(var(--u) * 4) calc(var(--u) * 3);
+}
+
+@media (max-width: 1100px) {
+  .form-grid--fisica {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid--fisica {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calib-summary--pesos {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.form-section--fisica .calib-summary--pesos .calib-summary__item::before {
+  background: var(--marrom);
+}
+
+@media (max-width: 640px) {
+  .calib-summary--pesos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+.registro-avisos {
+  margin-top: calc(var(--u) * 3);
+}
+
+.registro-avisos ul {
+  margin: 4px 0 0 18px;
+  padding: 0;
+}
+
