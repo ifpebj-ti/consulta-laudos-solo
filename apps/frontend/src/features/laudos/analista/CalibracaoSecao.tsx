@@ -54,15 +54,13 @@ export function CalibracaoSecao({
   }, [calibracaoAplicada?.pontos]);
 
   useEffect(() => {
-    if (leituraAmostra !== undefined) {
-      const atualNum = parseFloat(leituraTexto);
-      if (Number.isNaN(atualNum) && leituraAmostra === 0) {
-        return;
-      }
-      if (atualNum !== leituraAmostra) {
-        setLeituraTexto(leituraAmostra !== 0 ? String(leituraAmostra) : '');
-      }
-    }
+    if (leituraAmostra === undefined) return;
+    setLeituraTexto((atual) => {
+      const atualNum = parseFloat(atual);
+      if (Number.isNaN(atualNum) && leituraAmostra === 0) return atual;
+      if (atualNum === leituraAmostra) return atual;
+      return leituraAmostra !== 0 ? String(leituraAmostra) : '';
+    });
   }, [leituraAmostra]);
 
   const regressao = useMemo(() => calcularRegressaoLinear(pontos), [pontos]);

@@ -141,3 +141,33 @@
   outline: 2px solid var(--verde);
   outline-offset: 4px;
 }
+
+.analise-situacao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: calc(var(--u) * 4);
+  padding: calc(var(--u) * 1.5) 0 calc(var(--u) * 1.5) calc(var(--u) * 2);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--texto);
+  border-left: 2px solid var(--marrom);
+}
+
+.analise-situacao--pronta {
+  border-left-color: var(--verde);
+}
+
+.analise-situacao__titulo {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.analise-situacao--pronta .analise-situacao__titulo {
+  color: var(--verde-escuro);
+}
+
+.analise-situacao__info {
+  font-size: 12.5px;
+  color: var(--cinza);
+}
