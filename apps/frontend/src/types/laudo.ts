@@ -15,8 +15,11 @@ export interface LaudoDetalhe {
   protocolo: string;
   status: string;
   cliente: ClienteInfo;
-  propriedade: string;
-  dataEmissao: string;
-  parametrosSolo: ParametrosSolo;
+  propriedade: string | null;
+  dataEmissao: string | null;
+  parametrosSolo?: ParametrosSolo | null;
   temPdfDisponivel: boolean;
+  dataPrevistaEntrega?: string | null;
+  versao?: number | null;
+  atualizadoEm?: string | null;
 }

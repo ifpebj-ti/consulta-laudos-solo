@@ -38,7 +38,7 @@
   border-radius: 0;
 }
 
-.modal-box__header h3 {
+.modal-box__header h2 {
   margin-bottom: 4px;
   font-family: var(--fonte);
   font-size: 22px;
@@ -74,6 +74,10 @@
 
 .modal-box__body {
   padding: calc(var(--u) * 4);
+}
+
+.modal-box:focus {
+  outline: none;
 }
 
 .modal-box__fechar:focus-visible {

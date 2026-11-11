@@ -5,6 +5,10 @@ export interface CampoComBranco {
   branco: number;
 }
 
+export interface CampoComFator extends CampoComBranco {
+  fator: number;
+}
+
 export type TipoAnalise = 'fisica' | 'quimica' | 'fisico_quimica';
 
 export const ROTULOS_TIPO_ANALISE: Record<TipoAnalise, string> = {
@@ -59,7 +63,7 @@ export interface DadosQuimica {
   calcio: CampoComBranco;
   magnesio: CampoComBranco;
   aluminio: CampoComBranco;
-  acidezPotencial: CampoComBranco;
+  acidezPotencial: CampoComFator;
 }
 
 export interface DadosAnalise {
@@ -79,7 +83,7 @@ export const DADOS_ANALISE_VAZIOS: DadosAnalise = {
     calcio: { medido: 0, branco: 0 },
     magnesio: { medido: 0, branco: 0 },
     aluminio: { medido: 0, branco: 0 },
-    acidezPotencial: { medido: 0, branco: 0 },
+    acidezPotencial: { medido: 0, branco: 0, fator: 1 },
   },
   granulometria: {
     tfsa: 0,
@@ -93,17 +97,20 @@ export const DADOS_ANALISE_VAZIOS: DadosAnalise = {
   calibracao: null,
 };
 
-export type StatusAmostra = 'nao_iniciado' | 'em_andamento' | 'concluido';
+export type StatusAmostra = 'nao_iniciado' | 'em_andamento' | 'aguardando_homologacao' | 'concluido';
 
 export interface AmostraRegistro {
   dados: DadosAnalise;
   status: StatusAmostra;
   criadaEm: string;
+  atualizadaEm?: string;
 }
 
 export interface CartaoAmostra {
   protocolo: string;
   solicitante: string;
+  atualizadaEm?: string;
+  pendencias?: string[];
   propriedade: string;
   prazo: string;
   status: StatusAmostra;

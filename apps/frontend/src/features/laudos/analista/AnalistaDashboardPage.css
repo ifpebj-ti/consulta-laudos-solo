@@ -1,5 +1,5 @@
 .dashboard-cta {
-  background: transparent;
+  background-color: transparent;
 }
 
 .dashboard-cta__conteudo {
@@ -36,7 +36,7 @@
   font-family: var(--fonte);
   font-size: 13px;
   font-weight: 600;
-  background: transparent;
+  background-color: transparent;
   border: 0;
   border-bottom: 1px solid var(--texto);
   border-radius: 0;
@@ -72,7 +72,7 @@
   padding: var(--u) 28px var(--u) 26px;
   font-family: var(--fonte);
   font-size: 14px;
-  background: transparent;
+  background-color: transparent;
   border: 0;
   border-bottom: 1px solid var(--texto);
   border-radius: 0;
@@ -89,7 +89,7 @@
 .dashboard-busca input:focus {
   border-color: var(--verde);
   outline: none;
-  background: transparent;
+  background-color: transparent;
   border-bottom-color: var(--verde);
   box-shadow: 0 1px 0 0 var(--verde);
 }
@@ -111,7 +111,7 @@
   transition: background 0.12s ease, color 0.12s ease;
   right: 0;
   border-radius: 0;
-  background: transparent;
+  background-color: transparent;
 }
 
 .dashboard-busca__limpar:hover {
@@ -250,4 +250,63 @@
   .dashboard-bloco--clicavel::before {
     transition: none;
   }
+}
+
+.dashboard-listagem-erro {
+  margin-bottom: calc(var(--u) * 5);
+}
+
+.dashboard-situacoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--u) calc(var(--u) * 2);
+  margin-bottom: calc(var(--u) * 3);
+}
+
+.dashboard-situacao {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 0 4px;
+  font-family: var(--fonte);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cinza);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--filete);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.dashboard-situacao:hover {
+  color: var(--texto);
+}
+
+.dashboard-situacao--ativa {
+  color: var(--verde-escuro);
+  border-bottom: 2px solid var(--verde);
+}
+
+.dashboard-situacao__total {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--cinza-claro);
+}
+
+.dashboard-bloco__pendencias {
+  margin-top: var(--u);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--marrom);
+}
+
+.dashboard-bloco__pendencias--pronto {
+  color: var(--verde-escuro);
+}
+
+.dashboard-bloco__atualizacao {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--cinza-claro);
 }

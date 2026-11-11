@@ -3,53 +3,74 @@ import { FormField } from '@/components/ui/FormField';
 import { MensagemErroCampo } from '@/components/ui/MensagemErroCampo';
 import { Button } from '@/components/ui/Button';
 import { DecimalInput } from '@/components/ui/DecimalInput';
+import { SetaVelocidade } from '@/features/home/LayoutEntrada';
 import { CalibracaoSecao } from './CalibracaoSecao';
-import { calcularGranulometria, calcularValorLiquido } from './calculos';
-import type { CampoComBranco, DadosAnalise } from './tipos';
+import { avaliarDadosAnalise } from './validacaoAnalise';
+import '@/components/feedback/Feedback.css';
+import {
+  calcularAcidezPotencial,
+  calcularGranulometria,
+  calcularValorLiquido,
+  classificarTextura,
+  converterKParaCmolc,
+  converterNaParaCmolc,
+  FATOR_K_MG_L_PARA_CMOLC,
+  FATOR_NA_MG_L_PARA_CMOLC,
+  FATOR_NAOH_PADRAO,
+  fatorNaohValido,
+} from './calculos';
+import type { DadosAnalise } from './tipos';
 import './analista.css';
 
-interface CampoComBrancoInputProps {
-  idPrefix: string;
+interface Subcampo {
+  id: string;
+  rotulo: string;
+  valor: number;
+  onChange: (numero: number) => void;
+  invalido?: boolean;
+  idErro?: string;
+}
+
+function CampoElemento({
+  legenda,
+  unidade,
+  subcampos,
+  erro,
+}: {
   legenda: string;
   unidade: string;
-  valor: CampoComBranco;
-  onChange: (proximo: CampoComBranco) => void;
-}
-
-function ResultadoCalculado({ rotulo, valor, unidade }: { rotulo: string; valor: string; unidade: string }) {
+  subcampos: Subcampo[];
+  erro?: { id: string; mensagem?: string };
+}) {
   return (
-    <div className="form-field__liquido" aria-live="polite">
-      <span className="form-field__liquido-rotulo">{rotulo}</span>
-      <div className="form-field__liquido-valor">
-        <strong>{valor}</strong>
-        <span>{unidade}</span>
-      </div>
-    </div>
-  );
-}
-
-function CampoComBrancoInput({ idPrefix, legenda, unidade, valor, onChange }: CampoComBrancoInputProps) {
-  const liquido = calcularValorLiquido(valor.medido, valor.branco);
-  return (
-    <div className="form-field form-field--com-branco">
-      <label htmlFor={`${idPrefix}-medido`}>
+    <fieldset className={`form-field form-field--com-branco campo-elemento ${erro?.mensagem ? 'form-field--invalido' : ''}`.trim()}>
+      <legend className="campo-elemento__legenda">
         {legenda} <span className="unit">{unidade}</span>
-      </label>
-      <div className="form-field__linha-branco">
-        <div className="form-field__sub">
-          <span className="form-field__sub-label">Valor medido</span>
-          <DecimalInput id={`${idPrefix}-medido`} value={valor.medido} onChange={(medido) => onChange({ ...valor, medido })} />
-        </div>
-        <div className="form-field__sub">
-          <span className="form-field__sub-label">Branco</span>
-          <DecimalInput id={`${idPrefix}-branco`} value={valor.branco} onChange={(branco) => onChange({ ...valor, branco })} />
-        </div>
+      </legend>
+      <div className={`campo-elemento__subcampos campo-elemento__subcampos--${subcampos.length}`}>
+        {subcampos.map((sub) => (
+          <div className="form-field__sub" key={sub.id}>
+            <label className="form-field__sub-label" htmlFor={sub.id}>
+              {sub.rotulo}
+            </label>
+            <DecimalInput
+              id={sub.id}
+              value={sub.valor}
+              onChange={sub.onChange}
+              aria-invalid={sub.invalido || undefined}
+              aria-describedby={sub.invalido ? sub.idErro : undefined}
+            />
+          </div>
+        ))}
       </div>
-      <ResultadoCalculado rotulo="Valor líquido" valor={liquido.toFixed(2)} unidade={unidade} />
-    </div>
+      {erro && <MensagemErroCampo id={erro.id} mensagem={erro.mensagem} />}
+    </fieldset>
   );
 }
 
+const formatarResultado = (valor: number) => valor.toFixed(2);
+
+const formatarPercentual = (valor: number | null) => (valor === null ? '—' : `${Math.round(valor)}%`);
 export type CampoObrigatorioRegistro = 'tfsa' | 'calibracao';
 export type ErrosCamposRegistro = Partial<Record<CampoObrigatorioRegistro, string>>;
 
@@ -70,6 +91,7 @@ export interface RegistroFormProps {
   errosCampos?: ErrosCamposRegistro;
   tentativaValidacao?: number;
   onRecarregar?: () => void;
+  onTentarSalvar?: () => void;
 }
 
 export function RegistroForm({
@@ -83,6 +105,7 @@ export function RegistroForm({
   errosCampos = {},
   tentativaValidacao = 0,
   onRecarregar,
+  onTentarSalvar,
 }: RegistroFormProps) {
   const errosCamposRef = useRef(errosCampos);
   errosCamposRef.current = errosCampos;
@@ -124,7 +147,25 @@ export function RegistroForm({
 
   const { quimica, granulometria } = dados;
   const resultadoGranulometria = calcularGranulometria(granulometria);
+  const { pctAreia, pctSilte, pctArgila } = resultadoGranulometria;
+  const classeTextural =
+    pctAreia !== null && pctSilte !== null && pctArgila !== null ? classificarTextura(pctAreia, pctSilte, pctArgila) : null;
 
+  const fatorInvalido = !fatorNaohValido(quimica.acidezPotencial.fator);
+  const avisos = avaliarDadosAnalise(dados);
+  const resultadosComplexo = [
+    { sigla: 'Ca²⁺', valor: formatarResultado(calcularValorLiquido(quimica.calcio.medido, quimica.calcio.branco)) },
+    { sigla: 'Mg²⁺', valor: formatarResultado(calcularValorLiquido(quimica.magnesio.medido, quimica.magnesio.branco)) },
+    { sigla: 'Na⁺', valor: formatarResultado(converterNaParaCmolc(quimica.sodioMgL)) },
+    { sigla: 'K⁺', valor: formatarResultado(converterKParaCmolc(quimica.potassioMgL)) },
+    { sigla: 'Al³⁺', valor: formatarResultado(calcularValorLiquido(quimica.aluminio.medido, quimica.aluminio.branco)) },
+    {
+      sigla: 'H⁺+Al³⁺',
+      valor: formatarResultado(
+        calcularAcidezPotencial(quimica.acidezPotencial.medido, quimica.acidezPotencial.branco, quimica.acidezPotencial.fator),
+      ),
+    },
+  ];
   function atualizarQuimica<K extends keyof typeof quimica>(campo: K, valor: (typeof quimica)[K]) {
     onChange({ ...dados, quimica: { ...quimica, [campo]: valor } });
   }
@@ -164,8 +205,17 @@ export function RegistroForm({
             </div>
           )}
           {statusSalvamento === 'erro' && (
-            <div className="auto-save-status auto-save-status--erro">
-              <span>Falha no salvamento</span>
+            <div className="auto-save-status auto-save-status--erro" role="alert">
+              <span>
+                {typeof navigator !== 'undefined' && navigator.onLine === false
+                  ? 'Sem conexão: o rascunho será enviado quando a internet voltar'
+                  : 'Falha no salvamento do rascunho'}
+              </span>
+              {onTentarSalvar && (
+                <button type="button" className="link-acao" onClick={onTentarSalvar}>
+                  Tentar salvar novamente
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -185,65 +235,94 @@ export function RegistroForm({
         )}
         <div className="form-section">
           <div className="form-section__title">
-            <span className="dot"></span> Análise Química
+            <span className="dot"></span> Atributos Químicos
           </div>
-
           <div className="form-grid form-grid--quimica-simples">
             <FormField
               id="campo-ph"
               label="pH"
-              unit="(H₂O / CaCl₂)"
+              unit="(H₂O)"
               value={quimica.ph}
               onChange={(numero) => atualizarQuimica('ph', numero)}
-            />
-            <FormField
-              id="campo-sodio"
-              label="Sódio (Na)"
-              unit="mg/L"
-              value={quimica.sodioMgL}
-              onChange={(numero) => atualizarQuimica('sodioMgL', numero)}
-            />
-            <FormField
-              id="campo-potassio"
-              label="Potássio (K)"
-              unit="mg/L"
-              value={quimica.potassioMgL}
-              onChange={(numero) => atualizarQuimica('potassioMgL', numero)}
-            />
-          </div>
-
-          <div className="form-grid form-grid--branco" style={{ marginTop: 'calc(var(--u) * 3)' }}>
-            <CampoComBrancoInput
-              idPrefix="campo-ca"
-              legenda="Cálcio (Ca)"
-              unidade="cmolc/dm³"
-              valor={quimica.calcio}
-              onChange={(v) => atualizarQuimica('calcio', v)}
-            />
-            <CampoComBrancoInput
-              idPrefix="campo-mg"
-              legenda="Magnésio (Mg)"
-              unidade="cmolc/dm³"
-              valor={quimica.magnesio}
-              onChange={(v) => atualizarQuimica('magnesio', v)}
-            />
-            <CampoComBrancoInput
-              idPrefix="campo-al"
-              legenda="Alumínio (Al)"
-              unidade="cmolc/dm³"
-              valor={quimica.aluminio}
-              onChange={(v) => atualizarQuimica('aluminio', v)}
-            />
-            <CampoComBrancoInput
-              idPrefix="campo-h-al"
-              legenda="Acidez Potencial (H+Al)"
-              unidade="cmolc/dm³"
-              valor={quimica.acidezPotencial}
-              onChange={(v) => atualizarQuimica('acidezPotencial', v)}
             />
           </div>
         </div>
 
+        <div className="form-section">
+          <div className="form-section__title">
+            <span className="dot"></span> Complexo Sortivo
+          </div>
+          <div className="form-grid form-grid--complexo">
+            <CampoElemento
+              legenda="Cálcio (Ca²⁺)"
+              unidade="cmolc/dm³"
+              subcampos={[
+                { id: 'campo-ca-medido', rotulo: 'Leitura', valor: quimica.calcio.medido, onChange: (medido) => atualizarQuimica('calcio', { ...quimica.calcio, medido }) },
+                { id: 'campo-ca-branco', rotulo: 'Branco', valor: quimica.calcio.branco, onChange: (branco) => atualizarQuimica('calcio', { ...quimica.calcio, branco }) },
+              ]}
+            />
+            <CampoElemento
+              legenda="Magnésio (Mg²⁺)"
+              unidade="cmolc/dm³"
+              subcampos={[
+                { id: 'campo-mg-medido', rotulo: 'Leitura', valor: quimica.magnesio.medido, onChange: (medido) => atualizarQuimica('magnesio', { ...quimica.magnesio, medido }) },
+                { id: 'campo-mg-branco', rotulo: 'Branco', valor: quimica.magnesio.branco, onChange: (branco) => atualizarQuimica('magnesio', { ...quimica.magnesio, branco }) },
+              ]}
+            />
+            <CampoElemento
+              legenda="Sódio (Na⁺)"
+              unidade={`mg/L ÷ ${FATOR_NA_MG_L_PARA_CMOLC}`}
+              subcampos={[
+                { id: 'campo-sodio', rotulo: 'Leitura do fotômetro', valor: quimica.sodioMgL, onChange: (numero) => atualizarQuimica('sodioMgL', numero) },
+              ]}
+            />
+            <CampoElemento
+              legenda="Potássio (K⁺)"
+              unidade={`mg/L ÷ ${FATOR_K_MG_L_PARA_CMOLC}`}
+              subcampos={[
+                { id: 'campo-potassio', rotulo: 'Leitura do fotômetro', valor: quimica.potassioMgL, onChange: (numero) => atualizarQuimica('potassioMgL', numero) },
+              ]}
+            />
+            <CampoElemento
+              legenda="Alumínio (Al³⁺)"
+              unidade="cmolc/dm³"
+              subcampos={[
+                { id: 'campo-al-medido', rotulo: 'Leitura', valor: quimica.aluminio.medido, onChange: (medido) => atualizarQuimica('aluminio', { ...quimica.aluminio, medido }) },
+                { id: 'campo-al-branco', rotulo: 'Branco', valor: quimica.aluminio.branco, onChange: (branco) => atualizarQuimica('aluminio', { ...quimica.aluminio, branco }) },
+              ]}
+            />
+            <CampoElemento
+              legenda="Acidez Potencial (H⁺+Al³⁺)"
+              unidade="cmolc/dm³"
+              subcampos={[
+                { id: 'campo-h-al-medido', rotulo: 'Leitura', valor: quimica.acidezPotencial.medido, onChange: (medido) => atualizarQuimica('acidezPotencial', { ...quimica.acidezPotencial, medido }) },
+                {
+                  id: 'campo-h-al-fator',
+                  rotulo: 'Fator NaOH',
+                  valor: quimica.acidezPotencial.fator,
+                  onChange: (fator) => atualizarQuimica('acidezPotencial', { ...quimica.acidezPotencial, fator }),
+                  invalido: fatorInvalido,
+                  idErro: 'campo-h-al-fator-erro',
+                },
+                { id: 'campo-h-al-branco', rotulo: 'Branco', valor: quimica.acidezPotencial.branco, onChange: (branco) => atualizarQuimica('acidezPotencial', { ...quimica.acidezPotencial, branco }) },
+              ]}
+              erro={{
+                id: 'campo-h-al-fator-erro',
+                mensagem: fatorInvalido ? `O fator de correção do NaOH deve ser maior que zero. Usando ${FATOR_NAOH_PADRAO} no cálculo.` : undefined,
+              }}
+            />
+          </div>
+
+          <p className="form-subsecao-titulo">Resultados do complexo sortivo (cmolc/dm³)</p>
+          <dl className="calib-summary calib-summary--complexo" aria-live="polite">
+            {resultadosComplexo.map((item) => (
+              <div className="calib-summary__item" key={item.sigla}>
+                <dt>{item.sigla}</dt>
+                <dd>{item.valor}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
         <div
           id="secao-calibracao"
           className={`registro-alvo registro-alvo--secao ${errosCampos.calibracao ? 'registro-alvo--invalido' : ''}`.trim()}
@@ -259,108 +338,103 @@ export function RegistroForm({
 
         <div className="form-section form-section--fisica">
           <div className="form-section__title">
-            <span className="dot"></span> Análise Física (Granulometria)
+            <span className="dot"></span> Atributos Físicos (Granulometria)
           </div>
 
-          <div className="form-grid" style={{ marginBottom: 'calc(var(--u) * 2)' }}>
+          <div className="form-grid form-grid--fisica">
             <div id="bloco-tfsa" className="registro-alvo">
-              <FormField
-                id="campo-tfsa"
-                label="Peso da amostra (TFSA)"
-                unit="g"
-                required
-                erro={errosCampos.tfsa}
-                value={granulometria.tfsa}
-                onChange={(numero) => atualizarGranulometria('tfsa', numero)}
-              />
-            </div>
-          </div>
-
-          <p className="form-subsecao-titulo">Cálculos da Fração Areia, Silte e Argila</p>
-          <div className="form-grid form-grid--granulometria">
-            <div className="form-field form-field--com-branco">
-              <label>Fração Areia</label>
-              <div className="form-field__sub">
-                <span className="form-field__sub-label">Peso seco areia + becker (g)</span>
-                <DecimalInput
-                  value={granulometria.areiaBecker}
-                  onChange={(numero) => atualizarGranulometria('areiaBecker', numero)}
-                />
-              </div>
-              <div className="form-field__sub" style={{ marginTop: 8 }}>
-                <span className="form-field__sub-label">Peso seco becker (g)</span>
-                <DecimalInput
-                  value={granulometria.areiaBeckerVazio}
-                  onChange={(numero) => atualizarGranulometria('areiaBeckerVazio', numero)}
-                />
-              </div>
-              <ResultadoCalculado rotulo="Peso areia" valor={resultadoGranulometria.pesoAreia.toFixed(4)} unidade="g" />
-            </div>
-
-            <div className="form-field form-field--com-branco">
-              <label>Fração Argila</label>
-              <div className="form-field__sub">
-                <span className="form-field__sub-label">Peso seco argila + becker (g)</span>
-                <DecimalInput
-                  value={granulometria.argilaBecker}
-                  onChange={(numero) => atualizarGranulometria('argilaBecker', numero)}
-                />
-              </div>
-              <div className="form-field__sub" style={{ marginTop: 8 }}>
-                <span className="form-field__sub-label">Peso seco becker (g)</span>
-                <DecimalInput
-                  value={granulometria.argilaBeckerVazio}
-                  onChange={(numero) => atualizarGranulometria('argilaBeckerVazio', numero)}
-                />
-              </div>
-              <ResultadoCalculado
-                rotulo="Argila em 10 ml"
-                valor={resultadoGranulometria.argila10mlCorrigido.toFixed(4)}
+              <CampoElemento
+                legenda="Amostra (TFSA)"
                 unidade="g"
-              />
-              <ResultadoCalculado
-                rotulo="Argila em 1000 ml"
-                valor={resultadoGranulometria.argila1000ml.toFixed(2)}
-                unidade="g"
+                subcampos={[
+                  {
+                    id: 'campo-tfsa',
+                    rotulo: 'Peso da amostra *',
+                    valor: granulometria.tfsa,
+                    onChange: (numero) => atualizarGranulometria('tfsa', numero),
+                    invalido: Boolean(errosCampos.tfsa),
+                    idErro: 'campo-tfsa-erro',
+                  },
+                ]}
+                erro={{ id: 'campo-tfsa-erro', mensagem: errosCampos.tfsa }}
               />
             </div>
-
-            <div className="form-field form-field--com-branco">
-              <label>Branco do Dispersante (NaOH)</label>
-              <div className="form-field__sub">
-                <span className="form-field__sub-label">Peso seco NaOH + becker (g)</span>
-                <DecimalInput
-                  value={granulometria.naohBecker}
-                  onChange={(numero) => atualizarGranulometria('naohBecker', numero)}
-                />
-              </div>
-              <div className="form-field__sub" style={{ marginTop: 8 }}>
-                <span className="form-field__sub-label">Peso seco becker (g)</span>
-                <DecimalInput
-                  value={granulometria.naohBeckerVazio}
-                  onChange={(numero) => atualizarGranulometria('naohBeckerVazio', numero)}
-                />
-              </div>
-              <ResultadoCalculado rotulo="Peso seco do NaOH" valor={resultadoGranulometria.pesoSecoNaoh.toFixed(4)} unidade="g" />
-            </div>
+            <CampoElemento
+              legenda="Fração areia"
+              unidade="g"
+              subcampos={[
+                { id: 'campo-areia-becker', rotulo: 'Areia + becker', valor: granulometria.areiaBecker, onChange: (numero) => atualizarGranulometria('areiaBecker', numero) },
+                { id: 'campo-areia-vazio', rotulo: 'Becker vazio', valor: granulometria.areiaBeckerVazio, onChange: (numero) => atualizarGranulometria('areiaBeckerVazio', numero) },
+              ]}
+            />
+            <CampoElemento
+              legenda="Fração argila"
+              unidade="g"
+              subcampos={[
+                { id: 'campo-argila-becker', rotulo: 'Argila + becker', valor: granulometria.argilaBecker, onChange: (numero) => atualizarGranulometria('argilaBecker', numero) },
+                { id: 'campo-argila-vazio', rotulo: 'Becker vazio', valor: granulometria.argilaBeckerVazio, onChange: (numero) => atualizarGranulometria('argilaBeckerVazio', numero) },
+              ]}
+            />
+            <CampoElemento
+              legenda="Branco do dispersante (NaOH)"
+              unidade="g"
+              subcampos={[
+                { id: 'campo-naoh-becker', rotulo: 'NaOH + becker', valor: granulometria.naohBecker, onChange: (numero) => atualizarGranulometria('naohBecker', numero) },
+                { id: 'campo-naoh-vazio', rotulo: 'Becker vazio', valor: granulometria.naohBeckerVazio, onChange: (numero) => atualizarGranulometria('naohBeckerVazio', numero) },
+              ]}
+            />
           </div>
 
-          <div className="calib-summary" style={{ marginTop: 'calc(var(--u) * 2)' }}>
+          <p className="form-subsecao-titulo form-subsecao-titulo--resultados">Pesos calculados (g)</p>
+          <dl className="calib-summary calib-summary--pesos" aria-live="polite">
             <div className="calib-summary__item">
-              <span>% Areia</span>
-              <strong>{resultadoGranulometria.pctAreia !== null ? `${Math.round(resultadoGranulometria.pctAreia)}%` : '—'}</strong>
+              <dt>Areia</dt>
+              <dd>{resultadoGranulometria.pesoAreia.toFixed(4)}</dd>
             </div>
             <div className="calib-summary__item">
-              <span>% Silte</span>
-              <strong>{resultadoGranulometria.pctSilte !== null ? `${Math.round(resultadoGranulometria.pctSilte)}%` : '—'}</strong>
+              <dt>Argila em 10 ml</dt>
+              <dd>{resultadoGranulometria.argila10mlCorrigido.toFixed(4)}</dd>
             </div>
             <div className="calib-summary__item">
-              <span>% Argila</span>
-              <strong>{resultadoGranulometria.pctArgila !== null ? `${Math.round(resultadoGranulometria.pctArgila)}%` : '—'}</strong>
+              <dt>Argila em 1000 ml</dt>
+              <dd>{resultadoGranulometria.argila1000ml.toFixed(2)}</dd>
             </div>
-          </div>
-
+            <div className="calib-summary__item">
+              <dt>NaOH seco</dt>
+              <dd>{resultadoGranulometria.pesoSecoNaoh.toFixed(4)}</dd>
+            </div>
+          </dl>
+          <p className="form-subsecao-titulo form-subsecao-titulo--resultados">Resultados da granulometria</p>
+          <dl className="calib-summary calib-summary--fisica" aria-live="polite">
+            <div className="calib-summary__item">
+              <dt>Areia</dt>
+              <dd>{formatarPercentual(resultadoGranulometria.pctAreia)}</dd>
+            </div>
+            <div className="calib-summary__item">
+              <dt>Silte</dt>
+              <dd>{formatarPercentual(resultadoGranulometria.pctSilte)}</dd>
+            </div>
+            <div className="calib-summary__item">
+              <dt>Argila</dt>
+              <dd>{formatarPercentual(resultadoGranulometria.pctArgila)}</dd>
+            </div>
+            <div className="calib-summary__item calib-summary__item--texto">
+              <dt>Classe textural</dt>
+              <dd>{classeTextural ?? 'A classificar'}</dd>
+            </div>
+          </dl>
         </div>
+
+        {avisos.length > 0 && (
+          <div className="estado-bloco estado-bloco--info registro-avisos" aria-live="polite">
+            <strong className="estado-bloco__titulo">Confira antes de processar</strong>
+            <ul>
+              {avisos.map((aviso) => (
+                <li key={aviso.id}>{aviso.mensagem}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {errosProcessamento && errosProcessamento.length > 0 && (
           <div className="form-alert-erro" role="alert">
@@ -376,6 +450,7 @@ export function RegistroForm({
         <div className="form-actions">
           <Button type="submit" disabled={processando}>
             {processando ? 'Processando Cálculos...' : 'Salvar e Processar Cálculos'}
+            <SetaVelocidade />
           </Button>
         </div>
       </div>

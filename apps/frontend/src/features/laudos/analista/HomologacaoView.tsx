@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { BrandMark } from '@/components/layout/BrandMark';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { FUNCIONALIDADES } from '@/config/ambiente';
 import {
   calcularComplexoSortivo,
   calcularConcentracaoFosforo,
   calcularGranulometria,
+  calcularAcidezPotencial,
   calcularValorLiquido,
   classificarTextura,
   converterKParaCmolc,
@@ -12,17 +15,50 @@ import {
 } from './calculos';
 import { formatarData, hojeIso } from './statusAmostra';
 import { ROTULOS_TIPO_ANALISE, type DadosAnalise } from './tipos';
+import './analista.css';
 import './HomologacaoView.css';
+
+export type ResultadoHomologacao = { ok: true; simulado: boolean } | { ok: false; mensagem: string };
 
 interface HomologacaoViewProps {
   dados: DadosAnalise;
+  responsavel: string;
   jaLiberado?: boolean;
+  processada?: boolean;
   onVoltarParaEdicao: () => void;
-  onLiberarLaudo: () => void;
+  onHomologar: () => Promise<ResultadoHomologacao>;
 }
 
-export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao, onLiberarLaudo }: HomologacaoViewProps) {
+export function HomologacaoView({
+  dados,
+  responsavel,
+  jaLiberado = false,
+  processada = true,
+  onVoltarParaEdicao,
+  onHomologar,
+}: HomologacaoViewProps) {
   const [liberado, setLiberado] = useState(jaLiberado);
+  const [simulado, setSimulado] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+  const [homologando, setHomologando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const indisponivel = !FUNCIONALIDADES.homologacaoServidor && !import.meta.env.DEV;
+  const bloqueadaPorProcessamento = !processada && !liberado;
+
+  async function confirmar() {
+    if (homologando) return;
+    setHomologando(true);
+    setErro(null);
+    const resultado = await onHomologar();
+    setHomologando(false);
+    setConfirmando(false);
+    if (resultado.ok) {
+      setLiberado(true);
+      setSimulado(resultado.simulado);
+    } else {
+      setErro(resultado.mensagem);
+    }
+  }
   const { identificacao, quimica, granulometria, calibracao } = dados;
   const temContato = Boolean(identificacao.email || identificacao.telefone);
 
@@ -32,7 +68,11 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
   const liquidoCa = calcularValorLiquido(quimica.calcio.medido, quimica.calcio.branco);
   const liquidoMg = calcularValorLiquido(quimica.magnesio.medido, quimica.magnesio.branco);
   const liquidoAl = calcularValorLiquido(quimica.aluminio.medido, quimica.aluminio.branco);
-  const liquidoHAl = calcularValorLiquido(quimica.acidezPotencial.medido, quimica.acidezPotencial.branco);
+  const liquidoHAl = calcularAcidezPotencial(
+    quimica.acidezPotencial.medido,
+    quimica.acidezPotencial.branco,
+    quimica.acidezPotencial.fator,
+  );
 
   const naCmolc = converterNaParaCmolc(quimica.sodioMgL);
   const kCmolc = converterKParaCmolc(quimica.potassioMgL);
@@ -123,7 +163,7 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
         </div>
 
         <div className="laudo-table-wrap">
-          <p className="laudo-title">Atributos Químicos</p>
+          <p className="laudo-title">Atributos Químicos e Complexo Sortivo</p>
           <table className="laudo-table">
             <thead>
               <tr>
@@ -144,16 +184,6 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
                 <td>{resultadoFosforo ? 'mg/dm³' : 'calibração pendente'}</td>
               </tr>
               <tr>
-                <td>Potássio (K)</td>
-                <td className="valor">{quimica.potassioMgL.toFixed(2)}</td>
-                <td>mg/L</td>
-              </tr>
-              <tr>
-                <td>Sódio (Na)</td>
-                <td className="valor">{quimica.sodioMgL.toFixed(2)}</td>
-                <td>mg/L</td>
-              </tr>
-              <tr>
                 <td>Cálcio (Ca)</td>
                 <td className="valor">{liquidoCa.toFixed(2)}</td>
                 <td>cmolc/dm³</td>
@@ -161,6 +191,16 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
               <tr>
                 <td>Magnésio (Mg)</td>
                 <td className="valor">{liquidoMg.toFixed(2)}</td>
+                <td>cmolc/dm³</td>
+              </tr>
+              <tr>
+                <td>Sódio (Na)</td>
+                <td className="valor">{naCmolc.toFixed(2)}</td>
+                <td>cmolc/dm³</td>
+              </tr>
+              <tr>
+                <td>Potássio (K)</td>
+                <td className="valor">{kCmolc.toFixed(2)}</td>
                 <td>cmolc/dm³</td>
               </tr>
               <tr>
@@ -280,8 +320,8 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
 
         <div className="laudo-doc__rodape">
           <div className="resp-tecnico">
-            <strong>Prof. Msc. Carla Andrade Ferreira</strong>
-            Responsável Técnica &middot; CREA-PE 123456-D
+            <strong>{responsavel || 'Responsável técnico'}</strong>
+            Responsável técnico pela homologação
             <br />
             Laboratório de Solos &middot; IFPE Campus Belo Jardim
           </div>
@@ -290,18 +330,27 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
       </div>
 
       <div className="homolog-cta">
-        {liberado ? (
-          <p className="homolog-cta__aviso homolog-cta__aviso--sucesso">
-            Laudo assinado digitalmente e liberado para o cliente.
-          </p>
-        ) : (
-          <p className="homolog-cta__aviso">
-            Ao homologar, o status da análise será alterado para <strong>“Concluído”</strong> e o laudo em PDF ficará
-            disponível na área de consulta pública do cliente.
-          </p>
-        )}
-        {!jaLiberado && (
-          <Button variant="ghost" lg onClick={onVoltarParaEdicao}>
+        <div aria-live="polite" className="homolog-cta__mensagens">
+          {liberado ? (
+            <p className="homolog-cta__aviso homolog-cta__aviso--sucesso">
+              {simulado
+                ? 'Laudo marcado como concluído apenas neste navegador (ambiente de desenvolvimento, sem servidor).'
+                : 'Laudo homologado e liberado para o cliente.'}
+            </p>
+          ) : (
+            <p className="homolog-cta__aviso">
+              Ao homologar, o status da análise será alterado para <strong>“Concluído”</strong> e o laudo em PDF ficará
+              disponível na área de consulta pública do cliente.
+            </p>
+          )}
+          {erro && (
+            <p className="form-alert-erro" role="alert">
+              {erro}
+            </p>
+          )}
+        </div>
+        {!liberado && (
+          <Button variant="ghost" lg onClick={onVoltarParaEdicao} disabled={homologando}>
             Voltar para Edição
           </Button>
         )}
@@ -309,14 +358,45 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
           variant="danger"
           lg
           onClick={() => {
-            setLiberado(true);
-            onLiberarLaudo();
+            setErro(null);
+            setConfirmando(true);
           }}
-          disabled={liberado}
+          disabled={liberado || homologando || indisponivel || bloqueadaPorProcessamento}
+          aria-describedby={indisponivel ? 'homologacao-indisponivel' : bloqueadaPorProcessamento ? 'homologacao-nao-processada' : undefined}
         >
-          {liberado ? 'Laudo Liberado' : 'Assinar Digitalmente e Liberar Laudo'}
+          {liberado ? 'Laudo Liberado' : homologando ? 'Homologando...' : 'Assinar Digitalmente e Liberar Laudo'}
         </Button>
+        {bloqueadaPorProcessamento && (
+          <p id="homologacao-nao-processada" className="homolog-cta__aviso">
+            A análise ainda não foi processada. Volte para a edição e use "Salvar e Processar Cálculos" antes de homologar.
+          </p>
+        )}
+        {indisponivel && (
+          <p id="homologacao-indisponivel" className="homolog-cta__aviso">
+            A homologação pelo servidor ainda não está habilitada neste ambiente.
+          </p>
+        )}
       </div>
+
+      <Modal
+        isOpen={confirmando}
+        onClose={() => !homologando && setConfirmando(false)}
+        title="Confirmar homologação"
+        subtitle={`Protocolo ${identificacao.protocolo || '—'}`}
+      >
+        <p className="homolog-confirmacao__texto">
+          Depois de homologado, o laudo fica disponível para o cliente e os dados de bancada não podem mais ser editados.
+          Deseja continuar?
+        </p>
+        <div className="form-actions">
+          <Button variant="ghost" onClick={() => setConfirmando(false)} disabled={homologando}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={() => void confirmar()} disabled={homologando}>
+            {homologando ? 'Homologando...' : 'Homologar laudo'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { MensagemErroCampo } from '@/components/ui/MensagemErroCampo';
 import { Button } from '@/components/ui/Button';
 import { gerarIdentificacaoTeste } from './dadosTeste';
+import { EMAIL_REGEX, formatarCpf, formatarTelefone, validarCpf, validarProtocoloCadastro } from '@/lib/documentos';
 import { calcularPrevisaoEntrega, formatarData } from './statusAmostra';
 import { ROTULOS_TIPO_ANALISE, type Identificacao, type TipoAnalise } from './tipos';
 import './analista.css';
@@ -32,16 +33,16 @@ const OPCOES_TIPO_ANALISE = (Object.keys(ROTULOS_TIPO_ANALISE) as TipoAnalise[])
 function validar(identificacao: Identificacao): ErrosCampos {
   const erros: ErrosCampos = {};
   const obrigatorio = 'Preencha este campo para continuar.';
-  if (!identificacao.protocolo.trim()) erros.protocolo = obrigatorio;
-  const cpf = (identificacao.cpfCliente ?? '').replace(/\D/g, '');
-  if (!cpf) erros.cpfCliente = obrigatorio;
-  else if (cpf.length !== 11) erros.cpfCliente = 'O CPF precisa ter 11 dígitos.';
+  const erroProtocolo = validarProtocoloCadastro(identificacao.protocolo);
+  if (erroProtocolo) erros.protocolo = erroProtocolo;
+  const erroCpf = validarCpf(identificacao.cpfCliente ?? '');
+  if (erroCpf) erros.cpfCliente = erroCpf;
   if (!identificacao.solicitante.trim()) erros.solicitante = obrigatorio;
   if (!identificacao.dataRecebimento) erros.dataRecebimento = 'Informe a data em que a amostra chegou.';
   if (!identificacao.tipoAnalise) erros.tipoAnalise = 'Escolha o tipo da análise.';
   if (!identificacao.propriedade.trim()) erros.propriedade = obrigatorio;
   if (!identificacao.culturaExistente.trim()) erros.culturaExistente = obrigatorio;
-  if (identificacao.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(identificacao.email)) {
+  if (identificacao.email && !EMAIL_REGEX.test(identificacao.email.trim())) {
     erros.email = 'Confira o e-mail (ex.: nome@exemplo.com).';
   }
   const telefone = identificacao.telefone.replace(/\D/g, '');
@@ -91,24 +92,8 @@ export function NovaAmostraModal({
     if (campo in erros) setErros((atual) => ({ ...atual, [campo]: undefined }));
   }
 
-  function formatarCpf(valor: string) {
-    const digitos = valor.replace(/\D/g, '').slice(0, 11);
-    if (digitos.length <= 3) return digitos;
-    if (digitos.length <= 6) return `${digitos.slice(0, 3)}.${digitos.slice(3)}`;
-    if (digitos.length <= 9) return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6)}`;
-    return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9)}`;
-  }
-
   function handleCpfChange(valor: string) {
     atualizar('cpfCliente', formatarCpf(valor));
-  }
-
-  function formatarTelefone(valor: string) {
-    const digitos = valor.replace(/\D/g, '').slice(0, 11);
-    if (digitos.length <= 2) return digitos.length ? `(${digitos}` : '';
-    if (digitos.length <= 6) return `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
-    if (digitos.length <= 10) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
-    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
   }
 
   const previsaoEntrega = calcularPrevisaoEntrega(identificacao.dataRecebimento);
