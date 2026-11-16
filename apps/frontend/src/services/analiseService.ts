@@ -195,23 +195,49 @@ export interface ListarAmostrasApiResponse {
   dados: LaudoResumoItem[];
 }
 
-export interface AnaliseServiceApi {
-  criarAmostra(payload: CriarAmostraPayload, token: string, signal?: AbortSignal): Promise<CriarAmostraApiResponse>;
-  listarAmostras(token: string): Promise<ListarAmostrasApiResponse>;
-  listarAmostras(
-    parametros: ListarAmostrasParametros,
-    token: string,
-    signal?: AbortSignal,
-  ): Promise<ListarAmostrasPaginadaApiResponse>;
-  obterAnalise(protocolo: string, token: string, signal?: AbortSignal): Promise<ObterAnaliseApiResponse>;
-  salvarRascunho(protocolo: string, payload: SalvarRascunhoPayload, token: string, signal?: AbortSignal): Promise<SalvarRascunhoApiResponse>;
-  processarAnalise(protocolo: string, payload: ProcessarAnalisePayload, token: string, signal?: AbortSignal): Promise<ProcessarAnaliseApiResponse>;
-  homologarLaudo(protocolo: string, payload: HomologarLaudoPayload, token: string, signal?: AbortSignal): Promise<HomologarLaudoApiResponse>;
-}
-
 const caminhoLaudo = (protocolo: string) => `/laudos/${encodeURIComponent(protocolo)}`;
 
-export const analiseService: AnaliseServiceApi = {
+function listarAmostras(token: string): Promise<ListarAmostrasApiResponse>;
+function listarAmostras(
+  parametros: ListarAmostrasParametros,
+  token: string,
+  signal?: AbortSignal,
+): Promise<ListarAmostrasPaginadaApiResponse>;
+function listarAmostras(
+  parametrosOuToken: ListarAmostrasParametros | string,
+  tokenOuSignal?: string | AbortSignal,
+  talvezSignal?: AbortSignal,
+): Promise<ListarAmostrasApiResponse | ListarAmostrasPaginadaApiResponse> {
+  if (typeof parametrosOuToken === 'string') {
+    const token = parametrosOuToken;
+    const signal = tokenOuSignal instanceof AbortSignal ? tokenOuSignal : undefined;
+    return apiClient.request<ListarAmostrasApiResponse>('/laudos', {
+      method: 'GET',
+      token,
+      signal,
+    });
+  }
+
+  const parametros = parametrosOuToken;
+  const token = typeof tokenOuSignal === 'string' ? tokenOuSignal : '';
+  const signal = talvezSignal;
+
+  return apiClient.request<ListarAmostrasPaginadaApiResponse>('/laudos', {
+    method: 'GET',
+    token,
+    signal,
+    query: {
+      pagina: parametros.pagina,
+      tamanhoPagina: parametros.tamanhoPagina,
+      busca: parametros.busca?.trim(),
+      situacao: parametros.situacao,
+      status: parametros.status,
+      ordenacao: parametros.ordenacao,
+    },
+  });
+}
+
+export const analiseService = {
   criarAmostra(payload: CriarAmostraPayload, token: string, signal?: AbortSignal) {
     return apiClient.request<CriarAmostraApiResponse>('/laudos', {
       method: 'POST',
@@ -221,39 +247,7 @@ export const analiseService: AnaliseServiceApi = {
     });
   },
 
-  listarAmostras(
-    parametrosOuToken: ListarAmostrasParametros | string,
-    tokenOuSignal?: string | AbortSignal,
-    talvezSignal?: AbortSignal,
-  ): Promise<any> {
-    if (typeof parametrosOuToken === 'string') {
-      const token = parametrosOuToken;
-      const signal = tokenOuSignal instanceof AbortSignal ? tokenOuSignal : undefined;
-      return apiClient.request<ListarAmostrasApiResponse>('/laudos', {
-        method: 'GET',
-        token,
-        signal,
-      });
-    }
-
-    const parametros = parametrosOuToken;
-    const token = typeof tokenOuSignal === 'string' ? tokenOuSignal : '';
-    const signal = talvezSignal;
-
-    return apiClient.request<ListarAmostrasPaginadaApiResponse>('/laudos', {
-      method: 'GET',
-      token,
-      signal,
-      query: {
-        pagina: parametros.pagina,
-        tamanhoPagina: parametros.tamanhoPagina,
-        busca: parametros.busca?.trim(),
-        situacao: parametros.situacao,
-        status: parametros.status,
-        ordenacao: parametros.ordenacao,
-      },
-    });
-  },
+  listarAmostras,
 
   obterAnalise(protocolo: string, token: string, signal?: AbortSignal) {
     return apiClient.request<ObterAnaliseApiResponse>(`${caminhoLaudo(protocolo)}/analise`, { token, signal });
