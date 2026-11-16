@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -21,6 +21,8 @@ from src.schemas.analise import (
     CriarLaudoResponse,
     DadosBancadaSchema,
     GranulometriaRascunhoSchema,
+    LaudoResumoItemSchema,
+    ListarLaudosResponse,
     ObterAnaliseDataSchema,
     ObterAnaliseResponse,
     PontoCalibracaoSchema,
@@ -44,6 +46,71 @@ from src.services.calculos_service import (
 
 
 class AnaliseService:
+    @staticmethod
+    def _obter_escopo_analista(usuario: dict[str, Any] | None) -> str:
+        if not usuario:
+            return ""
+        escopo = (
+            usuario.get("escopoAnalistaId")
+            or usuario.get("email")
+            or usuario.get("sub")
+            or ""
+        )
+        return str(escopo).strip()
+
+    @staticmethod
+    def _validar_acesso_laudo(laudo: Laudo, usuario: dict[str, Any] | None) -> None:
+        if not usuario or not laudo.analista_id:
+            return
+        escopo = AnaliseService._obter_escopo_analista(usuario)
+        if escopo and laudo.analista_id.strip().lower() != escopo.lower():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "sucesso": False,
+                    "mensagem": "Você não possui permissão para acessar ou modificar o laudo de outro analista.",
+                },
+            )
+
+    @staticmethod
+    async def listar_laudos(
+        usuario: dict[str, Any], db: AsyncSession
+    ) -> ListarLaudosResponse:
+        escopo = AnaliseService._obter_escopo_analista(usuario)
+        stmt = (
+            select(Laudo)
+            .where(func.lower(Laudo.analista_id) == escopo.lower())
+            .order_by(Laudo.criado_em.desc())
+        )
+        res = await db.execute(stmt)
+        laudos = list(res.scalars().all())
+
+        dados = [
+            LaudoResumoItemSchema(
+                protocolo=item.protocolo,
+                cpfCliente=item.cpf_cliente,
+                solicitante=item.cliente_nome,
+                propriedade=item.propriedade,
+                localizacao=item.localizacao,
+                areaIdentificacao=item.area_identificacao,
+                areaHectares=item.area_hectares,
+                profundidadeColeta=item.profundidade_coleta,
+                cultivo=item.cultivo,
+                dataRecebimento=item.data_recebimento,
+                tipoAnalise=item.tipo_analise,
+                culturaExistente=item.cultura_existente,
+                email=item.email_cliente,
+                telefone=item.telefone_cliente,
+                status=item.status,
+                versao=item.versao,
+                criadoEm=item.criado_em.isoformat(),
+                responsavelNome=item.analista_nome,
+                responsavelCrea=item.analista_crea,
+            )
+            for item in laudos
+        ]
+        return ListarLaudosResponse(sucesso=True, dados=dados)
+
     @staticmethod
     async def criar_laudo(
         payload: CriarLaudoInput, usuario: dict, db: AsyncSession
@@ -81,12 +148,44 @@ class AnaliseService:
         nome_cliente = html.escape(payload.cliente_nome.strip())
         propriedade = html.escape(payload.propriedade.strip())
         analista_email = usuario.get("email") or usuario.get("sub") or "analista"
+        escopo_analista = (
+            AnaliseService._obter_escopo_analista(usuario) or analista_email
+        )
+        responsavel_nome = (
+            usuario.get("responsavelNome") or usuario.get("nome") or analista_email
+        )
+        responsavel_crea = usuario.get("responsavelCrea") or usuario.get("crea")
 
         novo_laudo = Laudo(
             protocolo=protocolo_sanitizado,
             cpf_cliente=cpf_limpo,
             cliente_nome=nome_cliente,
             propriedade=propriedade,
+            localizacao=html.escape(payload.localizacao.strip())
+            if payload.localizacao
+            else None,
+            area_identificacao=html.escape(payload.areaIdentificacao.strip())
+            if payload.areaIdentificacao
+            else None,
+            area_hectares=html.escape(payload.areaHectares.strip())
+            if payload.areaHectares
+            else None,
+            profundidade_coleta=html.escape(payload.profundidadeColeta.strip())
+            if payload.profundidadeColeta
+            else None,
+            cultivo=html.escape(payload.cultivo.strip()) if payload.cultivo else None,
+            data_recebimento=payload.dataRecebimento.isoformat()
+            if payload.dataRecebimento
+            else None,
+            tipo_analise=payload.tipoAnalise,
+            cultura_existente=html.escape(payload.culturaExistente.strip())
+            if payload.culturaExistente
+            else None,
+            email_cliente=payload.email.strip() if payload.email else None,
+            telefone_cliente=payload.telefone.strip() if payload.telefone else None,
+            analista_id=escopo_analista,
+            analista_nome=responsavel_nome,
+            analista_crea=responsavel_crea,
             status="EM_ANALISE",
             versao=1,
             atualizado_por=analista_email,
@@ -110,11 +209,17 @@ class AnaliseService:
                 status=novo_laudo.status,
                 versao=novo_laudo.versao,
                 criadoEm=novo_laudo.criado_em.isoformat(),
+                analistaNome=novo_laudo.analista_nome,
+                analistaCrea=novo_laudo.analista_crea,
             ),
         )
 
     @staticmethod
-    async def obter_analise(protocolo: str, db: AsyncSession) -> ObterAnaliseResponse:
+    async def obter_analise(
+        protocolo: str,
+        db: AsyncSession,
+        usuario: dict[str, Any] | None = None,
+    ) -> ObterAnaliseResponse:
         """Obtém os dados da bancada laboratorial para o protocolo informado."""
         query = (
             select(Laudo)
@@ -134,6 +239,8 @@ class AnaliseService:
                     "mensagem": "Laudo ou amostra não localizada para o protocolo informado.",
                 },
             )
+
+        AnaliseService._validar_acesso_laudo(laudo, usuario)
 
         bancada = laudo.bancada
         if not bancada:
@@ -197,6 +304,19 @@ class AnaliseService:
                         if laudo.criado_em
                         else None
                     ),
+                    cpfCliente=laudo.cpf_cliente,
+                    localizacao=laudo.localizacao,
+                    areaIdentificacao=laudo.area_identificacao,
+                    areaHectares=laudo.area_hectares,
+                    profundidadeColeta=laudo.profundidade_coleta,
+                    cultivo=laudo.cultivo,
+                    dataRecebimento=laudo.data_recebimento,
+                    tipoAnalise=laudo.tipo_analise,
+                    culturaExistente=laudo.cultura_existente,
+                    email=laudo.email_cliente,
+                    telefone=laudo.telefone_cliente,
+                    responsavelNome=laudo.analista_nome,
+                    responsavelCrea=laudo.analista_crea,
                 ),
                 dadosBancada=dados_bancada,
                 atualizadoEm=(
@@ -230,6 +350,8 @@ class AnaliseService:
                     "mensagem": "Laudo ou amostra não localizada para o protocolo informado.",
                 },
             )
+
+        AnaliseService._validar_acesso_laudo(laudo, usuario)
 
         # Bloqueio Concorrente Otimista (409 Conflict)
         if laudo.versao != payload.versaoEsperada:
@@ -360,6 +482,8 @@ class AnaliseService:
                     "mensagem": "Laudo ou amostra não localizada para o protocolo informado.",
                 },
             )
+
+        AnaliseService._validar_acesso_laudo(laudo, usuario)
 
         # Concorrência Otimista
         if laudo.versao != payload.versaoEsperada:
