@@ -1,38 +1,120 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { MensagemErroCampo } from '@/components/ui/MensagemErroCampo';
 import { useAuth } from '@/context/AuthContext';
 import { ApiError } from '@/services/apiClient';
 import { LayoutEntrada, SetaVelocidade } from '@/features/home/LayoutEntrada';
+import { useTituloPagina } from '@/hooks/useTituloPagina';
+import { formatarCpf, normalizarProtocolo, validarCpf, validarProtocoloConsulta } from '@/lib/documentos';
+import {
+  consultaBloqueadaAte,
+  limparFalhasConsulta,
+  registrarFalhaConsulta,
+  segundosRestantes,
+} from '@/lib/tentativasConsulta';
+
+type Erros = { protocolo?: string; cpf?: string };
+
+const MENSAGEM_DADOS_NAO_CONFEREM =
+  'Não encontramos um laudo com esses dados. Confira o protocolo e o CPF do titular; se estiverem corretos, procure o laboratório.';
+
+const mensagemBloqueio = (segundos: number) =>
+  `Muitas consultas sem sucesso. Por segurança, aguarde ${segundos} segundo${segundos > 1 ? 's' : ''} para tentar de novo.`;
+
+const dadosNaoConferem = (erro: unknown) =>
+  erro instanceof ApiError && (erro.status === 401 || erro.status === 403 || erro.status === 404 || erro.status === 422);
+
+function descreverFalhaConsulta(erro: unknown): { mensagem: string; podeTentarNovamente: boolean } {
+  if (!(erro instanceof ApiError)) return { mensagem: 'Não foi possível consultar o laudo agora. Tente novamente.', podeTentarNovamente: true };
+  if (dadosNaoConferem(erro)) {
+    return { mensagem: MENSAGEM_DADOS_NAO_CONFEREM, podeTentarNovamente: false };
+  }
+  if (erro.status === 429) return { mensagem: erro.message, podeTentarNovamente: false };
+  return { mensagem: erro.message, podeTentarNovamente: true };
+}
 
 export function ConsultaLaudoPage() {
-  const { entrarComProtocolo } = useAuth();
+  useTituloPagina('Consultar laudo');
+  const { entrarComProtocolo, motivoUltimaSaida, limparMotivoSaida } = useAuth();
   const navigate = useNavigate();
   const [protocolo, setProtocolo] = useState('');
   const [cpf, setCpf] = useState('');
   const [carregando, setCarregando] = useState(false);
-  const [mensagemErro, setMensagemErro] = useState<string | null>(null);
-  const [erros, setErros] = useState<{ protocolo?: string; cpf?: string }>({});
+  const [falha, setFalha] = useState<{ mensagem: string; podeTentarNovamente: boolean } | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [erros, setErros] = useState<Erros>({});
+  const protocoloRef = useRef<HTMLInputElement>(null);
+  const cpfRef = useRef<HTMLInputElement>(null);
+  const montadoRef = useRef(true);
+  const [bloqueadoAte, setBloqueadoAte] = useState(consultaBloqueadaAte);
+  const [agora, setAgora] = useState(() => Date.now());
+  const restante = segundosRestantes(bloqueadoAte, agora);
+
+  useEffect(() => {
+    if (bloqueadoAte <= Date.now()) return;
+    const temporizador = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(temporizador);
+  }, [bloqueadoAte]);
+
+  useEffect(() => {
+    montadoRef.current = true;
+    return () => {
+      montadoRef.current = false;
+    };
+  }, []);
+
+  const avisoSessao =
+    motivoUltimaSaida === 'sessao_expirada'
+      ? 'Sua sessão expirou. Consulte o laudo novamente para continuar.'
+      : motivoUltimaSaida === 'sessao_encerrada'
+        ? 'Sua sessão foi encerrada. Consulte o laudo novamente para continuar.'
+        : null;
 
   async function aoConsultar(evento: FormEvent) {
     evento.preventDefault();
-    const encontrados: { protocolo?: string; cpf?: string } = {};
-    if (!protocolo.trim()) encontrados.protocolo = 'Informe o número do protocolo.';
-    if (!cpf.trim()) encontrados.cpf = 'Informe o CPF do titular.';
+    if (carregando) return;
+    const esperaAtual = segundosRestantes(consultaBloqueadaAte());
+    if (esperaAtual > 0) {
+      setAgora(Date.now());
+      setFalha({ mensagem: mensagemBloqueio(esperaAtual), podeTentarNovamente: false });
+      return;
+    }
+    const encontrados: Erros = {
+      protocolo: validarProtocoloConsulta(protocolo) ?? undefined,
+      cpf: validarCpf(cpf) ?? undefined,
+    };
     setErros(encontrados);
-    if (encontrados.protocolo || encontrados.cpf) return;
+    if (encontrados.protocolo) {
+      protocoloRef.current?.focus();
+      return;
+    }
+    if (encontrados.cpf) {
+      cpfRef.current?.focus();
+      return;
+    }
     setCarregando(true);
-    setMensagemErro(null);
+    setFalha(null);
+    limparMotivoSaida();
     try {
-      await entrarComProtocolo(protocolo, cpf);
+      await entrarComProtocolo(normalizarProtocolo(protocolo), cpf);
+      limparFalhasConsulta();
       navigate('/cliente/laudo', { replace: true });
     } catch (erro) {
-      setMensagemErro(erro instanceof ApiError ? erro.message : 'Não foi possível consultar o laudo agora.');
+      const bloqueio = dadosNaoConferem(erro) ? registrarFalhaConsulta() : 0;
+      if (montadoRef.current) {
+        const descricao = descreverFalhaConsulta(erro);
+        const espera = segundosRestantes(bloqueio);
+        setAgora(Date.now());
+        setBloqueadoAte(bloqueio);
+        setFalha(espera > 0 ? { ...descricao, mensagem: `${descricao.mensagem} ${mensagemBloqueio(espera)}` } : descricao);
+      }
     } finally {
-      setCarregando(false);
+      if (montadoRef.current) setCarregando(false);
     }
   }
+
+  const alerta = falha?.mensagem ?? avisoSessao;
 
   return (
     <LayoutEntrada tituloId="consulta-titulo" voltar>
@@ -43,21 +125,39 @@ export function ConsultaLaudoPage() {
       </h1>
       <p className="entrada-texto">Informe o Protocolo da amostra e o CPF do titular para acompanhar o andamento.</p>
 
-      {mensagemErro && (
-        <div className="entrada-alerta" role="alert">
-          {mensagemErro}
-        </div>
-      )}
+      <div aria-live="assertive">
+        {alerta && (
+          <div className="entrada-alerta" role="alert">
+            {alerta}
+            {falha?.podeTentarNovamente && (
+              <button
+                type="button"
+                className="entrada-alerta__acao"
+                onClick={() => formRef.current?.requestSubmit()}
+                disabled={carregando}
+              >
+                Tentar novamente
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
-      <form className="entrada-form" onSubmit={aoConsultar} noValidate>
+      <form ref={formRef} className="entrada-form" onSubmit={aoConsultar} noValidate aria-busy={carregando}>
         <div className={`entrada-campo ${erros.protocolo ? 'entrada-campo--invalido' : ''}`.trim()}>
-          <span className="entrada-campo__rotulo" aria-hidden="true">
+          <label className="entrada-campo__rotulo" htmlFor="consulta-protocolo">
             Protocolo
-          </span>
+          </label>
           <input
+            ref={protocoloRef}
+            id="consulta-protocolo"
+            name="protocolo"
             type="text"
-            placeholder="Protocolo (ex.: LAB-2026-0142)"
-            aria-label="Número do protocolo"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            maxLength={30}
+            placeholder="Ex.: LAB-2026-0142"
             aria-invalid={erros.protocolo ? true : undefined}
             aria-describedby={erros.protocolo ? 'consulta-protocolo-erro' : undefined}
             value={protocolo}
@@ -70,28 +170,48 @@ export function ConsultaLaudoPage() {
           <MensagemErroCampo id="consulta-protocolo-erro" mensagem={erros.protocolo} />
         </div>
         <div className={`entrada-campo ${erros.cpf ? 'entrada-campo--invalido' : ''}`.trim()}>
-          <span className="entrada-campo__rotulo" aria-hidden="true">
+          <label className="entrada-campo__rotulo" htmlFor="consulta-cpf">
             CPF do titular
-          </span>
+          </label>
           <input
+            ref={cpfRef}
+            id="consulta-cpf"
+            name="cpf"
             type="text"
-            placeholder="CPF"
-            aria-label="CPF do titular"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={14}
+            placeholder="000.000.000-00"
             aria-invalid={erros.cpf ? true : undefined}
             aria-describedby={erros.cpf ? 'consulta-cpf-erro' : undefined}
             value={cpf}
             onChange={(evento) => {
-              setCpf(evento.target.value);
+              setCpf(formatarCpf(evento.target.value));
               setErros((atual) => ({ ...atual, cpf: undefined }));
             }}
             required
           />
           <MensagemErroCampo id="consulta-cpf-erro" mensagem={erros.cpf} />
         </div>
-        <Button type="submit" disabled={carregando}>
-          {carregando ? 'Consultando...' : 'Consultar Laudo'}
+        <Button type="submit" disabled={carregando || restante > 0}>
+          {carregando ? 'Consultando...' : restante > 0 ? `Aguarde ${restante} s` : 'Consultar Laudo'}
           <SetaVelocidade />
         </Button>
+        {/* TEMPORARIO: preenche o laudo mockado do backend (laudo_service.py); remover antes de publicar. */}
+        {import.meta.env.DEV && (
+          <button
+            type="button"
+            className="entrada-teste"
+            onClick={() => {
+              setProtocolo('20101.2306');
+              setCpf('529.982.247-25');
+              setErros({});
+            }}
+            disabled={carregando}
+          >
+            Preencher dados de teste
+          </button>
+        )}
       </form>
     </LayoutEntrada>
   );

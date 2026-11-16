@@ -1,4 +1,6 @@
 import { apiClient } from './apiClient';
+import { normalizarLoginCliente, normalizarLoginGoogle } from './respostasApi';
+import { normalizarProtocolo, somenteDigitos } from '@/lib/documentos';
 import type {
   AnalistaPrincipalItem,
   AuxiliarItem,
@@ -6,75 +8,88 @@ import type {
   ListarAuxiliaresResponse,
   LoginClienteResponse,
   LoginGoogleResponse,
+  UsuarioMeResponse,
 } from '@/types/auth';
 
-function normalizarCpf(cpf: string): string {
-  return cpf.replace(/\D/g, '');
-}
-
 export const authService = {
-  loginLocal(username: string, password: string) {
-    return apiClient.request<LoginGoogleResponse>('/auth/login', {
+  async loginLocal(username: string, password: string, signal?: AbortSignal): Promise<LoginGoogleResponse> {
+    const resposta = await apiClient.request<unknown>('/auth/login', {
       method: 'POST',
       body: { username: username.trim(), password },
+      signal,
     });
+    return normalizarLoginGoogle(resposta);
   },
 
-  loginGoogle(idToken: string) {
-    return apiClient.request<LoginGoogleResponse>('/auth/google', {
+  async loginGoogle(idToken: string, signal?: AbortSignal): Promise<LoginGoogleResponse> {
+    const resposta = await apiClient.request<unknown>('/auth/google', {
       method: 'POST',
       body: { idToken },
+      signal,
     });
+    return normalizarLoginGoogle(resposta);
   },
 
-  loginCliente(protocolo: string, cpf: string) {
-    return apiClient.request<LoginClienteResponse>('/auth/cliente', {
+  async loginCliente(protocolo: string, cpf: string, signal?: AbortSignal): Promise<LoginClienteResponse> {
+    const resposta = await apiClient.request<unknown>('/auth/cliente', {
       method: 'POST',
-      body: { protocolo: protocolo.trim(), cpf: normalizarCpf(cpf) },
+      body: { protocolo: normalizarProtocolo(protocolo), cpf: somenteDigitos(cpf) },
+      signal,
     });
+    return normalizarLoginCliente(resposta);
   },
 
-  listarAnalistasPrincipais(token: string) {
+  sessaoAtual(token: string, signal?: AbortSignal) {
+    return apiClient.request<UsuarioMeResponse>('/auth/me', { token, signal });
+  },
+
+  listarAnalistasPrincipais(token: string, signal?: AbortSignal) {
     return apiClient.request<ListarAnalistasResponse>('/usuarios/analistas', {
       method: 'GET',
       token,
+      signal,
     });
   },
 
-  criarAnalistaPrincipal(payload: { nome: string; email: string; crea: string }, token: string) {
+  criarAnalistaPrincipal(payload: { nome: string; email: string; crea: string }, token: string, signal?: AbortSignal) {
     return apiClient.request<AnalistaPrincipalItem>('/usuarios/analistas', {
       method: 'POST',
       body: payload,
       token,
+      signal,
     });
   },
 
-  removerAnalistaPrincipal(id: string, token: string) {
+  removerAnalistaPrincipal(id: string, token: string, signal?: AbortSignal) {
     return apiClient.request<{ sucesso: boolean; mensagem: string }>(`/usuarios/analistas/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       token,
+      signal,
     });
   },
 
-  listarAuxiliares(token: string) {
+  listarAuxiliares(token: string, signal?: AbortSignal) {
     return apiClient.request<ListarAuxiliaresResponse>('/usuarios/auxiliares', {
       method: 'GET',
       token,
+      signal,
     });
   },
 
-  criarAuxiliar(payload: { nome: string; email: string }, token: string) {
+  criarAuxiliar(payload: { nome: string; email: string }, token: string, signal?: AbortSignal) {
     return apiClient.request<AuxiliarItem>('/usuarios/auxiliares', {
       method: 'POST',
       body: payload,
       token,
+      signal,
     });
   },
 
-  removerAuxiliar(id: string, token: string) {
+  removerAuxiliar(id: string, token: string, signal?: AbortSignal) {
     return apiClient.request<{ sucesso: boolean; mensagem: string }>(`/usuarios/auxiliares/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       token,
+      signal,
     });
   },
 };

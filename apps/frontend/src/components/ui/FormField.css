@@ -26,7 +26,7 @@
   font-size: 15px;
   color: var(--texto);
   font-variant-numeric: tabular-nums;
-  background: transparent;
+  background-color: transparent;
   border: 0;
   border-bottom: 1px solid var(--texto);
   border-radius: 0;
@@ -37,7 +37,7 @@
 .form-field select:focus {
   border-color: var(--verde);
   outline: none;
-  background: transparent;
+  background-color: transparent;
   border-bottom-color: var(--verde);
   box-shadow: 0 1px 0 0 var(--verde);
 }
@@ -50,7 +50,7 @@
 .form-field--invalido input,
 .form-field--invalido input:focus {
   border-color: var(--vermelho);
-  background: rgba(205, 25, 30, 0.04);
+  background-color: rgba(205, 25, 30, 0.04);
   border-bottom-color: var(--vermelho);
   box-shadow: 0 1px 0 0 var(--vermelho);
 }

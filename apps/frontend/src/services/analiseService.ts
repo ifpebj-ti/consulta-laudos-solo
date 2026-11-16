@@ -1,11 +1,12 @@
 import { apiClient } from './apiClient';
 import type { DadosAnalise, TipoAnalise } from '@/features/laudos/analista/tipos';
 import type { RegressaoLinear } from '@/features/laudos/analista/calculos';
+import type { StatusLaudoServidor } from '@/lib/statusLaudo';
 
 export interface AmostraMetadata {
   solicitante: string;
   propriedade: string;
-  dataColeta?: string;
+  dataColeta?: string | null;
   cpfCliente?: string;
   localizacao?: string;
   areaIdentificacao?: string;
@@ -43,9 +44,13 @@ export interface LaudoResumoItem {
   responsavelCrea?: string;
 }
 
-export interface ListarAmostrasApiResponse {
-  sucesso: boolean;
-  dados: LaudoResumoItem[];
+type Parcial<T> = { [K in keyof T]?: T[K] extends object ? Partial<T[K]> | null : T[K] | null };
+
+export interface CalibracaoApi {
+  a?: number | null;
+  b?: number | null;
+  r2?: number | null;
+  pontos?: RegressaoLinear['pontos'] | null;
 }
 
 export interface ObterAnaliseApiResponse {
@@ -56,12 +61,12 @@ export interface ObterAnaliseApiResponse {
     versao: number;
     amostra: AmostraMetadata;
     dadosBancada: {
-      quimica: DadosAnalise['quimica'];
-      granulometria: DadosAnalise['granulometria'];
-      calibracao: RegressaoLinear | null;
+      quimica: Parcial<DadosAnalise['quimica']>;
+      granulometria: Parcial<DadosAnalise['granulometria']>;
+      calibracao: CalibracaoApi | null;
     };
-    atualizadoEm?: string;
-    atualizadoPor?: string;
+    atualizadoEm?: string | null;
+    atualizadoPor?: string | null;
   };
 }
 
@@ -100,12 +105,12 @@ export interface ProcessarAnaliseApiResponse {
     calculosOficiais: {
       valoresLiquidos: Record<string, number>;
       conversoes: Record<string, number>;
-      complexoSortivo: Record<string, any>;
-      granulometria: Record<string, any>;
+      complexoSortivo: Record<string, unknown>;
+      granulometria: Record<string, unknown>;
       fosforo: Record<string, number>;
     };
     processadoEm: string;
-    processadoPor?: string;
+    processadoPor?: string | null;
   };
 }
 
@@ -139,57 +144,145 @@ export interface CriarAmostraApiResponse {
   };
 }
 
-export const analiseService = {
-  async listarAmostras(token: string): Promise<ListarAmostrasApiResponse> {
-    return apiClient.request<ListarAmostrasApiResponse>('/laudos', {
-      method: 'GET',
-      token,
-    });
-  },
+export interface HomologarLaudoPayload {
+  versaoEsperada: number;
+}
 
-  async criarAmostra(payload: CriarAmostraPayload, token: string): Promise<CriarAmostraApiResponse> {
+export interface HomologarLaudoApiResponse {
+  sucesso: boolean;
+  mensagem: string;
+  dados: {
+    protocolo: string;
+    status: StatusLaudoServidor;
+    novaVersao: number;
+    homologadoEm: string;
+    homologadoPor: string;
+    temPdfDisponivel: boolean;
+  };
+}
+
+export interface ItemListagemAmostra {
+  protocolo: string;
+  solicitante: string;
+  propriedade: string;
+  status: StatusLaudoServidor;
+  dataRecebimento: string | null;
+  prazo: string | null;
+  atualizadoEm: string | null;
+}
+
+export interface ListarAmostrasParametros {
+  pagina?: number;
+  tamanhoPagina?: number;
+  busca?: string;
+  situacao?: 'pendentes' | 'concluidas';
+  status?: StatusLaudoServidor;
+  ordenacao?: string;
+}
+
+export interface ListarAmostrasPaginadaApiResponse {
+  sucesso: boolean;
+  dados: {
+    itens: ItemListagemAmostra[];
+    total: number;
+    pagina: number;
+    tamanhoPagina: number;
+  };
+}
+
+export interface ListarAmostrasApiResponse {
+  sucesso: boolean;
+  dados: LaudoResumoItem[];
+}
+
+export interface AnaliseServiceApi {
+  criarAmostra(payload: CriarAmostraPayload, token: string, signal?: AbortSignal): Promise<CriarAmostraApiResponse>;
+  listarAmostras(token: string): Promise<ListarAmostrasApiResponse>;
+  listarAmostras(
+    parametros: ListarAmostrasParametros,
+    token: string,
+    signal?: AbortSignal,
+  ): Promise<ListarAmostrasPaginadaApiResponse>;
+  obterAnalise(protocolo: string, token: string, signal?: AbortSignal): Promise<ObterAnaliseApiResponse>;
+  salvarRascunho(protocolo: string, payload: SalvarRascunhoPayload, token: string, signal?: AbortSignal): Promise<SalvarRascunhoApiResponse>;
+  processarAnalise(protocolo: string, payload: ProcessarAnalisePayload, token: string, signal?: AbortSignal): Promise<ProcessarAnaliseApiResponse>;
+  homologarLaudo(protocolo: string, payload: HomologarLaudoPayload, token: string, signal?: AbortSignal): Promise<HomologarLaudoApiResponse>;
+}
+
+const caminhoLaudo = (protocolo: string) => `/laudos/${encodeURIComponent(protocolo)}`;
+
+export const analiseService: AnaliseServiceApi = {
+  criarAmostra(payload: CriarAmostraPayload, token: string, signal?: AbortSignal) {
     return apiClient.request<CriarAmostraApiResponse>('/laudos', {
       method: 'POST',
       body: payload,
       token,
+      signal,
     });
   },
 
-  async obterAnalise(protocolo: string, token: string): Promise<ObterAnaliseApiResponse> {
-    return apiClient.request<ObterAnaliseApiResponse>(`/laudos/${encodeURIComponent(protocolo)}/analise`, {
+  listarAmostras(
+    parametrosOuToken: ListarAmostrasParametros | string,
+    tokenOuSignal?: string | AbortSignal,
+    talvezSignal?: AbortSignal,
+  ): Promise<any> {
+    if (typeof parametrosOuToken === 'string') {
+      const token = parametrosOuToken;
+      const signal = tokenOuSignal instanceof AbortSignal ? tokenOuSignal : undefined;
+      return apiClient.request<ListarAmostrasApiResponse>('/laudos', {
+        method: 'GET',
+        token,
+        signal,
+      });
+    }
+
+    const parametros = parametrosOuToken;
+    const token = typeof tokenOuSignal === 'string' ? tokenOuSignal : '';
+    const signal = talvezSignal;
+
+    return apiClient.request<ListarAmostrasPaginadaApiResponse>('/laudos', {
       method: 'GET',
       token,
+      signal,
+      query: {
+        pagina: parametros.pagina,
+        tamanhoPagina: parametros.tamanhoPagina,
+        busca: parametros.busca?.trim(),
+        situacao: parametros.situacao,
+        status: parametros.status,
+        ordenacao: parametros.ordenacao,
+      },
     });
   },
 
-  async salvarRascunho(
-    protocolo: string,
-    payload: SalvarRascunhoPayload,
-    token: string,
-  ): Promise<SalvarRascunhoApiResponse> {
-    return apiClient.request<SalvarRascunhoApiResponse>(
-      `/laudos/${encodeURIComponent(protocolo)}/analise/rascunho`,
-      {
-        method: 'PATCH',
-        body: payload,
-        token,
-      },
-    );
+  obterAnalise(protocolo: string, token: string, signal?: AbortSignal) {
+    return apiClient.request<ObterAnaliseApiResponse>(`${caminhoLaudo(protocolo)}/analise`, { token, signal });
   },
 
-  async processarAnalise(
-    protocolo: string,
-    payload: ProcessarAnalisePayload,
-    token: string,
-  ): Promise<ProcessarAnaliseApiResponse> {
-    return apiClient.request<ProcessarAnaliseApiResponse>(
-      `/laudos/${encodeURIComponent(protocolo)}/analise/processar`,
-      {
-        method: 'POST',
-        body: payload,
-        token,
-      },
-    );
+  salvarRascunho(protocolo: string, payload: SalvarRascunhoPayload, token: string, signal?: AbortSignal) {
+    return apiClient.request<SalvarRascunhoApiResponse>(`${caminhoLaudo(protocolo)}/analise/rascunho`, {
+      method: 'PATCH',
+      body: payload,
+      token,
+      signal,
+    });
+  },
+
+  processarAnalise(protocolo: string, payload: ProcessarAnalisePayload, token: string, signal?: AbortSignal) {
+    return apiClient.request<ProcessarAnaliseApiResponse>(`${caminhoLaudo(protocolo)}/analise/processar`, {
+      method: 'POST',
+      body: payload,
+      token,
+      signal,
+    });
+  },
+
+  homologarLaudo(protocolo: string, payload: HomologarLaudoPayload, token: string, signal?: AbortSignal) {
+    return apiClient.request<HomologarLaudoApiResponse>(`${caminhoLaudo(protocolo)}/homologar`, {
+      method: 'POST',
+      body: payload,
+      token,
+      signal,
+    });
   },
 };
-

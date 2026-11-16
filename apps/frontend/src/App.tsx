@@ -1,42 +1,83 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
+import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
+import { CarregandoPagina } from '@/components/feedback/CarregandoPagina';
+import { AvisoConexao } from '@/components/feedback/AvisoConexao';
 import { HomePage } from '@/features/home/HomePage';
-import { LoginAnalistaPage } from '@/features/auth/analista/LoginAnalistaPage';
-import { PowerUserPage } from '@/features/admin/PowerUserPage';
-import { AnalistaLayout } from '@/features/laudos/analista/AnalistaLayout';
-import { AnalistaDashboardPage } from '@/features/laudos/analista/AnalistaDashboardPage';
-import { AnaliseLaudoPage } from '@/features/laudos/analista/AnaliseLaudoPage';
-import { ConsultaLaudoPage } from '@/features/auth/cliente/ConsultaLaudoPage';
-import { LaudoDetalhePage } from '@/features/laudos/cliente/LaudoDetalhePage';
+import '@/components/feedback/Feedback.css';
+import { importarComNovaTentativa } from '@/lib/importarComNovaTentativa';
 
-export function App() {
+const LoginAnalistaPage = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/auth/analista/LoginAnalistaPage')).then((m) => ({ default: m.LoginAnalistaPage })),
+);
+const PowerUserPage = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/admin/PowerUserPage')).then((m) => ({ default: m.PowerUserPage })),
+);
+const AnalistaLayout = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/laudos/analista/AnalistaLayout')).then((m) => ({ default: m.AnalistaLayout })),
+);
+const AnalistaDashboardPage = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/laudos/analista/AnalistaDashboardPage')).then((m) => ({ default: m.AnalistaDashboardPage })),
+);
+const AnaliseLaudoPage = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/laudos/analista/AnaliseLaudoPage')).then((m) => ({ default: m.AnaliseLaudoPage })),
+);
+const ConsultaLaudoPage = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/auth/cliente/ConsultaLaudoPage')).then((m) => ({ default: m.ConsultaLaudoPage })),
+);
+const LaudoDetalhePage = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/laudos/cliente/LaudoDetalhePage')).then((m) => ({ default: m.LaudoDetalhePage })),
+);
+const NaoEncontradoPage = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/erros/NaoEncontradoPage')).then((m) => ({ default: m.NaoEncontradoPage })),
+);
+
+export function Rotas() {
+  const location = useLocation();
+
   return (
-    <BrowserRouter>
-      <AuthProvider>
+    <ErrorBoundary chaveReinicio={location.pathname}>
+      <Suspense fallback={<CarregandoPagina />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
 
           <Route path="/analista/login" element={<LoginAnalistaPage />} />
 
-          <Route element={<ProtectedRoute role="POWER_USER" redirectTo="/analista/login" />}>
+          <Route element={<ProtectedRoute perfil="POWER_USER" redirectTo="/analista/login" />}>
             <Route path="/power-user" element={<PowerUserPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute role={['ANALISTA', 'AUXILIAR']} redirectTo="/analista/login" />}>
+          <Route element={<ProtectedRoute perfil={['ANALISTA', 'AUXILIAR']} redirectTo="/analista/login" />}>
             <Route element={<AnalistaLayout />}>
               <Route path="/analista" element={<AnalistaDashboardPage />} />
-              <Route path="/analista/analises" element={<AnaliseLaudoPage />} />
+              <Route path="/analista/analises" element={<Navigate to="/analista" replace />} />
+              <Route path="/analista/analises/:protocolo" element={<AnaliseLaudoPage />} />
             </Route>
           </Route>
 
           <Route path="/cliente" element={<ConsultaLaudoPage />} />
-          <Route element={<ProtectedRoute role="CLIENTE" redirectTo="/cliente" />}>
+          <Route element={<ProtectedRoute perfil="CLIENTE" redirectTo="/cliente" />}>
             <Route path="/cliente/laudo" element={<LaudoDetalhePage />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NaoEncontradoPage />} />
         </Routes>
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <a className="pular-conteudo" href="#conteudo">
+          Pular para o conteúdo
+        </a>
+        <Rotas />
+        <AvisoConexao />
       </AuthProvider>
     </BrowserRouter>
   );

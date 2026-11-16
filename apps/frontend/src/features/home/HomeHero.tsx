@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { SetaVelocidade, doisDigitos } from './LayoutEntrada';
+import { SetaVelocidade } from './LayoutEntrada';
+import { doisDigitos } from '@/lib/formatos';
 
 const ACESSOS = [
   { rota: '/cliente', titulo: 'Sou cliente', texto: 'Consulte seu laudo com o protocolo da amostra e o CPF do titular.' },
