@@ -332,6 +332,8 @@ export function RegistroForm({
             onAplicar={(coef) => onChange({ ...dados, calibracao: coef })}
             leituraAmostra={quimica.fosforoAbsBruta}
             onLeituraAmostraChange={(numero) => atualizarQuimica('fosforoAbsBruta', numero)}
+            fatorDiluicao={quimica.fatorDiluicaoFosforo}
+            onFatorDiluicaoChange={(numero) => atualizarQuimica('fatorDiluicaoFosforo', numero)}
           />
           <MensagemErroCampo id="secao-calibracao-erro" mensagem={errosCampos.calibracao} />
         </div>

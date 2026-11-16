@@ -15,3 +15,9 @@ export function tokenExpirado(token: string, agora = Date.now()): boolean {
   const expiracao = expiracaoDoToken(token);
   return expiracao !== null && expiracao <= agora;
 }
+
+export function impressaoDoToken(token: string): string {
+  let hash = 0;
+  for (let i = 0; i < token.length; i += 1) hash = (Math.imul(31, hash) + token.charCodeAt(i)) | 0;
+  return `${token.length}:${(hash >>> 0).toString(36)}`;
+}

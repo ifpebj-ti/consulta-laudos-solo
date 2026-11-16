@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -9,8 +9,10 @@ import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/context/AuthContext';
 import { useAnalista } from '@/context/AnalistaContext';
 import { analiseService } from '@/services/analiseService';
+import { authService } from '@/services/authService';
 import { ApiError } from '@/services/apiClient';
 import { LinhasVelocidade, SetaVelocidade } from '@/features/home/LayoutEntrada';
+import type { AuxiliarItem } from '@/types/auth';
 import { FaixaPaginada } from './FaixaPaginada';
 import { NovaAmostraModal } from './NovaAmostraModal';
 import {
@@ -22,12 +24,15 @@ import {
   variantStatus,
 } from './statusAmostra';
 import { IDENTIFICACAO_VAZIA, type AmostraRegistro, type CartaoAmostra, type Identificacao } from './tipos';
-import { cpfValido, somenteDigitos } from '@/lib/documentos';
+import { cpfValido, normalizarProtocolo, somenteDigitos } from '@/lib/documentos';
 import { useTituloPagina } from '@/hooks/useTituloPagina';
 import { rotaAnalise } from '@/routes/rotas';
 import { FUNCIONALIDADES } from '@/config/ambiente';
 import { CarregandoPagina } from '@/components/feedback/CarregandoPagina';
-import { useAmostrasServidor } from './useAmostrasServidor';
+import { useListagemServidor, type ConsultaListagem } from './useAmostrasServidor';
+import { PaginacaoServidor } from './PaginacaoServidor';
+import { useValorAtrasado } from '@/hooks/useValorAtrasado';
+import type { StatusLaudoServidor } from '@/lib/statusLaudo';
 import { pendenciasParaProcessar } from './validacaoAnalise';
 import { formatarDataHoraServidor } from '@/lib/datas';
 import '@/components/feedback/Feedback.css';
@@ -175,6 +180,40 @@ const SITUACOES_PENDENTES: { valor: FiltroSituacao; rotulo: string }[] = [
   { valor: 'aguardando_homologacao', rotulo: 'Aguardando homologação' },
 ];
 
+const STATUS_SERVIDOR_DO_FILTRO: Record<FiltroSituacao, StatusLaudoServidor | undefined> = {
+  todas: undefined,
+  nao_iniciado: 'PENDENTE',
+  em_andamento: 'EM_ANALISE',
+  aguardando_homologacao: 'AGUARDANDO_HOMOLOGACAO',
+};
+
+const ORDEM_SERVIDOR_PENDENTES: Record<OrdemPendentes, string> = {
+  prazo: 'prazo',
+  atrasados: 'prazo',
+  vence_hoje: 'prazo',
+  no_prazo: 'prazo',
+  em_andamento: 'prazo',
+  nao_iniciado: 'prazo',
+  protocolo: 'protocolo',
+  solicitante: 'solicitante',
+};
+
+const ATRASO_BUSCA_MS = 350;
+
+function ErroListagem({ mensagem, onTentar }: { mensagem: string; onTentar: () => void }) {
+  return (
+    <div className="estado-bloco estado-bloco--erro dashboard-listagem-erro" role="alert">
+      <strong className="estado-bloco__titulo">Não foi possível carregar as amostras do servidor</strong>
+      {mensagem}
+      <div className="estado-bloco__acoes">
+        <button type="button" className="link-acao" onClick={onTentar}>
+          Tentar novamente
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function paraCartao(amostra: AmostraRegistro): CartaoAmostra {
   const { identificacao } = amostra.dados;
   return {
@@ -270,17 +309,89 @@ export function AnalistaDashboardPage() {
   const [pendentesExpandido, setPendentesExpandido] = useState(false);
   const [historicoExpandido, setHistoricoExpandido] = useState(false);
   const [filtroSituacao, setFiltroSituacao] = useState<FiltroSituacao>('todas');
-  const [recargaListagem, setRecargaListagem] = useState(0);
-  const listagem = useAmostrasServidor(FUNCIONALIDADES.listagemAmostrasServidor, token, recargaListagem);
+  const servidor = FUNCIONALIDADES.listagemAmostrasServidor;
+  const buscaPendentesServidor = useValorAtrasado(buscaPendentes.trim(), ATRASO_BUSCA_MS);
+  const buscaHistoricoServidor = useValorAtrasado(buscaHistorico.trim(), ATRASO_BUSCA_MS);
+  const consultaPendentes: ConsultaListagem = {
+    situacao: 'pendentes',
+    busca: buscaPendentesServidor || undefined,
+    status: STATUS_SERVIDOR_DO_FILTRO[filtroSituacao],
+    ordenacao: ORDEM_SERVIDOR_PENDENTES[ordemPendentes],
+  };
+  const consultaHistorico: ConsultaListagem = {
+    situacao: 'concluidas',
+    busca: buscaHistoricoServidor || undefined,
+    ordenacao: ordemHistorico,
+  };
+  const listaPendentes = useListagemServidor(servidor, token, consultaPendentes);
+  const listaHistorico = useListagemServidor(servidor, token, consultaHistorico);
 
-  const cartoes = listagem.tipo === 'pronto' ? listagem.cartoes : amostras.map(paraCartao);
+  const isAnalistaPrincipal = session?.role === 'ANALISTA';
+  const [auxiliares, setAuxiliares] = useState<AuxiliarItem[]>([]);
+  const [nomeAuxiliar, setNomeAuxiliar] = useState('');
+  const [emailAuxiliar, setEmailAuxiliar] = useState('');
+  const [salvandoAuxiliar, setSalvandoAuxiliar] = useState(false);
+  const [erroAuxiliar, setErroAuxiliar] = useState<string | null>(null);
 
-  const pendentes = cartoes.filter((c) => c.status !== 'concluido');
-  const concluidas = cartoes.filter((c) => c.status === 'concluido');
+  const carregarAuxiliares = useCallback(async () => {
+    if (!token || !isAnalistaPrincipal) return;
+    try {
+      const res = await authService.listarAuxiliares(token);
+      if (res.sucesso) {
+        setAuxiliares(res.dados);
+      }
+    } catch {
+      // silencioso
+    }
+  }, [token, isAnalistaPrincipal]);
+
+  useEffect(() => {
+    void carregarAuxiliares();
+  }, [carregarAuxiliares]);
+
+  async function aoCadastrarAuxiliar(evento: FormEvent) {
+    evento.preventDefault();
+    setErroAuxiliar(null);
+    if (!nomeAuxiliar.trim() || !emailAuxiliar.trim()) {
+      setErroAuxiliar('Informe o nome e a conta Gmail do auxiliar.');
+      return;
+    }
+    if (!token) return;
+    setSalvandoAuxiliar(true);
+    try {
+      const novo = await authService.criarAuxiliar(
+        { nome: nomeAuxiliar.trim(), email: emailAuxiliar.trim().toLowerCase() },
+        token,
+      );
+      setAuxiliares((atual) => [novo, ...atual]);
+      setNomeAuxiliar('');
+      setEmailAuxiliar('');
+    } catch (e) {
+      setErroAuxiliar(e instanceof ApiError ? e.message : 'Erro ao cadastrar conta auxiliar.');
+    } finally {
+      setSalvandoAuxiliar(false);
+    }
+  }
+
+  async function aoRemoverAuxiliar(id: string) {
+    if (!token) return;
+    setErroAuxiliar(null);
+    try {
+      await authService.removerAuxiliar(id, token);
+      setAuxiliares((atual) => atual.filter((item) => item.id !== id));
+    } catch (e) {
+      setErroAuxiliar(e instanceof ApiError ? e.message : 'Erro ao remover conta auxiliar.');
+    }
+  }
+
+  const cartoesLocais = servidor ? [] : amostras.map(paraCartao);
+  const pendentes = (servidor ? listaPendentes.cartoes : cartoesLocais).filter((c) => c.status !== 'concluido');
+  const concluidas = (servidor ? listaHistorico.cartoes : cartoesLocais).filter((c) => c.status === 'concluido');
+  const filtrosPendentesAtivos = Boolean(buscaPendentes.trim()) || filtroSituacao !== 'todas';
 
   const contagemSituacao = SITUACOES_PENDENTES.map((situacao) => ({
     ...situacao,
-    total: pendentes.filter((c) => situacao.valor === 'todas' || c.status === situacao.valor).length,
+    total: servidor ? null : pendentes.filter((c) => situacao.valor === 'todas' || c.status === situacao.valor).length,
   }));
   const pendentesFiltrados = ordenarPendentes(
     pendentes.filter(
@@ -288,10 +399,8 @@ export function AnalistaDashboardPage() {
     ),
     ordemPendentes,
   );
-  const concluidasFiltradas = ordenarHistorico(
-    concluidas.filter((c) => correspondeBusca(c, buscaHistorico, false)),
-    ordemHistorico,
-  );
+  const historicoBuscado = concluidas.filter((c) => correspondeBusca(c, buscaHistorico, false));
+  const concluidasFiltradas = servidor ? historicoBuscado : ordenarHistorico(historicoBuscado, ordemHistorico);
 
   function abrirModalNovaAmostra() {
     setIdentificacaoModal({ ...IDENTIFICACAO_VAZIA, dataRecebimento: hojeIso() });
@@ -335,7 +444,7 @@ export function AnalistaDashboardPage() {
     try {
       await analiseService.criarAmostra(
         {
-          protocolo: identificacaoModal.protocolo.trim(),
+          protocolo: normalizarProtocolo(identificacaoModal.protocolo),
           cpf_cliente: cpfLimpo,
           cliente_nome: identificacaoModal.solicitante.trim(),
           propriedade: identificacaoModal.propriedade.trim(),
@@ -355,6 +464,7 @@ export function AnalistaDashboardPage() {
 
       const amostraFinal: Identificacao = {
         ...identificacaoModal,
+        protocolo: normalizarProtocolo(identificacaoModal.protocolo),
         prazo: prazoCalculado,
       };
 
@@ -363,7 +473,7 @@ export function AnalistaDashboardPage() {
       navigate(rotaAnalise(amostraFinal.protocolo));
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
-        setErroModal(`Já existe uma amostra com o protocolo ${identificacaoModal.protocolo.trim()}. Confira o número ou use outro protocolo.`);
+        setErroModal(`Já existe uma amostra com o protocolo ${normalizarProtocolo(identificacaoModal.protocolo)}. Confira o número ou use outro protocolo.`);
       } else if (e instanceof ApiError && e.erros && e.erros.length > 0) {
         setErroModal(`Confira os dados: ${e.erros.join('; ')}`);
       } else if (e instanceof ApiError) {
@@ -397,7 +507,12 @@ export function AnalistaDashboardPage() {
       <main id="conteudo" className="page-container" tabIndex={-1}>
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Laboratório de Solos &middot; Uso interno</span>
+            <span className="page-header__eyebrow">
+              Laboratório de Solos &middot;{' '}
+              {session?.role === 'AUXILIAR'
+                ? `Auxiliar de ${session.responsavelNome || 'Analista'} (${session.responsavelCrea || 'CREA'})`
+                : `${session?.crea || 'Analista Principal'}`}
+            </span>
             <h1>
               <span>Painel do</span> <span className="painel-min__destaque">Analista</span>
             </h1>
@@ -416,18 +531,6 @@ export function AnalistaDashboardPage() {
           </CardBody>
         </Card>
 
-        {listagem.tipo === 'carregando' && <CarregandoPagina rotulo="Carregando amostras…" />}
-        {listagem.tipo === 'erro' && (
-          <div className="estado-bloco estado-bloco--erro dashboard-listagem-erro" role="alert">
-            <strong className="estado-bloco__titulo">Não foi possível carregar as amostras do servidor</strong>
-            {listagem.mensagem}
-            <div className="estado-bloco__acoes">
-              <button type="button" className="link-acao" onClick={() => setRecargaListagem((n) => n + 1)}>
-                Tentar novamente
-              </button>
-            </div>
-          </div>
-        )}
 
         <Card>
           <CardHeader
@@ -446,7 +549,9 @@ export function AnalistaDashboardPage() {
             }
           />
           <CardBody>
-            {pendentes.length > 0 && (
+            {listaPendentes.carregandoInicial && <CarregandoPagina rotulo="Carregando amostras…" />}
+            {listaPendentes.erro && <ErroListagem mensagem={listaPendentes.erro} onTentar={listaPendentes.tentarNovamente} />}
+            {(pendentes.length > 0 || (servidor && filtrosPendentesAtivos)) && (
               <div className="dashboard-situacoes" role="group" aria-label="Filtrar por situação">
                 {contagemSituacao.map((situacao) => (
                   <button
@@ -456,12 +561,13 @@ export function AnalistaDashboardPage() {
                     aria-pressed={filtroSituacao === situacao.valor}
                     onClick={() => setFiltroSituacao(situacao.valor)}
                   >
-                    {situacao.rotulo} <span className="dashboard-situacao__total">{situacao.total}</span>
+                    {situacao.rotulo}
+                    {situacao.total !== null && <span className="dashboard-situacao__total"> {situacao.total}</span>}
                   </button>
                 ))}
               </div>
             )}
-            {pendentes.length === 0 ? (
+            {listaPendentes.carregandoInicial ? null : pendentes.length === 0 && !(servidor && filtrosPendentesAtivos) ? (
               <EstadoVazio mensagem="Nenhum laudo pendente no momento. Clique em “Registrar Nova Análise” para começar." />
             ) : pendentesFiltrados.length === 0 ? (
               <div>
@@ -485,7 +591,7 @@ export function AnalistaDashboardPage() {
               </div>
             ) : (
               <FaixaPaginada
-                chaveReinicio={`${buscaPendentes}|${ordemPendentes}|${filtroSituacao}`}
+                chaveReinicio={`${buscaPendentes}|${ordemPendentes}|${filtroSituacao}|${listaPendentes.pagina}`}
                 expandida={pendentesExpandido}
                 itens={pendentesFiltrados.map((cartao) => (
                   <CartaoBloco
@@ -497,6 +603,7 @@ export function AnalistaDashboardPage() {
                 ))}
               />
             )}
+            <PaginacaoServidor listagem={listaPendentes} rotulo="amostras pendentes" />
           </CardBody>
         </Card>
 
@@ -517,13 +624,15 @@ export function AnalistaDashboardPage() {
             }
           />
           <CardBody>
-            {concluidas.length === 0 ? (
+            {listaHistorico.carregandoInicial && <CarregandoPagina rotulo="Carregando histórico…" />}
+            {listaHistorico.erro && <ErroListagem mensagem={listaHistorico.erro} onTentar={listaHistorico.tentarNovamente} />}
+            {listaHistorico.carregandoInicial ? null : concluidas.length === 0 && !(servidor && buscaHistorico.trim()) ? (
               <EstadoVazio mensagem="Nenhum laudo homologado ainda." />
             ) : concluidasFiltradas.length === 0 ? (
               <EstadoVazio mensagem={`Nenhum laudo encontrado para “${buscaHistorico.trim()}”.`} />
             ) : (
               <FaixaPaginada
-                chaveReinicio={`${buscaHistorico}|${ordemHistorico}`}
+                chaveReinicio={`${buscaHistorico}|${ordemHistorico}|${listaHistorico.pagina}`}
                 expandida={historicoExpandido}
                 itens={concluidasFiltradas.map((cartao) => (
                   <CartaoBloco
@@ -535,8 +644,103 @@ export function AnalistaDashboardPage() {
                 ))}
               />
             )}
+            <PaginacaoServidor listagem={listaHistorico} rotulo="histórico de laudos" />
           </CardBody>
         </Card>
+
+        {isAnalistaPrincipal && (
+          <Card>
+            <CardHeader title={`Equipe · Contas Auxiliares (${auxiliares.length})`} />
+            <CardBody>
+              <p style={{ marginBottom: '16px', color: 'var(--cinza)', fontSize: '14px' }}>
+                Autorize contas Gmail de auxiliares para que tenham permissão de leitura e escrita nos seus laudos. Os
+                laudos emitidos continuarão vinculados ao seu nome (<strong>{session?.nome}</strong>) e registro (
+                <strong>{session?.crea || 'CREA'}</strong>).
+              </p>
+
+              {erroAuxiliar && (
+                <div className="entrada-alerta" role="alert" style={{ marginBottom: '16px' }}>
+                  {erroAuxiliar}
+                </div>
+              )}
+
+              <form
+                onSubmit={aoCadastrarAuxiliar}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '16px',
+                  alignItems: 'end',
+                  marginBottom: auxiliares.length > 0 ? '20px' : 0,
+                }}
+              >
+                <div className="entrada-campo">
+                  <label className="entrada-campo__rotulo" htmlFor="aux-nome">
+                    Nome do Auxiliar
+                  </label>
+                  <input
+                    id="aux-nome"
+                    type="text"
+                    placeholder="Ex.: Lucas Auxiliar"
+                    value={nomeAuxiliar}
+                    onChange={(e) => setNomeAuxiliar(e.target.value)}
+                    disabled={salvandoAuxiliar}
+                    required
+                  />
+                </div>
+
+                <div className="entrada-campo">
+                  <label className="entrada-campo__rotulo" htmlFor="aux-email">
+                    Conta Google (Gmail) do Auxiliar
+                  </label>
+                  <input
+                    id="aux-email"
+                    type="email"
+                    placeholder="Ex.: auxiliar@gmail.com"
+                    value={emailAuxiliar}
+                    onChange={(e) => setEmailAuxiliar(e.target.value)}
+                    disabled={salvandoAuxiliar}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Button type="submit" disabled={salvandoAuxiliar}>
+                    {salvandoAuxiliar ? 'Adicionando...' : 'Adicionar Auxiliar'}
+                    <SetaVelocidade />
+                  </Button>
+                </div>
+              </form>
+
+              {auxiliares.length > 0 && (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                    gap: '12px',
+                  }}
+                >
+                  {auxiliares.map((aux) => (
+                    <div key={aux.id} className="dashboard-bloco">
+                      <div className="dashboard-bloco__topo">
+                        <strong>{aux.nome}</strong>
+                      </div>
+                      <p className="dashboard-bloco__solicitante">{aux.email}</p>
+                      <div className="dashboard-bloco__badges" style={{ marginTop: '6px' }}>
+                        <Badge variant="status-processamento">Auxiliar (Read/Write)</Badge>
+                      </div>
+                      <div style={{ marginTop: '10px' }}>
+                        <Button variant="ghost" onClick={() => void aoRemoverAuxiliar(aux.id)}>
+                          Remover Auxiliar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        )}
       </main>
       <Footer />
 

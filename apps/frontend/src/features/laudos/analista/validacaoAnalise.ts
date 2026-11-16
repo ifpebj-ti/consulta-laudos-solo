@@ -1,4 +1,4 @@
-import { calcularAcidezPotencial, calcularGranulometria, calcularValorLiquido, fatorNaohValido } from './calculos';
+import { calcularAcidezPotencial, calcularGranulometria, calcularValorLiquido, fatorDiluicaoValido, fatorNaohValido } from './calculos';
 import type { DadosAnalise } from './tipos';
 
 export interface AvisoAnalise {
@@ -79,6 +79,7 @@ export function pendenciasParaProcessar(dados: DadosAnalise): PendenciasAnalise 
   if (!calibracao || !calibracao.a) bloqueantes.push('curva de calibração do fósforo');
   if (!(granulometria.tfsa > 0)) bloqueantes.push('peso da amostra (TFSA)');
   if (!fatorNaohValido(quimica.acidezPotencial.fator)) bloqueantes.push('fator de correção do NaOH');
+  if (!fatorDiluicaoValido(quimica.fatorDiluicaoFosforo)) bloqueantes.push('fator de diluição do fósforo');
   avaliarDadosAnalise(dados)
     .filter((aviso) => aviso.bloqueante)
     .forEach((aviso) => bloqueantes.push(aviso.mensagem.replace(/\.$/, '').toLowerCase()));

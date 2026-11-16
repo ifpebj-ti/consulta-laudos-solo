@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -5,6 +7,8 @@ from typing import Any
 import jwt
 
 from src.core.config import settings
+
+PBKDF2_ITERATIONS = 600_000
 
 
 class JWTError(Exception):
@@ -17,6 +21,40 @@ class InvalidTokenError(JWTError):
 
 class ExpiredTokenError(JWTError):
     pass
+
+
+def get_password_hash(password: str) -> str:
+    """
+    Gera hash seguro de senha utilizando PBKDF2-HMAC-SHA256 com salt aleatório de 16 bytes.
+    """
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        PBKDF2_ITERATIONS,
+    )
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt}${dk.hex()}"
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Valida uma senha em texto plano contra o hash PBKDF2-HMAC-SHA256 em tempo constante.
+    """
+    try:
+        algoritmo, iteracoes_str, salt, hash_armazenado = hashed_password.split("$")
+        if algoritmo != "pbkdf2_sha256":
+            return False
+        iteracoes = int(iteracoes_str)
+        dk = hashlib.pbkdf2_hmac(
+            "sha256",
+            plain_password.encode("utf-8"),
+            salt.encode("utf-8"),
+            iteracoes,
+        )
+        return secrets.compare_digest(dk.hex(), hash_armazenado)
+    except Exception:
+        return False
 
 
 def create_access_token(
@@ -34,7 +72,7 @@ def create_access_token(
     else:
         hours = (
             settings.JWT_EXPIRATION_ANALISTA_HOURS
-            if role == "ANALISTA"
+            if role in ("ANALISTA", "AUXILIAR", "POWER_USER")
             else settings.JWT_EXPIRATION_CLIENTE_HOURS
         )
         expire = now + timedelta(hours=hours)

@@ -6,6 +6,7 @@ from src.core.database import get_db
 from src.schemas.analise import (
     CriarLaudoInput,
     CriarLaudoResponse,
+    ListarLaudosResponse,
     ObterAnaliseResponse,
     ProcessarAnaliseInput,
     ProcessarAnaliseResponse,
@@ -17,6 +18,22 @@ from src.services.analise_service import AnaliseService
 router = APIRouter(prefix="/laudos", tags=["Análises Laboratoriais"])
 
 
+@router.get(
+    "",
+    response_model=ListarLaudosResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Listar laudos/amostras pertencentes ao escopo do analista autenticado",
+)
+async def listar_laudos(
+    user: dict = Depends(require_role(("ANALISTA", "AUXILIAR"))),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Lista apenas os laudos pertencentes ao Analista Principal (ou ao Analista Principal vinculado ao Auxiliar).
+    """
+    return await AnaliseService.listar_laudos(usuario=user, db=db)
+
+
 @router.post(
     "",
     response_model=CriarLaudoResponse,
@@ -25,12 +42,12 @@ router = APIRouter(prefix="/laudos", tags=["Análises Laboratoriais"])
 )
 async def criar_laudo(
     payload: CriarLaudoInput,
-    user: dict = Depends(require_role("ANALISTA")),
+    user: dict = Depends(require_role(("ANALISTA", "AUXILIAR"))),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Cadastra uma nova amostra/laudo e inicializa uma bancada limpa associada.
-    Exige perfil de acesso ANALISTA.
+    Exige perfil de acesso ANALISTA ou AUXILIAR.
     """
     return await AnaliseService.criar_laudo(payload=payload, usuario=user, db=db)
 
@@ -43,14 +60,14 @@ async def criar_laudo(
 )
 async def obter_analise(
     protocolo: str,
-    user: dict = Depends(require_role("ANALISTA")),
+    user: dict = Depends(require_role(("ANALISTA", "AUXILIAR"))),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Retorna os dados de bancada brutos, metadados da amostra, rascunho e curva de calibração.
-    Exige perfil de acesso ANALISTA.
+    Valida que o laudo pertence ao escopo do analista autenticado.
     """
-    return await AnaliseService.obter_analise(protocolo=protocolo, db=db)
+    return await AnaliseService.obter_analise(protocolo=protocolo, db=db, usuario=user)
 
 
 @router.patch(
@@ -62,13 +79,13 @@ async def obter_analise(
 async def salvar_rascunho(
     protocolo: str,
     payload: RascunhoAnaliseInput,
-    user: dict = Depends(require_role("ANALISTA")),
+    user: dict = Depends(require_role(("ANALISTA", "AUXILIAR"))),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Salva incrementalmente dados parciais de bancada.
     Valida concorrência otimista com base no campo versaoEsperada.
-    Exige perfil de acesso ANALISTA.
+    Exige perfil de acesso ANALISTA ou AUXILIAR do mesmo escopo.
     """
     return await AnaliseService.salvar_rascunho(
         protocolo=protocolo,
@@ -87,13 +104,13 @@ async def salvar_rascunho(
 async def processar_analise(
     protocolo: str,
     payload: ProcessarAnaliseInput,
-    user: dict = Depends(require_role("ANALISTA")),
+    user: dict = Depends(require_role(("ANALISTA", "AUXILIAR"))),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Valida a completude de bancada, reexecuta cálculos oficiais agronômicos,
     grava os resultados consolidados e avança o status para AGUARDANDO_HOMOLOGACAO.
-    Exige perfil de acesso ANALISTA.
+    Exige perfil de acesso ANALISTA ou AUXILIAR do mesmo escopo.
     """
     return await AnaliseService.processar_analise(
         protocolo=protocolo,

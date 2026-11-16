@@ -121,8 +121,8 @@ const SINONIMOS: Record<string, StatusLaudoServidor> = {
   AMOSTRA_DEVOLVIDA: 'RECOLETA',
 };
 
-export function normalizarStatusLaudo(status: string | null | undefined): StatusLaudoServidor | null {
-  const normalizado = (status ?? '')
+export function normalizarStatusLaudo(status: unknown): StatusLaudoServidor | null {
+  const normalizado = (typeof status === 'string' ? status : '')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .trim()
