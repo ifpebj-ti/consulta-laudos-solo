@@ -421,7 +421,8 @@ export function AnaliseLaudoPage() {
     return (
       <HomologacaoView
         dados={dados}
-        responsavel={session?.nome ?? ''}
+        responsavel={amostraInfo?.responsavelNome ?? session?.responsavelNome ?? session?.nome ?? ''}
+        crea={amostraInfo?.responsavelCrea ?? session?.responsavelCrea ?? session?.crea ?? ''}
         jaLiberado={laudoConcluido}
         processada={statusServidor === 'AGUARDANDO_HOMOLOGACAO' || laudoConcluido}
         onVoltarParaEdicao={() => irParaAba('registro')}

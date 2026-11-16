@@ -7,6 +7,41 @@ export interface AmostraMetadata {
   solicitante: string;
   propriedade: string;
   dataColeta?: string | null;
+  cpfCliente?: string;
+  localizacao?: string;
+  areaIdentificacao?: string;
+  areaHectares?: string;
+  profundidadeColeta?: string;
+  cultivo?: string;
+  dataRecebimento?: string;
+  tipoAnalise?: TipoAnalise;
+  culturaExistente?: string;
+  email?: string;
+  telefone?: string;
+  responsavelNome?: string;
+  responsavelCrea?: string;
+}
+
+export interface LaudoResumoItem {
+  protocolo: string;
+  cpfCliente: string;
+  solicitante: string;
+  propriedade: string;
+  localizacao?: string;
+  areaIdentificacao?: string;
+  areaHectares?: string;
+  profundidadeColeta?: string;
+  cultivo?: string;
+  dataRecebimento?: string;
+  tipoAnalise?: TipoAnalise;
+  culturaExistente?: string;
+  email?: string;
+  telefone?: string;
+  status: string;
+  versao: number;
+  criadoEm: string;
+  responsavelNome?: string;
+  responsavelCrea?: string;
 }
 
 type Parcial<T> = { [K in keyof T]?: T[K] extends object ? Partial<T[K]> | null : T[K] | null };
@@ -145,7 +180,7 @@ export interface ListarAmostrasParametros {
   ordenacao?: string;
 }
 
-export interface ListarAmostrasApiResponse {
+export interface ListarAmostrasPaginadaApiResponse {
   sucesso: boolean;
   dados: {
     itens: ItemListagemAmostra[];
@@ -155,27 +190,64 @@ export interface ListarAmostrasApiResponse {
   };
 }
 
+export interface ListarAmostrasApiResponse {
+  sucesso: boolean;
+  dados: LaudoResumoItem[];
+}
+
 const caminhoLaudo = (protocolo: string) => `/laudos/${encodeURIComponent(protocolo)}`;
+
+function listarAmostras(token: string): Promise<ListarAmostrasApiResponse>;
+function listarAmostras(
+  parametros: ListarAmostrasParametros,
+  token: string,
+  signal?: AbortSignal,
+): Promise<ListarAmostrasPaginadaApiResponse>;
+function listarAmostras(
+  parametrosOuToken: ListarAmostrasParametros | string,
+  tokenOuSignal?: string | AbortSignal,
+  talvezSignal?: AbortSignal,
+): Promise<ListarAmostrasApiResponse | ListarAmostrasPaginadaApiResponse> {
+  if (typeof parametrosOuToken === 'string') {
+    const token = parametrosOuToken;
+    const signal = tokenOuSignal instanceof AbortSignal ? tokenOuSignal : undefined;
+    return apiClient.request<ListarAmostrasApiResponse>('/laudos', {
+      method: 'GET',
+      token,
+      signal,
+    });
+  }
+
+  const parametros = parametrosOuToken;
+  const token = typeof tokenOuSignal === 'string' ? tokenOuSignal : '';
+  const signal = talvezSignal;
+
+  return apiClient.request<ListarAmostrasPaginadaApiResponse>('/laudos', {
+    method: 'GET',
+    token,
+    signal,
+    query: {
+      pagina: parametros.pagina,
+      tamanhoPagina: parametros.tamanhoPagina,
+      busca: parametros.busca?.trim(),
+      situacao: parametros.situacao,
+      status: parametros.status,
+      ordenacao: parametros.ordenacao,
+    },
+  });
+}
 
 export const analiseService = {
   criarAmostra(payload: CriarAmostraPayload, token: string, signal?: AbortSignal) {
-    return apiClient.request<CriarAmostraApiResponse>('/laudos', { method: 'POST', body: payload, token, signal });
-  },
-
-  listarAmostras(parametros: ListarAmostrasParametros, token: string, signal?: AbortSignal) {
-    return apiClient.request<ListarAmostrasApiResponse>('/laudos', {
+    return apiClient.request<CriarAmostraApiResponse>('/laudos', {
+      method: 'POST',
+      body: payload,
       token,
       signal,
-      query: {
-        pagina: parametros.pagina,
-        tamanhoPagina: parametros.tamanhoPagina,
-        busca: parametros.busca?.trim(),
-        situacao: parametros.situacao,
-        status: parametros.status,
-        ordenacao: parametros.ordenacao,
-      },
     });
   },
+
+  listarAmostras,
 
   obterAnalise(protocolo: string, token: string, signal?: AbortSignal) {
     return apiClient.request<ObterAnaliseApiResponse>(`${caminhoLaudo(protocolo)}/analise`, { token, signal });

@@ -12,6 +12,9 @@ import { importarComNovaTentativa } from '@/lib/importarComNovaTentativa';
 const LoginAnalistaPage = lazy(() =>
   importarComNovaTentativa(() => import('@/features/auth/analista/LoginAnalistaPage')).then((m) => ({ default: m.LoginAnalistaPage })),
 );
+const PowerUserPage = lazy(() =>
+  importarComNovaTentativa(() => import('@/features/admin/PowerUserPage')).then((m) => ({ default: m.PowerUserPage })),
+);
 const AnalistaLayout = lazy(() =>
   importarComNovaTentativa(() => import('@/features/laudos/analista/AnalistaLayout')).then((m) => ({ default: m.AnalistaLayout })),
 );
@@ -41,7 +44,12 @@ export function Rotas() {
           <Route path="/" element={<HomePage />} />
 
           <Route path="/analista/login" element={<LoginAnalistaPage />} />
-          <Route element={<ProtectedRoute perfil="ANALISTA" redirectTo="/analista/login" />}>
+
+          <Route element={<ProtectedRoute perfil="POWER_USER" redirectTo="/analista/login" />}>
+            <Route path="/power-user" element={<PowerUserPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute perfil={['ANALISTA', 'AUXILIAR']} redirectTo="/analista/login" />}>
             <Route element={<AnalistaLayout />}>
               <Route path="/analista" element={<AnalistaDashboardPage />} />
               <Route path="/analista/analises" element={<Navigate to="/analista" replace />} />

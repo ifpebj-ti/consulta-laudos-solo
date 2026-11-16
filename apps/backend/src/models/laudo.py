@@ -17,6 +17,23 @@ class Laudo(Base):
     cpf_cliente: Mapped[str] = mapped_column(String(11), nullable=False)
     cliente_nome: Mapped[str] = mapped_column(String(255), nullable=False)
     propriedade: Mapped[str] = mapped_column(String(255), nullable=False)
+    localizacao: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    area_identificacao: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    area_hectares: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    profundidade_coleta: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    cultivo: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    data_recebimento: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    tipo_analise: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    cultura_existente: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    email_cliente: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    telefone_cliente: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    analista_id: Mapped[str | None] = mapped_column(
+        String(255), index=True, nullable=True
+    )
+    analista_nome: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    analista_crea: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
     status: Mapped[str] = mapped_column(
         String(32), default="PENDENTE", index=True, nullable=False
     )

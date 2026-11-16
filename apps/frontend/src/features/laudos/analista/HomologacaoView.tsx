@@ -23,7 +23,10 @@ export type ResultadoHomologacao = { ok: true; simulado: boolean } | { ok: false
 
 interface HomologacaoViewProps {
   dados: DadosAnalise;
-  responsavel: string;
+  responsavel?: string | null;
+  responsavelNome?: string | null;
+  crea?: string | null;
+  responsavelCrea?: string | null;
   jaLiberado?: boolean;
   processada?: boolean;
   onVoltarParaEdicao: () => void;
@@ -33,6 +36,9 @@ interface HomologacaoViewProps {
 export function HomologacaoView({
   dados,
   responsavel,
+  responsavelNome,
+  crea,
+  responsavelCrea,
   jaLiberado = false,
   processada = true,
   onVoltarParaEdicao,
@@ -321,8 +327,8 @@ export function HomologacaoView({
 
         <div className="laudo-doc__rodape">
           <div className="resp-tecnico">
-            <strong>{responsavel || 'Responsável técnico'}</strong>
-            Responsável técnico pela homologação
+            <strong>{responsavelNome || responsavel || 'Responsável Técnico não informado'}</strong>
+            Responsável Técnico(a) &middot; {responsavelCrea || crea || 'CREA não informado'}
             <br />
             Laboratório de Solos &middot; IFPE Campus Belo Jardim
           </div>

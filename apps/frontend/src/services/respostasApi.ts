@@ -75,15 +75,36 @@ export function normalizarLoginCliente(bruto: unknown): LoginClienteResponse {
 export function normalizarLoginGoogle(bruto: unknown): LoginGoogleResponse {
   if (!ehObjeto(bruto)) throw respostaInvalida();
   const usuario = ehObjeto(bruto.usuario) ? bruto.usuario : {};
+  const roleBruta = textoOuNulo(usuario.role) ?? 'ANALISTA';
+  const roleValida: LoginGoogleResponse['usuario']['role'] =
+    roleBruta === 'POWER_USER' || roleBruta === 'AUXILIAR' ? roleBruta : 'ANALISTA';
+
+  const dadosUsuario: LoginGoogleResponse['usuario'] = {
+    nome: textoOuNulo(usuario.nome) ?? '',
+    email: textoOuNulo(usuario.email) ?? '',
+    role: roleValida,
+  };
+
+  const id = textoOuNulo(usuario.id);
+  if (id) dadosUsuario.id = id;
+
+  const crea = textoOuNulo(usuario.crea);
+  if (crea !== null) dadosUsuario.crea = crea;
+
+  const escopo = textoOuNulo(usuario.escopoAnalistaId);
+  if (escopo !== null) dadosUsuario.escopoAnalistaId = escopo;
+
+  const respNome = textoOuNulo(usuario.responsavelNome);
+  if (respNome !== null) dadosUsuario.responsavelNome = respNome;
+
+  const respCrea = textoOuNulo(usuario.responsavelCrea);
+  if (respCrea !== null) dadosUsuario.responsavelCrea = respCrea;
+
   return {
     sucesso: true,
     token: tokenValido(bruto.token),
     tipoToken: textoOuNulo(bruto.tipoToken) ?? 'bearer',
-    usuario: {
-      nome: textoOuNulo(usuario.nome) ?? '',
-      email: textoOuNulo(usuario.email) ?? '',
-      role: 'ANALISTA',
-    },
+    usuario: dadosUsuario,
   };
 }
 

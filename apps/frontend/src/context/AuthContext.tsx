@@ -23,6 +23,10 @@ export interface AuthSession {
   role: Role;
   nome?: string;
   email?: string;
+  crea?: string | null;
+  escopoAnalistaId?: string | null;
+  responsavelNome?: string | null;
+  responsavelCrea?: string | null;
   protocolo?: string;
   laudo?: LaudoDetalhe;
   consultadoEm?: string;
@@ -33,7 +37,8 @@ export type MotivoSaida = 'manual' | 'sessao_expirada' | 'sessao_encerrada';
 interface AuthContextValue {
   session: AuthSession | null;
   motivoUltimaSaida: MotivoSaida | null;
-  entrarComGoogle: (idToken: string) => Promise<void>;
+  entrarComCredenciais: (username: string, password: string) => Promise<Role>;
+  entrarComGoogle: (idToken: string) => Promise<Role>;
   entrarComProtocolo: (protocolo: string, cpf: string) => Promise<LaudoDetalhe>;
   sair: (motivo?: MotivoSaida) => void;
   limparMotivoSaida: () => void;
@@ -45,7 +50,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 function sessaoValida(valor: unknown): valor is AuthSession {
   if (!valor || typeof valor !== 'object') return false;
   const sessao = valor as Partial<AuthSession>;
-  return typeof sessao.token === 'string' && (sessao.role === 'ANALISTA' || sessao.role === 'CLIENTE');
+  const rolesValidas: Role[] = ['POWER_USER', 'ANALISTA', 'AUXILIAR', 'CLIENTE'];
+  return typeof sessao.token === 'string' && typeof sessao.role === 'string' && rolesValidas.includes(sessao.role);
 }
 
 function lerSessaoArmazenada(): AuthSession | null {
@@ -196,15 +202,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(temporizador);
   }, [session, sair]);
 
-  const entrarComGoogle = useCallback(
-    async (idToken: string) => {
-      const resposta = await authService.loginGoogle(idToken);
+  const entrarComCredenciais = useCallback(
+    async (username: string, password: string): Promise<Role> => {
+      const resposta = await authService.loginLocal(username, password);
+      const role = resposta.usuario.role;
       salvarSessao({
         token: resposta.token,
-        role: 'ANALISTA',
+        role,
         nome: resposta.usuario.nome,
         email: resposta.usuario.email,
+        crea: resposta.usuario.crea,
+        escopoAnalistaId: resposta.usuario.escopoAnalistaId ?? resposta.usuario.email,
+        responsavelNome: resposta.usuario.responsavelNome ?? resposta.usuario.nome,
+        responsavelCrea: resposta.usuario.responsavelCrea ?? resposta.usuario.crea,
       });
+      return role;
+    },
+    [salvarSessao],
+  );
+
+  const entrarComGoogle = useCallback(
+    async (idToken: string): Promise<Role> => {
+      const resposta = await authService.loginGoogle(idToken);
+      const role = resposta.usuario.role;
+      salvarSessao({
+        token: resposta.token,
+        role,
+        nome: resposta.usuario.nome,
+        email: resposta.usuario.email,
+        crea: resposta.usuario.crea,
+        escopoAnalistaId: resposta.usuario.escopoAnalistaId ?? resposta.usuario.email,
+        responsavelNome: resposta.usuario.responsavelNome ?? resposta.usuario.nome,
+        responsavelCrea: resposta.usuario.responsavelCrea ?? resposta.usuario.crea,
+      });
+      return role;
     },
     [salvarSessao],
   );
@@ -234,8 +265,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, motivoUltimaSaida, entrarComGoogle, entrarComProtocolo, sair, limparMotivoSaida, atualizarLaudo }),
-    [session, motivoUltimaSaida, entrarComGoogle, entrarComProtocolo, sair, limparMotivoSaida, atualizarLaudo],
+    () => ({
+      session,
+      motivoUltimaSaida,
+      entrarComCredenciais,
+      entrarComGoogle,
+      entrarComProtocolo,
+      sair,
+      limparMotivoSaida,
+      atualizarLaudo,
+    }),
+    [
+      session,
+      motivoUltimaSaida,
+      entrarComCredenciais,
+      entrarComGoogle,
+      entrarComProtocolo,
+      sair,
+      limparMotivoSaida,
+      atualizarLaudo,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
