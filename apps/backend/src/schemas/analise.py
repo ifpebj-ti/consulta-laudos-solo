@@ -96,6 +96,19 @@ class AmostraInfoSchema(BaseModel):
     solicitante: str
     propriedade: str
     dataColeta: str | None = None
+    cpfCliente: str | None = None
+    localizacao: str | None = None
+    areaIdentificacao: str | None = None
+    areaHectares: str | None = None
+    profundidadeColeta: str | None = None
+    cultivo: str | None = None
+    dataRecebimento: str | None = None
+    tipoAnalise: str | None = None
+    culturaExistente: str | None = None
+    email: str | None = None
+    telefone: str | None = None
+    responsavelNome: str | None = None
+    responsavelCrea: str | None = None
 
 
 class DadosBancadaSchema(BaseModel):
@@ -151,9 +164,7 @@ class ProcessarAnaliseDataSchema(BaseModel):
 
 class ProcessarAnaliseResponse(BaseModel):
     sucesso: bool = True
-    mensagem: str = (
-        "Dados processados e cálculos consolidados com sucesso. Amostra pronta para homologação."
-    )
+    mensagem: str = "Dados processados e cálculos consolidados com sucesso. Amostra pronta para homologação."
     dados: ProcessarAnaliseDataSchema
 
 
@@ -187,9 +198,38 @@ class CriarLaudoDataSchema(BaseModel):
     status: str
     versao: int
     criadoEm: str
+    analistaNome: str | None = None
+    analistaCrea: str | None = None
 
 
 class CriarLaudoResponse(BaseModel):
     sucesso: bool = True
     mensagem: str = "Amostra/laudo cadastrado com sucesso."
     dados: CriarLaudoDataSchema
+
+
+class LaudoResumoItemSchema(BaseModel):
+    protocolo: str
+    cpfCliente: str
+    solicitante: str
+    propriedade: str
+    localizacao: str | None = None
+    areaIdentificacao: str | None = None
+    areaHectares: str | None = None
+    profundidadeColeta: str | None = None
+    cultivo: str | None = None
+    dataRecebimento: str | None = None
+    tipoAnalise: str | None = None
+    culturaExistente: str | None = None
+    email: str | None = None
+    telefone: str | None = None
+    status: str
+    versao: int
+    criadoEm: str
+    responsavelNome: str | None = None
+    responsavelCrea: str | None = None
+
+
+class ListarLaudosResponse(BaseModel):
+    sucesso: bool = True
+    dados: list[LaudoResumoItemSchema]
