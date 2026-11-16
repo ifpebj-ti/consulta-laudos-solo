@@ -161,26 +161,36 @@ class AnaliseService:
             cpf_cliente=cpf_limpo,
             cliente_nome=nome_cliente,
             propriedade=propriedade,
-            localizacao=html.escape(payload.localizacao.strip())
-            if payload.localizacao
-            else None,
-            area_identificacao=html.escape(payload.areaIdentificacao.strip())
-            if payload.areaIdentificacao
-            else None,
-            area_hectares=html.escape(payload.areaHectares.strip())
-            if payload.areaHectares
-            else None,
-            profundidade_coleta=html.escape(payload.profundidadeColeta.strip())
-            if payload.profundidadeColeta
-            else None,
+            localizacao=(
+                html.escape(payload.localizacao.strip())
+                if payload.localizacao
+                else None
+            ),
+            area_identificacao=(
+                html.escape(payload.areaIdentificacao.strip())
+                if payload.areaIdentificacao
+                else None
+            ),
+            area_hectares=(
+                html.escape(payload.areaHectares.strip())
+                if payload.areaHectares
+                else None
+            ),
+            profundidade_coleta=(
+                html.escape(payload.profundidadeColeta.strip())
+                if payload.profundidadeColeta
+                else None
+            ),
             cultivo=html.escape(payload.cultivo.strip()) if payload.cultivo else None,
-            data_recebimento=payload.dataRecebimento.isoformat()
-            if payload.dataRecebimento
-            else None,
+            data_recebimento=(
+                payload.dataRecebimento.isoformat() if payload.dataRecebimento else None
+            ),
             tipo_analise=payload.tipoAnalise,
-            cultura_existente=html.escape(payload.culturaExistente.strip())
-            if payload.culturaExistente
-            else None,
+            cultura_existente=(
+                html.escape(payload.culturaExistente.strip())
+                if payload.culturaExistente
+                else None
+            ),
             email_cliente=payload.email.strip() if payload.email else None,
             telefone_cliente=payload.telefone.strip() if payload.telefone else None,
             analista_id=escopo_analista,
