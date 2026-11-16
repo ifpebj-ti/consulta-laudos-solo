@@ -164,7 +164,9 @@ class ProcessarAnaliseDataSchema(BaseModel):
 
 class ProcessarAnaliseResponse(BaseModel):
     sucesso: bool = True
-    mensagem: str = "Dados processados e cálculos consolidados com sucesso. Amostra pronta para homologação."
+    mensagem: str = (
+        "Dados processados e cálculos consolidados com sucesso. Amostra pronta para homologação."
+    )
     dados: ProcessarAnaliseDataSchema
 
 
