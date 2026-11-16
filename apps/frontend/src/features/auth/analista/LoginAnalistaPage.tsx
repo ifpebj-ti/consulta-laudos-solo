@@ -60,7 +60,11 @@ export function LoginAnalistaPage() {
   }
 
   const avisoSessao =
-    motivoUltimaSaida === 'sessao_expirada' ? 'Sua sessão expirou. Entre novamente para continuar.' : null;
+    motivoUltimaSaida === 'sessao_expirada'
+      ? 'Sua sessão expirou. Entre novamente para continuar.'
+      : motivoUltimaSaida === 'sessao_encerrada'
+        ? 'Sua sessão foi encerrada. Entre novamente para continuar.'
+        : null;
   const alerta = mensagemErro ?? avisoSessao ?? (import.meta.env.DEV ? null : erroGoogle);
 
   return (

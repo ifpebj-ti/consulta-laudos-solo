@@ -7,27 +7,28 @@ import { CarregandoPagina } from '@/components/feedback/CarregandoPagina';
 import { AvisoConexao } from '@/components/feedback/AvisoConexao';
 import { HomePage } from '@/features/home/HomePage';
 import '@/components/feedback/Feedback.css';
+import { importarComNovaTentativa } from '@/lib/importarComNovaTentativa';
 
 const LoginAnalistaPage = lazy(() =>
-  import('@/features/auth/analista/LoginAnalistaPage').then((m) => ({ default: m.LoginAnalistaPage })),
+  importarComNovaTentativa(() => import('@/features/auth/analista/LoginAnalistaPage')).then((m) => ({ default: m.LoginAnalistaPage })),
 );
 const AnalistaLayout = lazy(() =>
-  import('@/features/laudos/analista/AnalistaLayout').then((m) => ({ default: m.AnalistaLayout })),
+  importarComNovaTentativa(() => import('@/features/laudos/analista/AnalistaLayout')).then((m) => ({ default: m.AnalistaLayout })),
 );
 const AnalistaDashboardPage = lazy(() =>
-  import('@/features/laudos/analista/AnalistaDashboardPage').then((m) => ({ default: m.AnalistaDashboardPage })),
+  importarComNovaTentativa(() => import('@/features/laudos/analista/AnalistaDashboardPage')).then((m) => ({ default: m.AnalistaDashboardPage })),
 );
 const AnaliseLaudoPage = lazy(() =>
-  import('@/features/laudos/analista/AnaliseLaudoPage').then((m) => ({ default: m.AnaliseLaudoPage })),
+  importarComNovaTentativa(() => import('@/features/laudos/analista/AnaliseLaudoPage')).then((m) => ({ default: m.AnaliseLaudoPage })),
 );
 const ConsultaLaudoPage = lazy(() =>
-  import('@/features/auth/cliente/ConsultaLaudoPage').then((m) => ({ default: m.ConsultaLaudoPage })),
+  importarComNovaTentativa(() => import('@/features/auth/cliente/ConsultaLaudoPage')).then((m) => ({ default: m.ConsultaLaudoPage })),
 );
 const LaudoDetalhePage = lazy(() =>
-  import('@/features/laudos/cliente/LaudoDetalhePage').then((m) => ({ default: m.LaudoDetalhePage })),
+  importarComNovaTentativa(() => import('@/features/laudos/cliente/LaudoDetalhePage')).then((m) => ({ default: m.LaudoDetalhePage })),
 );
 const NaoEncontradoPage = lazy(() =>
-  import('@/features/erros/NaoEncontradoPage').then((m) => ({ default: m.NaoEncontradoPage })),
+  importarComNovaTentativa(() => import('@/features/erros/NaoEncontradoPage')).then((m) => ({ default: m.NaoEncontradoPage })),
 );
 
 export function Rotas() {
