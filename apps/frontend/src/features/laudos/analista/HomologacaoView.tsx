@@ -16,12 +16,21 @@ import './HomologacaoView.css';
 
 interface HomologacaoViewProps {
   dados: DadosAnalise;
+  responsavelNome?: string | null;
+  responsavelCrea?: string | null;
   jaLiberado?: boolean;
   onVoltarParaEdicao: () => void;
   onLiberarLaudo: () => void;
 }
 
-export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao, onLiberarLaudo }: HomologacaoViewProps) {
+export function HomologacaoView({
+  dados,
+  responsavelNome,
+  responsavelCrea,
+  jaLiberado = false,
+  onVoltarParaEdicao,
+  onLiberarLaudo,
+}: HomologacaoViewProps) {
   const [liberado, setLiberado] = useState(jaLiberado);
   const { identificacao, quimica, granulometria, calibracao } = dados;
   const temContato = Boolean(identificacao.email || identificacao.telefone);
@@ -280,8 +289,8 @@ export function HomologacaoView({ dados, jaLiberado = false, onVoltarParaEdicao,
 
         <div className="laudo-doc__rodape">
           <div className="resp-tecnico">
-            <strong>Prof. Msc. Carla Andrade Ferreira</strong>
-            Responsável Técnica &middot; CREA-PE 123456-D
+            <strong>{responsavelNome || 'Responsável Técnico não informado'}</strong>
+            Responsável Técnico(a) &middot; {responsavelCrea || 'CREA não informado'}
             <br />
             Laboratório de Solos &middot; IFPE Campus Belo Jardim
           </div>
