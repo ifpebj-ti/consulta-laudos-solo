@@ -7,15 +7,27 @@ import { ApiError } from '@/services/apiClient';
 import { LayoutEntrada, SetaVelocidade } from '@/features/home/LayoutEntrada';
 import { useTituloPagina } from '@/hooks/useTituloPagina';
 import { formatarCpf, normalizarProtocolo, validarCpf, validarProtocoloConsulta } from '@/lib/documentos';
+import {
+  consultaBloqueadaAte,
+  limparFalhasConsulta,
+  registrarFalhaConsulta,
+  segundosRestantes,
+} from '@/lib/tentativasConsulta';
 
 type Erros = { protocolo?: string; cpf?: string };
 
 const MENSAGEM_DADOS_NAO_CONFEREM =
   'Não encontramos um laudo com esses dados. Confira o protocolo e o CPF do titular; se estiverem corretos, procure o laboratório.';
 
+const mensagemBloqueio = (segundos: number) =>
+  `Muitas consultas sem sucesso. Por segurança, aguarde ${segundos} segundo${segundos > 1 ? 's' : ''} para tentar de novo.`;
+
+const dadosNaoConferem = (erro: unknown) =>
+  erro instanceof ApiError && (erro.status === 401 || erro.status === 403 || erro.status === 404 || erro.status === 422);
+
 function descreverFalhaConsulta(erro: unknown): { mensagem: string; podeTentarNovamente: boolean } {
   if (!(erro instanceof ApiError)) return { mensagem: 'Não foi possível consultar o laudo agora. Tente novamente.', podeTentarNovamente: true };
-  if (erro.status === 401 || erro.status === 403 || erro.status === 404 || erro.status === 422) {
+  if (dadosNaoConferem(erro)) {
     return { mensagem: MENSAGEM_DADOS_NAO_CONFEREM, podeTentarNovamente: false };
   }
   if (erro.status === 429) return { mensagem: erro.message, podeTentarNovamente: false };
@@ -35,6 +47,15 @@ export function ConsultaLaudoPage() {
   const protocoloRef = useRef<HTMLInputElement>(null);
   const cpfRef = useRef<HTMLInputElement>(null);
   const montadoRef = useRef(true);
+  const [bloqueadoAte, setBloqueadoAte] = useState(consultaBloqueadaAte);
+  const [agora, setAgora] = useState(() => Date.now());
+  const restante = segundosRestantes(bloqueadoAte, agora);
+
+  useEffect(() => {
+    if (bloqueadoAte <= Date.now()) return;
+    const temporizador = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(temporizador);
+  }, [bloqueadoAte]);
 
   useEffect(() => {
     montadoRef.current = true;
@@ -44,11 +65,21 @@ export function ConsultaLaudoPage() {
   }, []);
 
   const avisoSessao =
-    motivoUltimaSaida === 'sessao_expirada' ? 'Sua sessão expirou. Consulte o laudo novamente para continuar.' : null;
+    motivoUltimaSaida === 'sessao_expirada'
+      ? 'Sua sessão expirou. Consulte o laudo novamente para continuar.'
+      : motivoUltimaSaida === 'sessao_encerrada'
+        ? 'Sua sessão foi encerrada. Consulte o laudo novamente para continuar.'
+        : null;
 
   async function aoConsultar(evento: FormEvent) {
     evento.preventDefault();
     if (carregando) return;
+    const esperaAtual = segundosRestantes(consultaBloqueadaAte());
+    if (esperaAtual > 0) {
+      setAgora(Date.now());
+      setFalha({ mensagem: mensagemBloqueio(esperaAtual), podeTentarNovamente: false });
+      return;
+    }
     const encontrados: Erros = {
       protocolo: validarProtocoloConsulta(protocolo) ?? undefined,
       cpf: validarCpf(cpf) ?? undefined,
@@ -67,9 +98,17 @@ export function ConsultaLaudoPage() {
     limparMotivoSaida();
     try {
       await entrarComProtocolo(normalizarProtocolo(protocolo), cpf);
+      limparFalhasConsulta();
       navigate('/cliente/laudo', { replace: true });
     } catch (erro) {
-      if (montadoRef.current) setFalha(descreverFalhaConsulta(erro));
+      const bloqueio = dadosNaoConferem(erro) ? registrarFalhaConsulta() : 0;
+      if (montadoRef.current) {
+        const descricao = descreverFalhaConsulta(erro);
+        const espera = segundosRestantes(bloqueio);
+        setAgora(Date.now());
+        setBloqueadoAte(bloqueio);
+        setFalha(espera > 0 ? { ...descricao, mensagem: `${descricao.mensagem} ${mensagemBloqueio(espera)}` } : descricao);
+      }
     } finally {
       if (montadoRef.current) setCarregando(false);
     }
@@ -154,8 +193,8 @@ export function ConsultaLaudoPage() {
           />
           <MensagemErroCampo id="consulta-cpf-erro" mensagem={erros.cpf} />
         </div>
-        <Button type="submit" disabled={carregando}>
-          {carregando ? 'Consultando...' : 'Consultar Laudo'}
+        <Button type="submit" disabled={carregando || restante > 0}>
+          {carregando ? 'Consultando...' : restante > 0 ? `Aguarde ${restante} s` : 'Consultar Laudo'}
           <SetaVelocidade />
         </Button>
         {/* TEMPORARIO: preenche o laudo mockado do backend (laudo_service.py); remover antes de publicar. */}
