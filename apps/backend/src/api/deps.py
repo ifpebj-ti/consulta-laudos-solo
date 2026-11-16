@@ -46,9 +46,7 @@ def require_role(allowed_role: str | tuple[str, ...]) -> Callable:
     Garante que o usuário autenticado tenha a role exigida (ou uma das roles exigidas).
     """
     allowed_set = {allowed_role} if isinstance(allowed_role, str) else set(allowed_role)
-    allowed_set = (
-        {allowed_role} if isinstance(allowed_role, str) else set(allowed_role)
-    )
+    allowed_set = {allowed_role} if isinstance(allowed_role, str) else set(allowed_role)
 
     def role_checker(
         user: dict[str, Any] = Depends(get_current_user),
