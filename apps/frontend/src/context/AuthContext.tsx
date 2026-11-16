@@ -10,13 +10,18 @@ interface AuthSession {
   role: Role;
   nome?: string;
   email?: string;
+  crea?: string | null;
+  escopoAnalistaId?: string | null;
+  responsavelNome?: string | null;
+  responsavelCrea?: string | null;
   protocolo?: string;
   laudo?: LaudoDetalhe;
 }
 
 interface AuthContextValue {
   session: AuthSession | null;
-  entrarComGoogle: (idToken: string) => Promise<void>;
+  entrarComCredenciais: (username: string, password: string) => Promise<Role>;
+  entrarComGoogle: (idToken: string) => Promise<Role>;
   entrarComProtocolo: (protocolo: string, cpf: string) => Promise<LaudoDetalhe>;
   sair: () => void;
 }
@@ -41,15 +46,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(proxima);
   }, []);
 
-  const entrarComGoogle = useCallback(
-    async (idToken: string) => {
-      const resposta = await authService.loginGoogle(idToken);
+  const entrarComCredenciais = useCallback(
+    async (username: string, password: string): Promise<Role> => {
+      const resposta = await authService.loginLocal(username, password);
+      const role = resposta.usuario.role;
       salvarSessao({
         token: resposta.token,
-        role: 'ANALISTA',
+        role,
         nome: resposta.usuario.nome,
         email: resposta.usuario.email,
+        crea: resposta.usuario.crea,
+        escopoAnalistaId: resposta.usuario.escopoAnalistaId ?? resposta.usuario.email,
+        responsavelNome: resposta.usuario.responsavelNome ?? resposta.usuario.nome,
+        responsavelCrea: resposta.usuario.responsavelCrea ?? resposta.usuario.crea,
       });
+      return role;
+    },
+    [salvarSessao],
+  );
+
+  const entrarComGoogle = useCallback(
+    async (idToken: string): Promise<Role> => {
+      const resposta = await authService.loginGoogle(idToken);
+      const role = resposta.usuario.role;
+      salvarSessao({
+        token: resposta.token,
+        role,
+        nome: resposta.usuario.nome,
+        email: resposta.usuario.email,
+        crea: resposta.usuario.crea,
+        escopoAnalistaId: resposta.usuario.escopoAnalistaId ?? resposta.usuario.email,
+        responsavelNome: resposta.usuario.responsavelNome ?? resposta.usuario.nome,
+        responsavelCrea: resposta.usuario.responsavelCrea ?? resposta.usuario.crea,
+      });
+      return role;
     },
     [salvarSessao],
   );
@@ -74,8 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, entrarComGoogle, entrarComProtocolo, sair }),
-    [session, entrarComGoogle, entrarComProtocolo, sair],
+    () => ({ session, entrarComCredenciais, entrarComGoogle, entrarComProtocolo, sair }),
+    [session, entrarComCredenciais, entrarComGoogle, entrarComProtocolo, sair],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
