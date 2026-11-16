@@ -41,15 +41,19 @@ def get_current_user(
         ) from err
 
 
-def require_role(allowed_role: str) -> Callable:
+def require_role(allowed_role: str | tuple[str, ...]) -> Callable:
     """
-    Garante que o usuário autenticado tenha a role exigida.
+    Garante que o usuário autenticado tenha a role exigida (ou uma das roles exigidas).
     """
+    allowed_set = {allowed_role} if isinstance(allowed_role, str) else set(allowed_role)
+    allowed_set = (
+        {allowed_role} if isinstance(allowed_role, str) else set(allowed_role)
+    )
 
     def role_checker(
         user: dict[str, Any] = Depends(get_current_user),
     ) -> dict[str, Any]:
-        if user.get("role") != allowed_role:
+        if user.get("role") not in allowed_set:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={
@@ -68,13 +72,13 @@ def authorize_laudo_access(
 ) -> dict[str, Any]:
     """
     Valida autorização de acesso ao laudo:
-    - ANALISTA: Acesso irrestrito a qualquer laudo.
+    - ANALISTA / AUXILIAR: Acesso aos laudos do seu escopo.
     - CLIENTE: Acesso restrito apenas ao protocolo correspondente ao token (BOLA / IDOR mitigation).
     """
     role = user.get("role")
     protocolo_normalizado = protocolo.strip().upper()
 
-    if role == "ANALISTA":
+    if role in ("ANALISTA", "AUXILIAR"):
         return user
 
     if role == "CLIENTE":
