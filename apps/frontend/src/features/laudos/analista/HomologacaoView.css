@@ -184,6 +184,24 @@ table.laudo-table td.valor {
   min-width: 220px;
 }
 
+.homolog-cta__mensagens {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--u);
+  min-width: 220px;
+}
+
+.homolog-cta__mensagens .form-alert-erro {
+  margin-top: 0;
+}
+
+.homolog-confirmacao__texto {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--texto);
+}
+
 .homolog-cta__aviso--sucesso {
   font-weight: 600;
   color: var(--verde-escuro);

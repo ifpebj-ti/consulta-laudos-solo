@@ -245,7 +245,7 @@
 .home-visual__eco {
   position: absolute;
   inset: 0;
-  background: rgba(47, 158, 65, 0.14);
+  background-color: rgba(47, 158, 65, 0.14);
   clip-path: var(--corte);
   transform: translate(-8px, 8px);
 }
@@ -308,7 +308,7 @@
   height: 40px;
   padding: 0;
   color: var(--texto);
-  background: transparent;
+  background-color: transparent;
   border: 1px solid var(--filete);
   transition: border-color 0.2s ease, color 0.2s ease;
 }
@@ -382,7 +382,7 @@
   font-weight: 600;
   color: var(--vermelho);
   border-left: 2px solid var(--vermelho);
-  background: rgba(205, 25, 30, 0.05);
+  background-color: rgba(205, 25, 30, 0.05);
 }
 
 .entrada-form {
@@ -413,7 +413,7 @@
   font-family: var(--fonte);
   font-size: 17px;
   color: var(--texto);
-  background: transparent;
+  background-color: transparent;
   border: 0;
   border-bottom: 1px solid var(--texto);
   border-radius: 0;
@@ -478,6 +478,37 @@
 .entrada-form .btn:focus-visible {
   outline: 2px solid var(--verde);
   outline-offset: 3px;
+}
+
+.entrada-google__status {
+  margin-left: calc(var(--u) * 2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cinza);
+}
+
+.entrada-teste {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cinza);
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed var(--filete);
+  border-radius: 0;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.entrada-teste:hover:not(:disabled) {
+  color: var(--verde-escuro);
+  border-color: var(--verde);
+}
+
+.entrada-teste:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .entrada-google {
@@ -689,4 +720,24 @@
   .home-visual__seta {
     transition: none;
   }
+}
+
+.entrada-alerta__acao {
+  display: block;
+  margin-top: var(--u);
+  padding: 0 0 2px;
+  font-family: var(--fonte);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--texto);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.entrada-alerta__acao:hover:not(:disabled) {
+  color: var(--verde-escuro);
+  border-color: var(--verde);
 }

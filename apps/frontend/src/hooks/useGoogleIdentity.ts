@@ -18,6 +18,9 @@ declare global {
 
 const SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 
+export const MENSAGEM_FALHA_SCRIPT_GOOGLE =
+  'Não foi possível carregar o login do Google. Verifique sua conexão ou se algum bloqueador está impedindo o acesso.';
+
 function carregarScriptGoogle(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (window.google?.accounts?.id) {
@@ -25,17 +28,21 @@ function carregarScriptGoogle(): Promise<void> {
       return;
     }
     const existente = document.querySelector<HTMLScriptElement>(`script[src="${SCRIPT_SRC}"]`);
-    if (existente) {
+    if (existente && existente.dataset.falhou !== 'sim') {
       existente.addEventListener('load', () => resolve());
-      existente.addEventListener('error', () => reject(new Error('Falha ao carregar o script do Google.')));
+      existente.addEventListener('error', () => reject(new Error(MENSAGEM_FALHA_SCRIPT_GOOGLE)));
       return;
     }
+    existente?.remove();
     const script = document.createElement('script');
     script.src = SCRIPT_SRC;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Falha ao carregar o script do Google.'));
+    script.onerror = () => {
+      script.dataset.falhou = 'sim';
+      reject(new Error(MENSAGEM_FALHA_SCRIPT_GOOGLE));
+    };
     document.head.appendChild(script);
   });
 }
@@ -45,6 +52,7 @@ export function useGoogleIdentity(clientId: string, onCredential: (idToken: stri
   const onCredentialRef = useRef(onCredential);
   onCredentialRef.current = onCredential;
   const [erro, setErro] = useState<string | null>(null);
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     if (!clientId) {
@@ -53,13 +61,16 @@ export function useGoogleIdentity(clientId: string, onCredential: (idToken: stri
     }
 
     let cancelado = false;
+    setErro(null);
 
     carregarScriptGoogle()
       .then(() => {
         if (cancelado || !window.google || !containerRef.current) return;
         window.google.accounts.id.initialize({
           client_id: clientId,
-          callback: (response) => onCredentialRef.current(response.credential),
+          callback: (response) => {
+            if (response?.credential) onCredentialRef.current(response.credential);
+          },
         });
         window.google.accounts.id.renderButton(containerRef.current, {
           theme: 'outline',
@@ -71,12 +82,14 @@ export function useGoogleIdentity(clientId: string, onCredential: (idToken: stri
           width: 360,
         });
       })
-      .catch((erroCarregamento: Error) => setErro(erroCarregamento.message));
+      .catch((erroCarregamento: Error) => {
+        if (!cancelado) setErro(erroCarregamento.message);
+      });
 
     return () => {
       cancelado = true;
     };
-  }, [clientId]);
+  }, [clientId, tentativa]);
 
-  return { containerRef, erro };
+  return { containerRef, erro, tentarNovamente: () => setTentativa((n) => n + 1) };
 }

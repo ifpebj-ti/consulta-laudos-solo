@@ -6,6 +6,8 @@ import {
   type Identificacao,
   type StatusAmostra,
 } from '@/features/laudos/analista/tipos';
+import { useAuth } from '@/context/AuthContext';
+import { chavePersistenciaAnalista } from '@/lib/persistenciaAnalista';
 
 interface AnalistaContextValue {
   amostras: AmostraRegistro[];
@@ -15,35 +17,45 @@ interface AnalistaContextValue {
   retomarAmostra: (protocolo: string) => void;
   atualizarAmostraAtual: (dados: DadosAnalise) => void;
   concluirAmostraAtual: () => void;
+  marcarAguardandoHomologacao: () => void;
 }
 
 const AnalistaContext = createContext<AnalistaContextValue | undefined>(undefined);
 
-const CHAVE_PERSISTENCIA_DEV = 'consulta-laudos-solo:amostras-analista';
 const PERSISTIR = import.meta.env.DEV;
 
-function carregarAmostrasSalvas(): AmostraRegistro[] {
-  if (!PERSISTIR) return [];
+function carregarAmostrasSalvas(chave: string | null): AmostraRegistro[] {
+  if (!PERSISTIR || !chave) return [];
   try {
-    const bruto = localStorage.getItem(CHAVE_PERSISTENCIA_DEV);
+    const bruto = localStorage.getItem(chave);
     const lista = bruto ? (JSON.parse(bruto) as AmostraRegistro[]) : [];
-    return Array.isArray(lista) ? lista : [];
+    if (!Array.isArray(lista)) return [];
+    return lista.map((amostra) => ({
+      ...amostra,
+      dados: {
+        ...amostra.dados,
+        quimica: { ...DADOS_ANALISE_VAZIOS.quimica, ...amostra.dados?.quimica },
+      },
+    }));
   } catch {
     return [];
   }
 }
 
 export function AnalistaProvider({ children }: { children: ReactNode }) {
-  const [amostras, setAmostras] = useState<AmostraRegistro[]>(carregarAmostrasSalvas);
+  const { session } = useAuth();
+  const chave = chavePersistenciaAnalista(session?.email ?? session?.nome);
+  const [amostras, setAmostras] = useState<AmostraRegistro[]>(() => carregarAmostrasSalvas(chave));
   const [protocoloAtual, setProtocoloAtual] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!PERSISTIR) return;
+    if (!PERSISTIR || !chave) return;
     try {
-      localStorage.setItem(CHAVE_PERSISTENCIA_DEV, JSON.stringify(amostras));
+      localStorage.setItem(chave, JSON.stringify(amostras));
     } catch {
+      return;
     }
-  }, [amostras]);
+  }, [amostras, chave]);
 
   const registroAtual = useMemo(
     () => amostras.find((a) => a.dados.identificacao.protocolo === protocoloAtual) ?? null,
@@ -54,7 +66,7 @@ export function AnalistaProvider({ children }: { children: ReactNode }) {
 
   const criarAmostra = useCallback((identificacao: Identificacao) => {
     const dados: DadosAnalise = { ...DADOS_ANALISE_VAZIOS, identificacao };
-    setAmostras((atual) => [...atual, { dados, status: 'nao_iniciado', criadaEm: new Date().toISOString() }]);
+    setAmostras((atual) => [...atual, { dados, status: 'nao_iniciado', criadaEm: new Date().toISOString(), atualizadaEm: new Date().toISOString() }]);
     setProtocoloAtual(identificacao.protocolo);
   }, []);
 
@@ -64,18 +76,33 @@ export function AnalistaProvider({ children }: { children: ReactNode }) {
 
   const atualizarAmostraAtual = useCallback((dados: DadosAnalise) => {
     setAmostras((atual) =>
-      atual.map((amostra) =>
-        amostra.dados.identificacao.protocolo === dados.identificacao.protocolo
-          ? { ...amostra, dados, status: amostra.status === 'nao_iniciado' ? 'em_andamento' : amostra.status }
-          : amostra,
-      ),
+      atual.map((amostra) => {
+        if (amostra.dados.identificacao.protocolo !== dados.identificacao.protocolo) return amostra;
+        if (JSON.stringify(amostra.dados) === JSON.stringify(dados)) return amostra;
+        return {
+          ...amostra,
+          dados,
+          atualizadaEm: new Date().toISOString(),
+          status:
+            amostra.status === 'nao_iniciado' || amostra.status === 'aguardando_homologacao' ? 'em_andamento' : amostra.status,
+        };
+      }),
     );
   }, []);
-
   const concluirAmostraAtual = useCallback(() => {
     setAmostras((atual) =>
       atual.map((amostra) =>
         amostra.dados.identificacao.protocolo === protocoloAtual ? { ...amostra, status: 'concluido' } : amostra,
+      ),
+    );
+  }, [protocoloAtual]);
+
+  const marcarAguardandoHomologacao = useCallback(() => {
+    setAmostras((atual) =>
+      atual.map((amostra) =>
+        amostra.dados.identificacao.protocolo === protocoloAtual && amostra.status !== 'concluido'
+          ? { ...amostra, status: 'aguardando_homologacao', atualizadaEm: new Date().toISOString() }
+          : amostra,
       ),
     );
   }, [protocoloAtual]);
@@ -89,8 +116,9 @@ export function AnalistaProvider({ children }: { children: ReactNode }) {
       retomarAmostra,
       atualizarAmostraAtual,
       concluirAmostraAtual,
+      marcarAguardandoHomologacao,
     }),
-    [amostras, amostraAtual, statusAmostraAtual, criarAmostra, retomarAmostra, atualizarAmostraAtual, concluirAmostraAtual],
+    [amostras, amostraAtual, statusAmostraAtual, criarAmostra, retomarAmostra, atualizarAmostraAtual, concluirAmostraAtual, marcarAguardandoHomologacao],
   );
 
   return <AnalistaContext.Provider value={value}>{children}</AnalistaContext.Provider>;
