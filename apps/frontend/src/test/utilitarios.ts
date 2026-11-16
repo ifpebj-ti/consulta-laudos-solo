@@ -6,7 +6,7 @@ export function respostaJson(corpo: unknown, status = 200, cabecalhos: Record<st
 }
 
 export function respostaPdf(conteudo = '%PDF-1.4 teste', cabecalhos: Record<string, string> = {}): Response {
-  return new Response(new Blob([conteudo], { type: 'application/pdf' }), {
+  return new Response(conteudo, {
     status: 200,
     headers: { 'Content-Type': 'application/pdf', ...cabecalhos },
   });

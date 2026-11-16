@@ -163,6 +163,7 @@ describe('validação da análise com dados aleatórios', () => {
           magnesio: { medido: valor(), branco: valor() },
           aluminio: { medido: valor(), branco: valor() },
           acidezPotencial: { medido: valor(), branco: valor(), fator: valor() },
+          fatorDiluicaoFosforo: valor(),
         },
         granulometria: {
           tfsa: valor(),

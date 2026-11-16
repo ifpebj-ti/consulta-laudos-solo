@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, apiClient, extrairNomeArquivo, registrarManipuladorNaoAutorizado } from './apiClient';
+import { ApiError, apiClient, ehConflitoDeVersao, extrairNomeArquivo, registrarManipuladorNaoAutorizado, segundosParaTentarNovamente } from './apiClient';
 import { respostaJson, respostaPdf } from '@/test/utilitarios';
 
 function mockFetch(implementacao: typeof fetch) {
@@ -133,5 +133,29 @@ describe('extrairNomeArquivo', () => {
     expect(extrairNomeArquivo('attachment; filename=laudo.pdf')).toBe('laudo.pdf');
     expect(extrairNomeArquivo('attachment; filename="laudo 1.pdf"')).toBe('laudo 1.pdf');
     expect(extrairNomeArquivo("attachment; filename*=UTF-8''laudo%20%C3%A1.pdf")).toBe('laudo á.pdf');
+  });
+});
+
+describe('limite de requisições e conflitos', () => {
+  it('429 com Retry-After em segundos informa a espera na mensagem', async () => {
+    mockFetch(async () => respostaJson({ detail: { mensagem: 'Rate limit' } }, 429, { 'Retry-After': '30' }));
+    const erro = await capturar(apiClient.request('/teste'));
+    expect(erro.tentarAposSegundos).toBe(30);
+    expect(erro.message).toBe('Muitas tentativas em pouco tempo. Aguarde 30 segundos e tente novamente.');
+  });
+
+  it('Retry-After em data HTTP vira segundos restantes', () => {
+    const agora = Date.parse('2026-11-11T12:00:00Z');
+    expect(segundosParaTentarNovamente('Wed, 11 Nov 2026 12:00:45 GMT', agora)).toBe(45);
+    expect(segundosParaTentarNovamente('Wed, 11 Nov 2026 11:00:00 GMT', agora)).toBeUndefined();
+    expect(segundosParaTentarNovamente('abc', agora)).toBeUndefined();
+    expect(segundosParaTentarNovamente('0', agora)).toBeUndefined();
+  });
+
+  it('409 e 412 são conflito de versão', () => {
+    expect(ehConflitoDeVersao(new ApiError(409, 'x'))).toBe(true);
+    expect(ehConflitoDeVersao(new ApiError(412, 'x'))).toBe(true);
+    expect(ehConflitoDeVersao(new ApiError(500, 'x'))).toBe(false);
+    expect(ehConflitoDeVersao(new Error('x'))).toBe(false);
   });
 });
