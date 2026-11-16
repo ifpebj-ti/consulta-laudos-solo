@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -9,8 +9,10 @@ import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/context/AuthContext';
 import { useAnalista } from '@/context/AnalistaContext';
 import { analiseService } from '@/services/analiseService';
+import { authService } from '@/services/authService';
 import { ApiError } from '@/services/apiClient';
 import { LinhasVelocidade, SetaVelocidade } from '@/features/home/LayoutEntrada';
+import type { AuxiliarItem } from '@/types/auth';
 import { FaixaPaginada } from './FaixaPaginada';
 import { NovaAmostraModal } from './NovaAmostraModal';
 import {
@@ -222,6 +224,64 @@ export function AnalistaDashboardPage() {
   const [pendentesExpandido, setPendentesExpandido] = useState(false);
   const [historicoExpandido, setHistoricoExpandido] = useState(false);
 
+  const isAnalistaPrincipal = session?.role === 'ANALISTA';
+  const [auxiliares, setAuxiliares] = useState<AuxiliarItem[]>([]);
+  const [nomeAuxiliar, setNomeAuxiliar] = useState('');
+  const [emailAuxiliar, setEmailAuxiliar] = useState('');
+  const [salvandoAuxiliar, setSalvandoAuxiliar] = useState(false);
+  const [erroAuxiliar, setErroAuxiliar] = useState<string | null>(null);
+
+  const carregarAuxiliares = useCallback(async () => {
+    if (!token || !isAnalistaPrincipal) return;
+    try {
+      const res = await authService.listarAuxiliares(token);
+      if (res.sucesso) {
+        setAuxiliares(res.dados);
+      }
+    } catch {
+      // silencioso
+    }
+  }, [token, isAnalistaPrincipal]);
+
+  useEffect(() => {
+    void carregarAuxiliares();
+  }, [carregarAuxiliares]);
+
+  async function aoCadastrarAuxiliar(evento: FormEvent) {
+    evento.preventDefault();
+    setErroAuxiliar(null);
+    if (!nomeAuxiliar.trim() || !emailAuxiliar.trim()) {
+      setErroAuxiliar('Informe o nome e a conta Gmail do auxiliar.');
+      return;
+    }
+    if (!token) return;
+    setSalvandoAuxiliar(true);
+    try {
+      const novo = await authService.criarAuxiliar(
+        { nome: nomeAuxiliar.trim(), email: emailAuxiliar.trim().toLowerCase() },
+        token,
+      );
+      setAuxiliares((atual) => [novo, ...atual]);
+      setNomeAuxiliar('');
+      setEmailAuxiliar('');
+    } catch (e) {
+      setErroAuxiliar(e instanceof ApiError ? e.message : 'Erro ao cadastrar conta auxiliar.');
+    } finally {
+      setSalvandoAuxiliar(false);
+    }
+  }
+
+  async function aoRemoverAuxiliar(id: string) {
+    if (!token) return;
+    setErroAuxiliar(null);
+    try {
+      await authService.removerAuxiliar(id, token);
+      setAuxiliares((atual) => atual.filter((item) => item.id !== id));
+    } catch (e) {
+      setErroAuxiliar(e instanceof ApiError ? e.message : 'Erro ao remover conta auxiliar.');
+    }
+  }
+
   const cartoes = amostras.map(paraCartao);
 
   const pendentes = cartoes.filter((c) => c.status !== 'concluido');
@@ -326,7 +386,12 @@ export function AnalistaDashboardPage() {
       <main className="page-container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Laboratório de Solos &middot; Uso interno</span>
+            <span className="page-header__eyebrow">
+              Laboratório de Solos &middot;{' '}
+              {session?.role === 'AUXILIAR'
+                ? `Auxiliar de ${session.responsavelNome || 'Analista'} (${session.responsavelCrea || 'CREA'})`
+                : `${session?.crea || 'Analista Principal'}`}
+            </span>
             <h1>
               <span>Painel do</span> <span className="painel-min__destaque">Analista</span>
             </h1>
@@ -420,6 +485,100 @@ export function AnalistaDashboardPage() {
             )}
           </CardBody>
         </Card>
+
+        {isAnalistaPrincipal && (
+          <Card>
+            <CardHeader title={`Equipe · Contas Auxiliares (${auxiliares.length})`} />
+            <CardBody>
+              <p style={{ marginBottom: '16px', color: 'var(--cinza)', fontSize: '14px' }}>
+                Autorize contas Gmail de auxiliares para que tenham permissão de leitura e escrita nos seus laudos. Os
+                laudos emitidos continuarão vinculados ao seu nome (<strong>{session?.nome}</strong>) e registro (
+                <strong>{session?.crea || 'CREA'}</strong>).
+              </p>
+
+              {erroAuxiliar && (
+                <div className="entrada-alerta" role="alert" style={{ marginBottom: '16px' }}>
+                  {erroAuxiliar}
+                </div>
+              )}
+
+              <form
+                onSubmit={aoCadastrarAuxiliar}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '16px',
+                  alignItems: 'end',
+                  marginBottom: auxiliares.length > 0 ? '20px' : 0,
+                }}
+              >
+                <div className="entrada-campo">
+                  <label className="entrada-campo__rotulo" htmlFor="aux-nome">
+                    Nome do Auxiliar
+                  </label>
+                  <input
+                    id="aux-nome"
+                    type="text"
+                    placeholder="Ex.: Lucas Auxiliar"
+                    value={nomeAuxiliar}
+                    onChange={(e) => setNomeAuxiliar(e.target.value)}
+                    disabled={salvandoAuxiliar}
+                    required
+                  />
+                </div>
+
+                <div className="entrada-campo">
+                  <label className="entrada-campo__rotulo" htmlFor="aux-email">
+                    Conta Google (Gmail) do Auxiliar
+                  </label>
+                  <input
+                    id="aux-email"
+                    type="email"
+                    placeholder="Ex.: auxiliar@gmail.com"
+                    value={emailAuxiliar}
+                    onChange={(e) => setEmailAuxiliar(e.target.value)}
+                    disabled={salvandoAuxiliar}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Button type="submit" disabled={salvandoAuxiliar}>
+                    {salvandoAuxiliar ? 'Adicionando...' : 'Adicionar Auxiliar'}
+                    <SetaVelocidade />
+                  </Button>
+                </div>
+              </form>
+
+              {auxiliares.length > 0 && (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                    gap: '12px',
+                  }}
+                >
+                  {auxiliares.map((aux) => (
+                    <div key={aux.id} className="dashboard-bloco">
+                      <div className="dashboard-bloco__topo">
+                        <strong>{aux.nome}</strong>
+                      </div>
+                      <p className="dashboard-bloco__solicitante">{aux.email}</p>
+                      <div className="dashboard-bloco__badges" style={{ marginTop: '6px' }}>
+                        <Badge variant="status-processamento">Auxiliar (Read/Write)</Badge>
+                      </div>
+                      <div style={{ marginTop: '10px' }}>
+                        <Button variant="ghost" onClick={() => void aoRemoverAuxiliar(aux.id)}>
+                          Remover Auxiliar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        )}
       </main>
       <Footer />
 
