@@ -141,6 +141,7 @@ export interface ListarAmostrasParametros {
   tamanhoPagina?: number;
   busca?: string;
   situacao?: 'pendentes' | 'concluidas';
+  status?: StatusLaudoServidor;
   ordenacao?: string;
 }
 
@@ -170,6 +171,7 @@ export const analiseService = {
         tamanhoPagina: parametros.tamanhoPagina,
         busca: parametros.busca?.trim(),
         situacao: parametros.situacao,
+        status: parametros.status,
         ordenacao: parametros.ordenacao,
       },
     });

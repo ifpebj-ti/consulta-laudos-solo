@@ -6,6 +6,7 @@ import { FUNCIONALIDADES } from '@/config/ambiente';
 import {
   calcularComplexoSortivo,
   calcularConcentracaoFosforo,
+  fatorDiluicaoAplicado,
   calcularGranulometria,
   calcularAcidezPotencial,
   calcularValorLiquido,
@@ -63,7 +64,7 @@ export function HomologacaoView({
   const temContato = Boolean(identificacao.email || identificacao.telefone);
 
   const granulometriaCalc = calcularGranulometria(granulometria);
-  const resultadoFosforo = calibracao ? calcularConcentracaoFosforo(quimica.fosforoAbsBruta, calibracao, 1) : null;
+  const resultadoFosforo = calibracao ? calcularConcentracaoFosforo(quimica.fosforoAbsBruta, calibracao, fatorDiluicaoAplicado(quimica.fatorDiluicaoFosforo)) : null;
 
   const liquidoCa = calcularValorLiquido(quimica.calcio.medido, quimica.calcio.branco);
   const liquidoMg = calcularValorLiquido(quimica.magnesio.medido, quimica.magnesio.branco);

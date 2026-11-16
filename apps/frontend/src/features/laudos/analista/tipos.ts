@@ -58,6 +58,7 @@ export const IDENTIFICACAO_VAZIA: Identificacao = {
 export interface DadosQuimica {
   ph: number;
   fosforoAbsBruta: number;
+  fatorDiluicaoFosforo: number;
   sodioMgL: number;
   potassioMgL: number;
   calcio: CampoComBranco;
@@ -78,6 +79,7 @@ export const DADOS_ANALISE_VAZIOS: DadosAnalise = {
   quimica: {
     ph: 0,
     fosforoAbsBruta: 0,
+    fatorDiluicaoFosforo: 10,
     sodioMgL: 0,
     potassioMgL: 0,
     calcio: { medido: 0, branco: 0 },
