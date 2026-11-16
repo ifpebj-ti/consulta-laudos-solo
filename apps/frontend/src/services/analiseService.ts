@@ -6,6 +6,46 @@ export interface AmostraMetadata {
   solicitante: string;
   propriedade: string;
   dataColeta?: string;
+  cpfCliente?: string;
+  localizacao?: string;
+  areaIdentificacao?: string;
+  areaHectares?: string;
+  profundidadeColeta?: string;
+  cultivo?: string;
+  dataRecebimento?: string;
+  tipoAnalise?: TipoAnalise;
+  culturaExistente?: string;
+  email?: string;
+  telefone?: string;
+  responsavelNome?: string;
+  responsavelCrea?: string;
+}
+
+export interface LaudoResumoItem {
+  protocolo: string;
+  cpfCliente: string;
+  solicitante: string;
+  propriedade: string;
+  localizacao?: string;
+  areaIdentificacao?: string;
+  areaHectares?: string;
+  profundidadeColeta?: string;
+  cultivo?: string;
+  dataRecebimento?: string;
+  tipoAnalise?: TipoAnalise;
+  culturaExistente?: string;
+  email?: string;
+  telefone?: string;
+  status: string;
+  versao: number;
+  criadoEm: string;
+  responsavelNome?: string;
+  responsavelCrea?: string;
+}
+
+export interface ListarAmostrasApiResponse {
+  sucesso: boolean;
+  dados: LaudoResumoItem[];
 }
 
 export interface ObterAnaliseApiResponse {
@@ -100,6 +140,13 @@ export interface CriarAmostraApiResponse {
 }
 
 export const analiseService = {
+  async listarAmostras(token: string): Promise<ListarAmostrasApiResponse> {
+    return apiClient.request<ListarAmostrasApiResponse>('/laudos', {
+      method: 'GET',
+      token,
+    });
+  },
+
   async criarAmostra(payload: CriarAmostraPayload, token: string): Promise<CriarAmostraApiResponse> {
     return apiClient.request<CriarAmostraApiResponse>('/laudos', {
       method: 'POST',
