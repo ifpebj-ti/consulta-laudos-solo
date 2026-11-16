@@ -65,12 +65,25 @@ export function AnaliseLaudoPage() {
         setAmostraInfo(res.dados.amostra);
 
         const bancada = res.dados.dadosBancada;
+        const meta = res.dados.amostra;
         const dadosCarregados: DadosAnalise = {
-          identificacao: amostraAtual?.identificacao ?? {
+          identificacao: {
             ...DADOS_ANALISE_VAZIOS.identificacao,
+            ...(amostraAtual?.identificacao ?? {}),
             protocolo: protocoloAlvo,
-            solicitante: res.dados.amostra?.solicitante ?? '',
-            propriedade: res.dados.amostra?.propriedade ?? '',
+            solicitante: meta?.solicitante || amostraAtual?.identificacao?.solicitante || '',
+            propriedade: meta?.propriedade || amostraAtual?.identificacao?.propriedade || '',
+            cpfCliente: meta?.cpfCliente || amostraAtual?.identificacao?.cpfCliente || '',
+            localizacao: meta?.localizacao || amostraAtual?.identificacao?.localizacao || '',
+            areaIdentificacao: meta?.areaIdentificacao || amostraAtual?.identificacao?.areaIdentificacao || '',
+            areaHectares: meta?.areaHectares || amostraAtual?.identificacao?.areaHectares || '',
+            profundidadeColeta: meta?.profundidadeColeta || amostraAtual?.identificacao?.profundidadeColeta || '',
+            cultivo: meta?.cultivo || amostraAtual?.identificacao?.cultivo || '',
+            dataRecebimento: meta?.dataRecebimento || amostraAtual?.identificacao?.dataRecebimento || '',
+            tipoAnalise: meta?.tipoAnalise || amostraAtual?.identificacao?.tipoAnalise || 'fisico_quimica',
+            culturaExistente: meta?.culturaExistente || amostraAtual?.identificacao?.culturaExistente || '',
+            email: meta?.email || amostraAtual?.identificacao?.email || '',
+            telefone: meta?.telefone || amostraAtual?.identificacao?.telefone || '',
           },
           quimica: {
             ph: bancada.quimica.ph ?? DADOS_ANALISE_VAZIOS.quimica.ph,
@@ -381,6 +394,8 @@ export function AnaliseLaudoPage() {
         ) : (
           <HomologacaoView
             dados={dados}
+            responsavelNome={amostraInfo?.responsavelNome ?? session?.responsavelNome ?? session?.nome}
+            responsavelCrea={amostraInfo?.responsavelCrea ?? session?.responsavelCrea ?? session?.crea}
             jaLiberado={laudoConcluido}
             onVoltarParaEdicao={() => irParaAba('registro')}
             onLiberarLaudo={concluirAmostraAtual}
