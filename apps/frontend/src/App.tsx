@@ -3,6 +3,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { HomePage } from '@/features/home/HomePage';
 import { LoginAnalistaPage } from '@/features/auth/analista/LoginAnalistaPage';
+import { PowerUserPage } from '@/features/admin/PowerUserPage';
 import { AnalistaLayout } from '@/features/laudos/analista/AnalistaLayout';
 import { AnalistaDashboardPage } from '@/features/laudos/analista/AnalistaDashboardPage';
 import { AnaliseLaudoPage } from '@/features/laudos/analista/AnaliseLaudoPage';
@@ -17,7 +18,12 @@ export function App() {
           <Route path="/" element={<HomePage />} />
 
           <Route path="/analista/login" element={<LoginAnalistaPage />} />
-          <Route element={<ProtectedRoute role="ANALISTA" redirectTo="/analista/login" />}>
+
+          <Route element={<ProtectedRoute role="POWER_USER" redirectTo="/analista/login" />}>
+            <Route path="/power-user" element={<PowerUserPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute role={['ANALISTA', 'AUXILIAR']} redirectTo="/analista/login" />}>
             <Route element={<AnalistaLayout />}>
               <Route path="/analista" element={<AnalistaDashboardPage />} />
               <Route path="/analista/analises" element={<AnaliseLaudoPage />} />
