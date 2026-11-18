@@ -46,8 +46,10 @@ describe('protocolo', () => {
 
   it('valida o formato aceito no cadastro de amostra', () => {
     expect(validarProtocoloCadastro('')).toMatch(/Preencha/);
-    expect(validarProtocoloCadastro('LAB/2026_01')).toBeNull();
-    expect(validarProtocoloCadastro('LAB 01')).toMatch(/3 a 32/);
+    expect(validarProtocoloCadastro('lab-2026-0142')).toBeNull();
+    expect(validarProtocoloCadastro('LAB/2026_01')).toMatch(/8 a 30/);
+    expect(validarProtocoloCadastro('LAB 01')).toMatch(/8 a 30/);
+    expect(validarProtocoloCadastro('LAB-01')).toMatch(/8 a 30/);
   });
 });
 

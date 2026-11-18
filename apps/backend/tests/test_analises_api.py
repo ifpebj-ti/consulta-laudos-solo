@@ -308,3 +308,122 @@ def test_criar_laudo_rejeita_campos_invalidos(client, token_analista, campo, val
         headers={"Authorization": f"Bearer {token_analista}"},
     )
     assert res.status_code == 422
+
+
+def test_isolamento_entre_equipes_e_acesso_auxiliar(client):
+    """
+    Garante que:
+    1. Analista Principal A e seu Auxiliar A1 compartilham Read/Write nos laudos da Equipe A (com Nome e CREA do Analista A).
+    2. Analista Principal B (outra conta) NÃO vê os laudos da Equipe A e recebe 403 Forbidden se tentar acessá-los ou editá-los.
+    3. Concorrência otimista (409 Conflict) protege contra sobrescrita simultânea (ex.: tablet + notebook ou Analista + Auxiliar).
+    """
+    token_analista_a = create_access_token(
+        "analista.a@gmail.com",
+        "ANALISTA",
+        extra_claims={
+            "nome": "Dra. Ana Solos",
+            "email": "analista.a@gmail.com",
+            "crea": "CREA-PE 111222-D",
+            "escopoAnalistaId": "analista.a@gmail.com",
+            "responsavelNome": "Dra. Ana Solos",
+            "responsavelCrea": "CREA-PE 111222-D",
+        },
+    )
+    token_auxiliar_a1 = create_access_token(
+        "auxiliar.a1@gmail.com",
+        "AUXILIAR",
+        extra_claims={
+            "nome": "Pedro Auxiliar",
+            "email": "auxiliar.a1@gmail.com",
+            "escopoAnalistaId": "analista.a@gmail.com",
+            "responsavelNome": "Dra. Ana Solos",
+            "responsavelCrea": "CREA-PE 111222-D",
+        },
+    )
+    token_analista_b = create_access_token(
+        "analista.b@gmail.com",
+        "ANALISTA",
+        extra_claims={
+            "nome": "Dr. Bruno Outro",
+            "email": "analista.b@gmail.com",
+            "crea": "CREA-PE 333444-D",
+            "escopoAnalistaId": "analista.b@gmail.com",
+            "responsavelNome": "Dr. Bruno Outro",
+            "responsavelCrea": "CREA-PE 333444-D",
+        },
+    )
+
+    # 1. Analista A cria amostra
+    res_criar = client.post(
+        "/api/laudos",
+        json={
+            "protocolo": "LAB-EQUIPE-A-01",
+            "cpf_cliente": "52998224725",
+            "cliente_nome": "Fazenda Santa Fé",
+            "propriedade": "Lote 10",
+            "dataRecebimento": "2026-11-16",
+            "tipoAnalise": "fisico_quimica",
+        },
+        headers={"Authorization": f"Bearer {token_analista_a}"},
+    )
+    assert res_criar.status_code == 201
+    assert res_criar.json()["dados"]["analistaNome"] == "Dra. Ana Solos"
+    assert res_criar.json()["dados"]["analistaCrea"] == "CREA-PE 111222-D"
+
+    # 2. Auxiliar A1 lista laudos e encontra o laudo da Equipe A
+    res_lista_aux = client.get(
+        "/api/laudos",
+        headers={"Authorization": f"Bearer {token_auxiliar_a1}"},
+    )
+    assert res_lista_aux.status_code == 200
+    protocolos_equipe_a = [item["protocolo"] for item in res_lista_aux.json()["dados"]]
+    assert "LAB-EQUIPE-A-01" in protocolos_equipe_a
+
+    # 3. Auxiliar A1 lê e edita (Read/Write) o rascunho do laudo da Equipe A
+    res_get_aux = client.get(
+        "/api/laudos/LAB-EQUIPE-A-01/analise",
+        headers={"Authorization": f"Bearer {token_auxiliar_a1}"},
+    )
+    assert res_get_aux.status_code == 200
+    amostra_meta = res_get_aux.json()["dados"]["amostra"]
+    assert amostra_meta["responsavelNome"] == "Dra. Ana Solos"
+    assert amostra_meta["responsavelCrea"] == "CREA-PE 111222-D"
+    versao_inicial = res_get_aux.json()["dados"]["versao"]
+
+    res_patch_aux = client.patch(
+        "/api/laudos/LAB-EQUIPE-A-01/analise/rascunho",
+        json={"versaoEsperada": versao_inicial, "quimica": {"ph": 6.1}},
+        headers={"Authorization": f"Bearer {token_auxiliar_a1}"},
+    )
+    assert res_patch_aux.status_code == 200
+    assert res_patch_aux.json()["dados"]["novaVersao"] == versao_inicial + 1
+
+    # 4. Concorrência otimista: se o Analista A (ou outro dispositivo tablet/notebook) tentar salvar com a versão antiga, recebe 409 Conflict
+    res_conflito = client.patch(
+        "/api/laudos/LAB-EQUIPE-A-01/analise/rascunho",
+        json={"versaoEsperada": versao_inicial, "quimica": {"ph": 5.9}},
+        headers={"Authorization": f"Bearer {token_analista_a}"},
+    )
+    assert res_conflito.status_code == 409
+
+    # 5. Isolamento: Analista B não vê o laudo na listagem e recebe 403 ao tentar acessar ou editar
+    res_lista_b = client.get(
+        "/api/laudos",
+        headers={"Authorization": f"Bearer {token_analista_b}"},
+    )
+    assert res_lista_b.status_code == 200
+    protocolos_b = [item["protocolo"] for item in res_lista_b.json()["dados"]]
+    assert "LAB-EQUIPE-A-01" not in protocolos_b
+
+    res_get_b = client.get(
+        "/api/laudos/LAB-EQUIPE-A-01/analise",
+        headers={"Authorization": f"Bearer {token_analista_b}"},
+    )
+    assert res_get_b.status_code == 403
+
+    res_patch_b = client.patch(
+        "/api/laudos/LAB-EQUIPE-A-01/analise/rascunho",
+        json={"versaoEsperada": versao_inicial + 1, "quimica": {"ph": 7.0}},
+        headers={"Authorization": f"Bearer {token_analista_b}"},
+    )
+    assert res_patch_b.status_code == 403

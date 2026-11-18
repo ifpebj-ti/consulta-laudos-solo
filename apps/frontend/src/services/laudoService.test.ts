@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from './apiClient';
-import { classificarFalhaPdf, laudoService, nomePadraoPdf } from './laudoService';
+import { classificarFalhaPdf, laudoService, nomePadraoPdf, temAssinaturaPdf } from './laudoService';
 import { respostaJson, respostaPdf } from '@/test/utilitarios';
 
 describe('classificarFalhaPdf', () => {
@@ -58,5 +58,24 @@ describe('laudoService.baixarPdf', () => {
       respostaJson({ detail: { mensagem: 'Arquivo PDF do laudo não encontrado.' } }, 404),
     );
     await expect(laudoService.baixarPdf('20101.2306', 'token')).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('validação do PDF e da situação', () => {
+  it('recusa arquivo com tipo application/pdf mas conteúdo que não é PDF', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(respostaPdf('<html>login</html>'));
+    const clique = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    await expect(laudoService.baixarPdf('20101.2306', 'token')).rejects.toMatchObject({ codigoErro: 'INVALID_RESPONSE' });
+    expect(clique).not.toHaveBeenCalled();
+  });
+
+  it('aceita PDF com bytes antes da assinatura', () => {
+    expect(temAssinaturaPdf(' %PDF-1.7 ...')).toBe(true);
+    expect(temAssinaturaPdf('PK zip')).toBe(false);
+  });
+
+  it('situação sem laudo na resposta vira resposta inválida', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(respostaJson({ sucesso: true }));
+    await expect(laudoService.consultarSituacao('20101.2306', 'token')).rejects.toMatchObject({ codigoErro: 'INVALID_RESPONSE' });
   });
 });

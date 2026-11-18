@@ -6,6 +6,8 @@ import { SetaVelocidade } from '@/features/home/LayoutEntrada';
 import {
   calcularConcentracaoFosforo,
   calcularRegressaoLinear,
+  FATOR_DILUICAO_FOSFORO_PADRAO,
+  fatorDiluicaoValido,
   type PontoCalibracao,
   type RegressaoLinear,
 } from './calculos';
@@ -33,6 +35,14 @@ interface CalibracaoSecaoProps {
   onAplicar: (coef: RegressaoLinear) => void;
   leituraAmostra?: number;
   onLeituraAmostraChange?: (valor: number) => void;
+  fatorDiluicao?: number;
+  onFatorDiluicaoChange?: (valor: number) => void;
+}
+
+export const MENSAGEM_FATOR_DILUICAO_INVALIDO = 'Informe um fator de diluição maior que zero (padrão da planilha: 10).';
+
+function textoDoFator(valor: number | undefined): string {
+  return valor === undefined ? String(FATOR_DILUICAO_FOSFORO_PADRAO) : Number.isFinite(valor) ? String(valor) : '';
 }
 
 export function CalibracaoSecao({
@@ -40,12 +50,22 @@ export function CalibracaoSecao({
   onAplicar,
   leituraAmostra,
   onLeituraAmostraChange,
+  fatorDiluicao,
+  onFatorDiluicaoChange,
 }: CalibracaoSecaoProps) {
   const [pontos, setPontos] = useState<PontoCalibracao[]>(() => calibracaoAplicada?.pontos ?? PONTOS_PADRAO);
   const [leituraTexto, setLeituraTexto] = useState(() =>
     leituraAmostra !== undefined && leituraAmostra !== 0 ? String(leituraAmostra) : ''
   );
-  const [fatorDiluicao, setFatorDiluicao] = useState('1');
+  const [fatorTexto, setFatorTexto] = useState(() => textoDoFator(fatorDiluicao));
+
+  useEffect(() => {
+    if (fatorDiluicao === undefined) return;
+    setFatorTexto((atual) => (parseFloat(atual.replace(',', '.')) === fatorDiluicao ? atual : textoDoFator(fatorDiluicao)));
+  }, [fatorDiluicao]);
+
+  const fatorNumero = parseFloat(fatorTexto.replace(',', '.'));
+  const fatorInvalido = !fatorDiluicaoValido(fatorNumero);
 
   useEffect(() => {
     if (calibracaoAplicada?.pontos && calibracaoAplicada.pontos.length > 0) {
@@ -68,9 +88,9 @@ export function CalibracaoSecao({
   const resultadoAmostra = useMemo(() => {
     const y = parseFloat(leituraTexto);
     if (Number.isNaN(y)) return null;
-    const fator = parseFloat(fatorDiluicao);
-    return calcularConcentracaoFosforo(y, regressao, Number.isNaN(fator) ? 1 : fator);
-  }, [leituraTexto, fatorDiluicao, regressao]);
+    if (!fatorDiluicaoValido(fatorNumero)) return null;
+    return calcularConcentracaoFosforo(y, regressao, fatorNumero);
+  }, [leituraTexto, fatorNumero, regressao]);
 
   const xs = pontos.map((p) => p.x);
   const ys = pontos.map((p) => p.y);
@@ -118,6 +138,7 @@ export function CalibracaoSecao({
                     <td>
                       <DecimalInput
                         className="calib-input"
+                        aria-label={`Concentração padrão do ponto P${indice + 1} (mg/L)`}
                         value={ponto.x}
                         onChange={(numero) => atualizarPonto(indice, 'x', numero)}
                       />
@@ -125,6 +146,7 @@ export function CalibracaoSecao({
                     <td>
                       <DecimalInput
                         className="calib-input"
+                        aria-label={`Leitura de absorbância do ponto P${indice + 1}`}
                         value={ponto.y}
                         onChange={(numero) => atualizarPonto(indice, 'y', numero)}
                       />
@@ -253,17 +275,32 @@ export function CalibracaoSecao({
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 id="calib-calc-fator-dil"
                 className="calib-input"
-                value={fatorDiluicao}
-                onChange={(e) => setFatorDiluicao(e.target.value)}
+                value={fatorTexto}
+                aria-invalid={fatorInvalido ? true : undefined}
+                aria-describedby={fatorInvalido ? 'calib-calc-fator-dil-erro' : undefined}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFatorTexto(val);
+                  const parsed = parseFloat(val.replace(',', '.'));
+                  onFatorDiluicaoChange?.(Number.isNaN(parsed) ? 0 : parsed);
+                }}
               />
+              {fatorInvalido && (
+                <span id="calib-calc-fator-dil-erro" className="form-field__erro" role="alert">
+                  {MENSAGEM_FATOR_DILUICAO_INVALIDO}
+                </span>
+              )}
             </div>
             <div className="calib-calculadora__resultado">
               <span>
                 Fósforo (P) <span style={{ fontWeight: 400 }}>mg/dm&sup3;</span>
               </span>
-              <div className="calib-calculadora__valor">{resultadoAmostra ? resultadoAmostra.fosforo.toFixed(2) : '—'}</div>
+              <div className="calib-calculadora__valor">
+                {resultadoAmostra ? resultadoAmostra.fosforo.toFixed(2) : fatorInvalido ? 'Fator inválido' : '—'}
+              </div>
             </div>
           </div>
         </div>

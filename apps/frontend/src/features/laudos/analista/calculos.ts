@@ -58,6 +58,16 @@ export function calcularValorLiquido(medido: number, branco: number): number {
 
 export const FATOR_NAOH_PADRAO = 1;
 
+export const FATOR_DILUICAO_FOSFORO_PADRAO = 10;
+
+export function fatorDiluicaoValido(fator: number | undefined | null): fator is number {
+  return typeof fator === 'number' && Number.isFinite(fator) && fator > 0;
+}
+
+export function fatorDiluicaoAplicado(fator: number | undefined | null): number {
+  return fatorDiluicaoValido(fator) ? fator : FATOR_DILUICAO_FOSFORO_PADRAO;
+}
+
 export function fatorNaohValido(fator: number): boolean {
   return Number.isFinite(fator) && fator > 0;
 }

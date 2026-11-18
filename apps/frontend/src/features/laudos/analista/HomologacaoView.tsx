@@ -6,6 +6,7 @@ import { FUNCIONALIDADES } from '@/config/ambiente';
 import {
   calcularComplexoSortivo,
   calcularConcentracaoFosforo,
+  fatorDiluicaoAplicado,
   calcularGranulometria,
   calcularAcidezPotencial,
   calcularValorLiquido,
@@ -22,7 +23,10 @@ export type ResultadoHomologacao = { ok: true; simulado: boolean } | { ok: false
 
 interface HomologacaoViewProps {
   dados: DadosAnalise;
-  responsavel: string;
+  responsavel?: string | null;
+  responsavelNome?: string | null;
+  crea?: string | null;
+  responsavelCrea?: string | null;
   jaLiberado?: boolean;
   processada?: boolean;
   onVoltarParaEdicao: () => void;
@@ -32,6 +36,9 @@ interface HomologacaoViewProps {
 export function HomologacaoView({
   dados,
   responsavel,
+  responsavelNome,
+  crea,
+  responsavelCrea,
   jaLiberado = false,
   processada = true,
   onVoltarParaEdicao,
@@ -63,7 +70,7 @@ export function HomologacaoView({
   const temContato = Boolean(identificacao.email || identificacao.telefone);
 
   const granulometriaCalc = calcularGranulometria(granulometria);
-  const resultadoFosforo = calibracao ? calcularConcentracaoFosforo(quimica.fosforoAbsBruta, calibracao, 1) : null;
+  const resultadoFosforo = calibracao ? calcularConcentracaoFosforo(quimica.fosforoAbsBruta, calibracao, fatorDiluicaoAplicado(quimica.fatorDiluicaoFosforo)) : null;
 
   const liquidoCa = calcularValorLiquido(quimica.calcio.medido, quimica.calcio.branco);
   const liquidoMg = calcularValorLiquido(quimica.magnesio.medido, quimica.magnesio.branco);
@@ -320,8 +327,8 @@ export function HomologacaoView({
 
         <div className="laudo-doc__rodape">
           <div className="resp-tecnico">
-            <strong>{responsavel || 'Responsável técnico'}</strong>
-            Responsável técnico pela homologação
+            <strong>{responsavelNome || responsavel || 'Responsável Técnico não informado'}</strong>
+            Responsável Técnico(a) &middot; {responsavelCrea || crea || 'CREA não informado'}
             <br />
             Laboratório de Solos &middot; IFPE Campus Belo Jardim
           </div>

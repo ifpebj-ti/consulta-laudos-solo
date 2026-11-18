@@ -1,4 +1,5 @@
-import { apiClient, ApiError } from './apiClient';
+import { apiClient, ApiError, mensagemLimiteRequisicoes } from './apiClient';
+import { normalizarSituacaoLaudo } from './respostasApi';
 import { TEMPO_LIMITE_DOWNLOAD_MS } from '@/config/ambiente';
 import { nomeArquivoSeguro, salvarArquivo } from '@/lib/download';
 import type { LaudoDetalhe } from '@/types/laudo';
@@ -49,9 +50,7 @@ export function classificarFalhaPdf(erro: unknown): FalhaPdf {
   }
   const espera = erro instanceof ApiError ? erro.tentarAposSegundos : undefined;
   const mensagem =
-    motivo === 'limite_requisicoes' && espera
-      ? `Muitas tentativas de download em pouco tempo. Aguarde ${espera} segundo${espera > 1 ? 's' : ''} e tente novamente.`
-      : MENSAGENS_FALHA_PDF[motivo];
+    motivo === 'limite_requisicoes' && espera ? mensagemLimiteRequisicoes(espera) : MENSAGENS_FALHA_PDF[motivo];
   return {
     motivo,
     mensagem,
@@ -63,14 +62,21 @@ export function nomePadraoPdf(protocolo: string): string {
   return nomeArquivoSeguro(`laudo-${protocolo}`, 'pdf');
 }
 
+const ASSINATURA_PDF = '%PDF';
+
+export function temAssinaturaPdf(inicioDoArquivo: string): boolean {
+  return inicioDoArquivo.includes(ASSINATURA_PDF);
+}
+
 export interface SituacaoLaudoApiResponse {
   sucesso: boolean;
   laudo: LaudoDetalhe;
 }
 
 export const laudoService = {
-  consultarSituacao(protocolo: string, token: string, signal?: AbortSignal) {
-    return apiClient.request<SituacaoLaudoApiResponse>(`/laudos/${encodeURIComponent(protocolo)}`, { token, signal });
+  async consultarSituacao(protocolo: string, token: string, signal?: AbortSignal): Promise<SituacaoLaudoApiResponse> {
+    const resposta = await apiClient.request<unknown>(`/laudos/${encodeURIComponent(protocolo)}`, { token, signal });
+    return normalizarSituacaoLaudo(resposta);
   },
 
   async obterPdf(protocolo: string, token: string, signal?: AbortSignal) {
@@ -80,6 +86,9 @@ export const laudoService = {
       timeoutMs: TEMPO_LIMITE_DOWNLOAD_MS,
       tiposAceitos: ['application/pdf'],
     });
+    if (!temAssinaturaPdf(arquivo.inicio)) {
+      throw new ApiError(200, 'O servidor enviou um arquivo que não é um PDF.', 'INVALID_RESPONSE');
+    }
     return {
       blob: arquivo.blob,
       nomeArquivo: arquivo.nomeArquivo ? nomeArquivoSeguro(arquivo.nomeArquivo, 'pdf') : nomePadraoPdf(protocolo),

@@ -28,10 +28,30 @@ class LoginGoogleRequest(BaseModel):
     )
 
 
+class LoginLocalRequest(BaseModel):
+    username: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Nome de usuário local",
+    )
+    password: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Senha do usuário local",
+    )
+
+
 class UsuarioAnalistaResponse(BaseModel):
+    id: str | None = None
     nome: str
     email: str
     role: str = "ANALISTA"
+    crea: str | None = None
+    escopoAnalistaId: str | None = None
+    responsavelNome: str | None = None
+    responsavelCrea: str | None = None
 
 
 class LoginGoogleResponse(BaseModel):
@@ -75,4 +95,45 @@ class UsuarioMeResponse(BaseModel):
     role: str
     nome: str | None = None
     email: str | None = None
+    crea: str | None = None
+    escopoAnalistaId: str | None = None
+    responsavelNome: str | None = None
+    responsavelCrea: str | None = None
     protocolo: str | None = None
+
+
+class CriarAnalistaRequest(BaseModel):
+    nome: str = Field(..., min_length=2, max_length=255)
+    email: str = Field(..., max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    crea: str = Field(..., min_length=2, max_length=100)
+
+
+class CriarAuxiliarRequest(BaseModel):
+    nome: str = Field(..., min_length=2, max_length=255)
+    email: str = Field(..., max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class AuxiliarItemResponse(BaseModel):
+    id: str
+    nome: str
+    email: str
+    criadoEm: str
+
+
+class AnalistaPrincipalItemResponse(BaseModel):
+    id: str
+    nome: str
+    email: str
+    crea: str
+    criadoEm: str
+    auxiliares: list[AuxiliarItemResponse] = []
+
+
+class ListarAnalistasResponse(BaseModel):
+    sucesso: bool = True
+    dados: list[AnalistaPrincipalItemResponse]
+
+
+class ListarAuxiliaresResponse(BaseModel):
+    sucesso: bool = True
+    dados: list[AuxiliarItemResponse]

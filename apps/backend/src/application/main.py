@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from src.api.routers import analises, auth, laudos
+from src.api.routers import analises, auth, laudos, usuarios
 from src.core.config import settings
 from src.core.init_db import init_db
 from src.core.limiter import limiter
@@ -82,6 +82,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Registro de Rotas sem prefixo /v1 (diretamente /api)
 app.include_router(auth.router, prefix=settings.API_PREFIX)
+app.include_router(usuarios.router, prefix=settings.API_PREFIX)
 app.include_router(laudos.router, prefix=settings.API_PREFIX)
 app.include_router(analises.router, prefix=settings.API_PREFIX)
 
