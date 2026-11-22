@@ -20,6 +20,7 @@ RUN npm run build
 
 # Estágio 2: Produção
 FROM nginx:alpine
+RUN apk update && apk upgrade --no-cache
 # Copia o build gerado para a pasta pública do Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 # Copia uma configuração customizada do Nginx (para lidar com rotas do React Router)
