@@ -14,7 +14,7 @@ import '@/styles/painel-minimalista.css';
 import '@/features/laudos/analista/AnalistaDashboardPage.css';
 
 export function PowerUserPage() {
-  useTituloPagina('Gestão de Analistas · PowerUser');
+  useTituloPagina('Gestão de Analistas · Administração');
   const { session } = useAuth();
   const token = session?.token;
 
@@ -100,9 +100,9 @@ export function PowerUserPage() {
     try {
       await authService.removerAnalistaPrincipal(analista.id, token);
       setAnalistas((atual) => atual.filter((item) => item.id !== analista.id));
-      setSucesso(`Analista "${analista.nome}" removido com sucesso.`);
+      setSucesso(`Analista "${analista.nome}" desativado com sucesso.`);
     } catch (e) {
-      setErro(e instanceof ApiError ? e.message : 'Erro ao remover Analista Principal.');
+      setErro(e instanceof ApiError ? e.message : 'Erro ao desativar Analista Principal.');
     } finally {
       setRemovendoId((atual) => (atual === analista.id ? null : atual));
     }
@@ -111,11 +111,11 @@ export function PowerUserPage() {
   return (
     <div className="painel-min">
       <LinhasVelocidade className="painel-min__velocidade" />
-      <Navbar titulo="Administração · PowerUser" />
+      <Navbar titulo="Administração" />
       <main id="conteudo" className="page-container" tabIndex={-1}>
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Controle de Acesso &middot; PowerUser</span>
+            <span className="page-header__eyebrow">Controle de Acesso &middot; Administração</span>
             <h1>
               <span>Gestão de</span> <span className="painel-min__destaque">Analistas Principais</span>
             </h1>
@@ -273,7 +273,7 @@ export function PowerUserPage() {
                         onClick={() => void aoRemoverAnalista(analista)}
                         disabled={removendoId === analista.id}
                       >
-                        {removendoId === analista.id ? 'Removendo...' : 'Remover Acesso'}
+                        {removendoId === analista.id ? 'Desativando...' : 'Desativar Acesso'}
                       </Button>
                     </div>
                   </div>

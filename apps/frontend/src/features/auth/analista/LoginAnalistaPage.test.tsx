@@ -24,11 +24,16 @@ function renderizarLogin(rotaInicial = '/analista/login', sessao?: object) {
 }
 
 describe('LoginAnalistaPage', () => {
-  it('valida usuário e senha obrigatórios antes de chamar a API', async () => {
+  it('oculta login local por padrão, não exibe PowerUser e valida ao expandir', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch');
     const usuario = userEvent.setup();
     renderizarLogin();
 
+    expect(screen.queryByText(/PowerUser/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Usuário')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument();
+
+    await usuario.click(screen.getByRole('button', { name: 'Acesso administrativo' }));
     await usuario.click(screen.getByRole('button', { name: /Entrar com Usuário e Senha/ }));
 
     expect(screen.getByText('Informe o usuário.')).toBeInTheDocument();
@@ -36,7 +41,7 @@ describe('LoginAnalistaPage', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('login local com POWER_USER redireciona para /power-user e trata erro 401', async () => {
+  it('login local administrativo redireciona para /power-user e trata erro 401', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(respostaJson({ detail: { mensagem: 'Usuário ou senha inválidos.' } }, 401))
@@ -45,14 +50,15 @@ describe('LoginAnalistaPage', () => {
           sucesso: true,
           token: tokenComExpiracao(3600),
           tipoToken: 'Bearer',
-          usuario: { nome: 'PowerUser', email: 'power@local', role: 'POWER_USER' },
+          usuario: { nome: 'Administrador', email: 'admin@local', role: 'POWER_USER' },
         }),
       );
 
     const usuario = userEvent.setup();
     renderizarLogin();
 
-    await usuario.type(screen.getByLabelText('Usuário'), 'PowerUser');
+    await usuario.click(screen.getByRole('button', { name: 'Acesso administrativo' }));
+    await usuario.type(screen.getByLabelText('Usuário'), 'admin');
     await usuario.type(screen.getByLabelText('Senha'), 'errada');
     await usuario.click(screen.getByRole('button', { name: /Entrar com Usuário e Senha/ }));
 

@@ -14,7 +14,7 @@ function renderizarPowerUser() {
     JSON.stringify({
       token: tokenComExpiracao(3600),
       role: 'POWER_USER',
-      nome: 'PowerUser',
+      nome: 'Administrador',
     }),
   );
   return render(
@@ -46,8 +46,9 @@ describe('PowerUserPage', () => {
 
     renderizarPowerUser();
 
-    expect(document.title).toMatch(/^Gestão de Analistas · PowerUser/);
+    expect(document.title).toMatch(/^Gestão de Analistas · Administração/);
     expect(document.getElementById('conteudo')).toHaveAttribute('tabindex', '-1');
+    expect(screen.queryByText(/PowerUser/i)).not.toBeInTheDocument();
 
     expect(await screen.findByText('Prof. Carla Andrade')).toBeInTheDocument();
     expect(screen.getByText('carla@gmail.com')).toBeInTheDocument();
@@ -151,17 +152,17 @@ describe('PowerUserPage', () => {
     const usuario = userEvent.setup();
     renderizarPowerUser();
 
-    const botaoRemover = await screen.findByRole('button', { name: 'Remover Acesso' });
-    await usuario.click(botaoRemover);
+    const botaoDesativar = await screen.findByRole('button', { name: 'Desativar Acesso' });
+    await usuario.click(botaoDesativar);
 
-    expect(screen.getByRole('button', { name: 'Removendo...' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Desativando...' })).toBeDisabled();
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    resolverDelete(respostaJson({ sucesso: true, mensagem: 'Removido' }));
+    resolverDelete(respostaJson({ sucesso: true, mensagem: 'Desativado' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Prof. Carla Andrade')).not.toBeInTheDocument();
     });
-    expect(screen.getByRole('status')).toHaveTextContent('Analista "Prof. Carla Andrade" removido com sucesso.');
+    expect(screen.getByRole('status')).toHaveTextContent('Analista "Prof. Carla Andrade" desativado com sucesso.');
   });
 });

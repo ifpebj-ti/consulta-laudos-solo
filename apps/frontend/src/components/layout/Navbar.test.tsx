@@ -9,7 +9,7 @@ import { tokenComExpiracao } from '@/test/utilitarios';
 const CHAVE_AUTH = 'consulta-laudos-solo:auth';
 
 describe('Navbar', () => {
-  it('exibe título e nome do usuário e ao sair limpa sessão navegando para /', async () => {
+  it('exibe título, nome do usuário e versão abaixo da navbar, e ao sair limpa sessão navegando para /', async () => {
     sessionStorage.setItem(
       CHAVE_AUTH,
       JSON.stringify({
@@ -33,10 +33,23 @@ describe('Navbar', () => {
 
     expect(screen.getByText('Módulo do Analista')).toBeInTheDocument();
     expect(screen.getByText('Carla Andrade')).toBeInTheDocument();
+    expect(screen.getByLabelText('Versão da aplicação')).toHaveTextContent(/^Versão v\d+/);
 
     await usuario.click(screen.getByRole('button', { name: 'Sair' }));
 
     expect(await screen.findByText('Página Inicial')).toBeInTheDocument();
     expect(sessionStorage.getItem(CHAVE_AUTH)).toBeNull();
+  });
+
+  it('não exibe a versão quando não há sessão ativa', () => {
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <Navbar titulo="Módulo Público" />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByLabelText('Versão da aplicação')).not.toBeInTheDocument();
   });
 });

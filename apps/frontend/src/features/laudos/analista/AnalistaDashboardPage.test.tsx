@@ -195,8 +195,8 @@ describe('AnalistaDashboardPage', () => {
 
     expect(await screen.findByText('Pedro Aux')).toBeInTheDocument();
 
-    const botoesRemover = screen.getAllByRole('button', { name: 'Remover Auxiliar' });
-    await usuario.click(botoesRemover[0]);
+    const botoesDesativar = screen.getAllByRole('button', { name: 'Desativar Auxiliar' });
+    await usuario.click(botoesDesativar[0]);
 
     await waitFor(() => {
       expect(screen.queryByText('Pedro Aux')).not.toBeInTheDocument();

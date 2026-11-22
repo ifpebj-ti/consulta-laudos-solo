@@ -387,7 +387,7 @@ export function AnalistaDashboardPage() {
       await authService.removerAuxiliar(id, token);
       setAuxiliares((atual) => atual.filter((item) => item.id !== id));
     } catch (e) {
-      setErroAuxiliar(e instanceof ApiError ? e.message : 'Erro ao remover conta auxiliar.');
+      setErroAuxiliar(e instanceof ApiError ? e.message : 'Erro ao desativar conta auxiliar.');
     } finally {
       setRemovendoAuxiliarId((atual) => (atual === id ? null : atual));
     }
@@ -744,7 +744,7 @@ export function AnalistaDashboardPage() {
                           onClick={() => void aoRemoverAuxiliar(aux.id)}
                           disabled={removendoAuxiliarId === aux.id}
                         >
-                          {removendoAuxiliarId === aux.id ? 'Removendo...' : 'Remover Auxiliar'}
+                          {removendoAuxiliarId === aux.id ? 'Desativando...' : 'Desativar Auxiliar'}
                         </Button>
                       </div>
                     </div>

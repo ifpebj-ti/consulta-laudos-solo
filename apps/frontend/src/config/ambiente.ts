@@ -25,3 +25,5 @@ export const FUNCIONALIDADES = {
 } as const;
 
 export const NOME_SISTEMA = 'Sistema de Laudos de Análise de Solo';
+
+export const VERSAO_APP = typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ ? __APP_VERSION__ : 'dev';
