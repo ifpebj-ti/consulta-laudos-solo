@@ -59,7 +59,18 @@ jobs:
 
       - name: Frontend Tests
         working-directory: ./apps/frontend
-        run: npm run test -- --run
+        run: npm run test:coverage
+
+      - name: Upload Frontend Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: apps/frontend/coverage
+          retention-days: 30
+
+      - name: Frontend Build
+        working-directory: ./apps/frontend
+        run: npm run build
 
       # ----------------------------------------------------------------------
       # Backend Validation (FastAPI)
@@ -122,6 +133,12 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve App Version
+        id: app_version
+        run: echo "version=$(git describe --tags --abbrev=0 2>/dev/null || echo 'dev')" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -140,13 +157,14 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./apps/frontend
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/consulta-laudos-frontend:latest
             ghcr.io/${{ github.repository_owner }}/consulta-laudos-frontend:${{ github.sha }}
           build-args: |
             VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            VITE_APP_VERSION=${{ steps.app_version.outputs.version }}
 
       - name: Build and Push Backend
         uses: docker/build-push-action@v5

@@ -5,6 +5,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
+import { useTituloPagina } from '@/hooks/useTituloPagina';
 import { authService } from '@/services/authService';
 import { ApiError } from '@/services/apiClient';
 import { LinhasVelocidade, SetaVelocidade } from '@/features/home/LayoutEntrada';
@@ -13,12 +14,14 @@ import '@/styles/painel-minimalista.css';
 import '@/features/laudos/analista/AnalistaDashboardPage.css';
 
 export function PowerUserPage() {
+  useTituloPagina('Gestão de Analistas · Administração');
   const { session } = useAuth();
   const token = session?.token;
 
   const [analistas, setAnalistas] = useState<AnalistaPrincipalItem[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [removendoId, setRemovendoId] = useState<string | null>(null);
 
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -26,23 +29,34 @@ export function PowerUserPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
 
-  const carregarAnalistas = useCallback(async () => {
-    if (!token) return;
-    setCarregando(true);
-    try {
-      const res = await authService.listarAnalistasPrincipais(token);
-      if (res.sucesso) {
-        setAnalistas(res.dados);
+  const carregarAnalistas = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!token) {
+        setCarregando(false);
+        return;
       }
-    } catch (e) {
-      setErro(e instanceof ApiError ? e.message : 'Não foi possível carregar os analistas cadastrados.');
-    } finally {
-      setCarregando(false);
-    }
-  }, [token]);
+      setCarregando(true);
+      try {
+        const res = await authService.listarAnalistasPrincipais(token, signal);
+        if (res.sucesso) {
+          setAnalistas(res.dados);
+        }
+      } catch (e) {
+        if (e instanceof ApiError && e.foiCancelada) return;
+        setErro(e instanceof ApiError ? e.message : 'Não foi possível carregar os analistas cadastrados.');
+      } finally {
+        if (!signal?.aborted) {
+          setCarregando(false);
+        }
+      }
+    },
+    [token],
+  );
 
   useEffect(() => {
-    void carregarAnalistas();
+    const controlador = new AbortController();
+    void carregarAnalistas(controlador.signal);
+    return () => controlador.abort();
   }, [carregarAnalistas]);
 
   async function aoCadastrarAnalista(evento: FormEvent) {
@@ -79,26 +93,29 @@ export function PowerUserPage() {
   }
 
   async function aoRemoverAnalista(analista: AnalistaPrincipalItem) {
-    if (!token) return;
+    if (!token || removendoId === analista.id) return;
     setErro(null);
     setSucesso(null);
+    setRemovendoId(analista.id);
     try {
       await authService.removerAnalistaPrincipal(analista.id, token);
       setAnalistas((atual) => atual.filter((item) => item.id !== analista.id));
-      setSucesso(`Analista "${analista.nome}" removido com sucesso.`);
+      setSucesso(`Analista "${analista.nome}" desativado com sucesso.`);
     } catch (e) {
-      setErro(e instanceof ApiError ? e.message : 'Erro ao remover Analista Principal.');
+      setErro(e instanceof ApiError ? e.message : 'Erro ao desativar Analista Principal.');
+    } finally {
+      setRemovendoId((atual) => (atual === analista.id ? null : atual));
     }
   }
 
   return (
     <div className="painel-min">
       <LinhasVelocidade className="painel-min__velocidade" />
-      <Navbar titulo="Administração · PowerUser" />
-      <main className="page-container">
+      <Navbar titulo="Administração" />
+      <main id="conteudo" className="page-container" tabIndex={-1}>
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Controle de Acesso &middot; PowerUser</span>
+            <span className="page-header__eyebrow">Controle de Acesso &middot; Administração</span>
             <h1>
               <span>Gestão de</span> <span className="painel-min__destaque">Analistas Principais</span>
             </h1>
@@ -251,8 +268,12 @@ export function PowerUserPage() {
                     )}
 
                     <div style={{ marginTop: '12px' }}>
-                      <Button variant="ghost" onClick={() => void aoRemoverAnalista(analista)}>
-                        Remover Acesso
+                      <Button
+                        variant="ghost"
+                        onClick={() => void aoRemoverAnalista(analista)}
+                        disabled={removendoId === analista.id}
+                      >
+                        {removendoId === analista.id ? 'Desativando...' : 'Desativar Acesso'}
                       </Button>
                     </div>
                   </div>

@@ -16,7 +16,7 @@ import { FUNCIONALIDADES } from '@/config/ambiente';
 import { DADOS_ANALISE_VAZIOS, ROTULOS_TIPO_ANALISE, type DadosAnalise, type Identificacao } from './tipos';
 import { RegistroForm, type ErrosCamposRegistro } from './RegistroForm';
 import { HomologacaoView, type ResultadoHomologacao } from './HomologacaoView';
-import { formatarData } from './statusAmostra';
+import { calcularPrevisaoEntrega, formatarData } from './statusAmostra';
 import { fatorDiluicaoValido, fatorNaohValido } from './calculos';
 import { avaliarDadosAnalise, pendenciasParaProcessar } from './validacaoAnalise';
 import '@/components/feedback/Feedback.css';
@@ -91,11 +91,29 @@ export function AnaliseLaudoPage() {
     analiseService
       .obterAnalise(protocoloAlvo, token, controlador.signal)
       .then((res) => {
-        const identificacao = identificacaoRef.current ?? {
-          ...DADOS_ANALISE_VAZIOS.identificacao,
-          protocolo: res.dados.protocolo || protocoloAlvo,
-          solicitante: res.dados.amostra?.solicitante ?? '',
-          propriedade: res.dados.amostra?.propriedade ?? '',
+        const info = res.dados.amostra;
+        const base = identificacaoRef.current ?? DADOS_ANALISE_VAZIOS.identificacao;
+        const dataRecebimento = info?.dataRecebimento || base.dataRecebimento;
+        const prazo = info?.dataRecebimento
+          ? calcularPrevisaoEntrega(info.dataRecebimento)
+          : base.prazo || (dataRecebimento ? calcularPrevisaoEntrega(dataRecebimento) : '');
+        const identificacao: Identificacao = {
+          ...base,
+          protocolo: res.dados.protocolo || base.protocolo || protocoloAlvo,
+          cpfCliente: info?.cpfCliente || base.cpfCliente,
+          dataRecebimento,
+          prazo,
+          tipoAnalise: info?.tipoAnalise || base.tipoAnalise,
+          solicitante: info?.solicitante || base.solicitante,
+          propriedade: info?.propriedade || base.propriedade,
+          localizacao: info?.localizacao || base.localizacao,
+          areaIdentificacao: info?.areaIdentificacao || base.areaIdentificacao,
+          areaHectares: info?.areaHectares || base.areaHectares,
+          profundidadeColeta: info?.profundidadeColeta || base.profundidadeColeta,
+          cultivo: info?.cultivo || base.cultivo,
+          culturaExistente: info?.culturaExistente || base.culturaExistente,
+          email: info?.email || base.email,
+          telefone: info?.telefone || base.telefone,
         };
         const carregados = montarDados(res.dados, identificacao);
         setVersao(numeroOuNulo(res.dados.versao) ?? 1);
@@ -462,7 +480,13 @@ export function AnaliseLaudoPage() {
                   ))}
                 </dl>
               )}
-              {!amostraDaRota && estadoCarga.tipo === 'pronto' && (
+              {!amostraDaRota &&
+                estadoCarga.tipo === 'pronto' &&
+                !amostraInfo?.localizacao &&
+                !amostraInfo?.areaIdentificacao &&
+                !amostraInfo?.cultivo &&
+                !amostraInfo?.dataRecebimento &&
+                !amostraInfo?.profundidadeColeta && (
                 <p className="analise-amostra__aviso">
                   Os demais dados do cadastro (localização, área, cultivo, prazo) ainda não são enviados pelo servidor
                   nesta tela.
