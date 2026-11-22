@@ -331,22 +331,28 @@ export function AnalistaDashboardPage() {
   const [nomeAuxiliar, setNomeAuxiliar] = useState('');
   const [emailAuxiliar, setEmailAuxiliar] = useState('');
   const [salvandoAuxiliar, setSalvandoAuxiliar] = useState(false);
+  const [removendoAuxiliarId, setRemovendoAuxiliarId] = useState<string | null>(null);
   const [erroAuxiliar, setErroAuxiliar] = useState<string | null>(null);
 
-  const carregarAuxiliares = useCallback(async () => {
-    if (!token || !isAnalistaPrincipal) return;
-    try {
-      const res = await authService.listarAuxiliares(token);
-      if (res.sucesso) {
-        setAuxiliares(res.dados);
+  const carregarAuxiliares = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!token || !isAnalistaPrincipal) return;
+      try {
+        const res = await authService.listarAuxiliares(token, signal);
+        if (res.sucesso) {
+          setAuxiliares(res.dados);
+        }
+      } catch {
+        // silencioso
       }
-    } catch {
-      // silencioso
-    }
-  }, [token, isAnalistaPrincipal]);
+    },
+    [token, isAnalistaPrincipal],
+  );
 
   useEffect(() => {
-    void carregarAuxiliares();
+    const controlador = new AbortController();
+    void carregarAuxiliares(controlador.signal);
+    return () => controlador.abort();
   }, [carregarAuxiliares]);
 
   async function aoCadastrarAuxiliar(evento: FormEvent) {
@@ -374,13 +380,16 @@ export function AnalistaDashboardPage() {
   }
 
   async function aoRemoverAuxiliar(id: string) {
-    if (!token) return;
+    if (!token || removendoAuxiliarId === id) return;
     setErroAuxiliar(null);
+    setRemovendoAuxiliarId(id);
     try {
       await authService.removerAuxiliar(id, token);
       setAuxiliares((atual) => atual.filter((item) => item.id !== id));
     } catch (e) {
       setErroAuxiliar(e instanceof ApiError ? e.message : 'Erro ao remover conta auxiliar.');
+    } finally {
+      setRemovendoAuxiliarId((atual) => (atual === id ? null : atual));
     }
   }
 
@@ -730,8 +739,12 @@ export function AnalistaDashboardPage() {
                         <Badge variant="status-processamento">Auxiliar (Read/Write)</Badge>
                       </div>
                       <div style={{ marginTop: '10px' }}>
-                        <Button variant="ghost" onClick={() => void aoRemoverAuxiliar(aux.id)}>
-                          Remover Auxiliar
+                        <Button
+                          variant="ghost"
+                          onClick={() => void aoRemoverAuxiliar(aux.id)}
+                          disabled={removendoAuxiliarId === aux.id}
+                        >
+                          {removendoAuxiliarId === aux.id ? 'Removendo...' : 'Remover Auxiliar'}
                         </Button>
                       </div>
                     </div>

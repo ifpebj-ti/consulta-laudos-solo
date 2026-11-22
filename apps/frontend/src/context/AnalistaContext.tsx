@@ -28,7 +28,8 @@ const PERSISTIR = import.meta.env.DEV;
 
 function mapearStatusBackend(statusBackend: string, statusLocal?: StatusAmostra): StatusAmostra {
   if (statusLocal === 'concluido' || statusBackend === 'CONCLUIDO') return 'concluido';
-  if (statusBackend === 'AGUARDANDO_HOMOLOGACAO' || statusBackend === 'EM_ANALISE') return 'em_andamento';
+  if (statusBackend === 'AGUARDANDO_HOMOLOGACAO') return 'aguardando_homologacao';
+  if (statusBackend === 'EM_ANALISE') return 'em_andamento';
   return statusLocal ?? 'nao_iniciado';
 }
 

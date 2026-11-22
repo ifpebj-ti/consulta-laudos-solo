@@ -44,7 +44,8 @@ export function HomologacaoView({
   onVoltarParaEdicao,
   onHomologar,
 }: HomologacaoViewProps) {
-  const [liberado, setLiberado] = useState(jaLiberado);
+  const [liberadoLocal, setLiberadoLocal] = useState(false);
+  const liberado = jaLiberado || liberadoLocal;
   const [simulado, setSimulado] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [homologando, setHomologando] = useState(false);
@@ -60,7 +61,7 @@ export function HomologacaoView({
     setHomologando(false);
     setConfirmando(false);
     if (resultado.ok) {
-      setLiberado(true);
+      setLiberadoLocal(true);
       setSimulado(resultado.simulado);
     } else {
       setErro(resultado.mensagem);
