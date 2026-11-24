@@ -1,6 +1,7 @@
 # Consulta Laudos Solo
 
 [![CI/CD](https://github.com/ifpebj-ti/consulta-laudos-solo/actions/workflows/ci-cd.yml/badge.svg?branch=main)](https://github.com/ifpebj-ti/consulta-laudos-solo/actions/workflows/ci-cd.yml)
+[![Release](https://img.shields.io/github/v/release/ifpebj-ti/consulta-laudos-solo)](https://github.com/ifpebj-ti/consulta-laudos-solo/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
 Sistema web para consulta de laudos de análise de solo desenvolvido como Projeto Integrador do 7º Período. Permite que **Analistas** gerenciem laudos via autenticação Google OAuth e que **Clientes** consultem seus laudos informando protocolo e CPF.
@@ -13,15 +14,29 @@ O projeto adota arquitetura de monorepo, isolando frontend, backend e infraestru
 
 | Documento | Link |
 |-----------|------|
-| Documento de Visão | [Wiki → Documento de Visão](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Documento-de-Visão) |
+| Visão do Projeto | [Wiki → Visão de Projeto](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Visão-de-Projeto) |
+| Análise de Concorrência | [Wiki → Análise de Concorrência](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Análise-de-Concorrência) |
 | Arquitetura e Modelagem de Dados | [Wiki → Arquitetura e Modelagem de Dados](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Arquitetura-e-Modelagem-de-Dados) |
-| Guia de Execução, Configuração e Operação | [Wiki → Guia de Execução, Configuração e Operação](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Guia-de-Execução,-Configuração-e-Operação) |
-| Manual de Uso do Sistema | [Wiki → Manual de Uso do Sistema](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Manual-de-Uso-do-Sistema) |
-| Protótipos de Interface | [Figma — preencher link](https://figma.com/) <!-- TODO: substituir pelo link real do Figma --> |
-| Backlog do Produto | [GitHub Projects — preencher link](https://github.com/orgs/ifpebj-ti/projects/) <!-- TODO: substituir pelo link real do quadro --> |
+| Guia de Execução, Configuração e Operação | [Wiki → Guia de Execução](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Guia-de-Execução,-Configuração-e-Operação) |
+| Modelagem de Ameaças | [Wiki → Modelagem de Ameaças](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Modelagem-de-Ameaças) |
+| Boas Práticas de Desenvolvimento Seguro | [Wiki → Boas Práticas](https://github.com/ifpebj-ti/consulta-laudos-solo/wiki/Guia-de-Boas-Práticas-de-Desenvolvimento-Seguro) |
+| Estratégia de Testes | [docs/wiki/Estratégia-de-Testes.md](docs/wiki/Estrat%C3%A9gia-de-Testes.md) (publicar na Wiki) |
+| Manual de Uso do Sistema | [docs/wiki/Manual-de-Uso-do-Sistema.md](docs/wiki/Manual-de-Uso-do-Sistema.md) (publicar na Wiki) |
+| Protótipos de Interface (Figma) | _Pendente: informar o link do arquivo Figma da equipe_ |
+| Backlog do Produto | _Pendente: criar o GitHub Project da organização e informar o link_ |
+| Segurança | [SECURITY.md](SECURITY.md) |
+| Como contribuir | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Histórico de versões | [CHANGELOG.md](CHANGELOG.md) |
+
+## 👥 Equipe
+
+| Integrante | Papel |
+|------------|-------|
+| Igor Nayan ([@igornayan](https://github.com/igornayan)) | _preencher (ex.: Desenvolvedor)_ |
+| Gabriel Lourinaldo ([@GabrielLourinaldo](https://github.com/GabrielLourinaldo)) | _preencher (ex.: Desenvolvedor)_ |
+| Gabriel Camelo | _preencher (ex.: Desenvolvedor)_ |
 
 ---
-
 ## 🏗️ Estrutura do Diretório
 
 ```
@@ -67,7 +82,7 @@ Serviços disponíveis após `docker compose up --build`:
 
 | Serviço | URL |
 |---------|-----|
-| Frontend | http://localhost:5173 |
+| Frontend | http://localhost |
 | Backend (API) | http://localhost:8000/api |
 | Documentação interativa (Swagger) | http://localhost:8000/api/docs |
 
@@ -78,11 +93,14 @@ Serviços disponíveis após `docker compose up --build`:
 Cada aplicação em `apps/` conta com um `Dockerfile` otimizado em múltiplos estágios (Multi-stage Build):
 
 - **Frontend**: Primeiro estágio usa `node:20-alpine` para gerar o build estático; segundo estágio usa `nginx:alpine` para servir a aplicação na porta 80 com roteamento correto para SPA.
+- **Banco**: PostgreSQL 16 no `docker-compose.yml` e no `docker-compose.prod.yml` (em dev local sem Docker o backend usa SQLite).
 - **Backend**: Usa `python:3.12-slim` como imagem base, instala dependências via `pip` e expõe o servidor Uvicorn na porta 8000.
 
 As imagens de produção são publicadas automaticamente no **GHCR** pelo pipeline CI/CD:
-- `ghcr.io/ifpebj-ti/consulta-laudos-frontend:latest`
-- `ghcr.io/ifpebj-ti/consulta-laudos-backend:latest`
+- `ghcr.io/ifpebj-ti/consulta-laudos-frontend:<versão>` (ex.: `0.2.6`)
+- `ghcr.io/ifpebj-ti/consulta-laudos-backend:<versão>`
+
+Cada imagem recebe as tags `latest`, `sha-<commit>`, `X.Y.Z`, `vX.Y.Z` e `X.Y`, em `linux/amd64` e `linux/arm64`. Em produção use sempre uma tag de versão: `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d` (defina `APP_VERSION` no `.env.prod`).
 
 ---
 

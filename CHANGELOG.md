@@ -8,23 +8,38 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ---
 
 ## [Unreleased]
-*Mudanças que estão atualmente em desenvolvimento (Open PRs).*
 
-### 🚀 Novidades
-- **Frontend:** Estilização da página do cliente (Client page style), incluindo revisão completa do fluxo de visualização de laudos, acessibilidade (focus trap, aria-live) e design system local (Inter font, sem dependências externas). (PR #67)
+### 🔒 Segurança e CI/CD
+- Esteira reescrita: scan Trivy antes do push (falha em CRITICAL/HIGH com correção), Semgrep e OWASP ZAP bloqueantes, SARIF enviado ao Code Scanning, build multi-arch (amd64/arm64) também no frontend e SBOM/provenance nas imagens.
+- Imagens do GHCR com tags `latest`, `sha-<commit>` e de versão (`X.Y.Z`, `vX.Y.Z`, `X.Y`); `docker-compose.prod.yml` passa a exigir `APP_VERSION`.
+- release-please configurado (manifest + config) e executado somente na `main`.
+- Backend: `ENABLE_MOCK_AUTH` e a `JWT_SECRET_KEY` padrão de desenvolvimento são rejeitados em `staging`/`production`, inclusive quando vêm de valores default; cabeçalho `Content-Security-Policy` na API.
+- Dockerfiles aplicam atualizações de segurança do sistema base (`apt-get upgrade`/`apk upgrade`).
 
-### ⚙️ Manutenção (Dependências)
-- Atualização do `vite` para `8.3.4`. (PR #60)
-- Atualização do `source-map-js` para `1.2.2`. (PR #53)
-- Atualização do `httpx` para `>=0.28.1`. (PR #51)
-- Atualização do `google-auth` para `>=2.58.1`. (PR #50)
-- Atualização do `cryptography` para `>=50.0.1`. (PR #49)
-- Atualização do `pytest` para `>=9.1.1`. (PR #48)
-- Atualização do `hypothesis` para `>=6.168.2`. (PR #47)
+### 🧪 Testes
+- Frontend com cobertura (`npm run test:coverage`, limite mínimo de 70%) e novos testes de componentes, serviços, hooks e fluxo do analista.
+
+### 📚 Governança e documentação
+- `SECURITY.md`, `CONTRIBUTING.md`, `CODEOWNERS` preenchido, `dependabot.yml` corrigido (npm em `/apps/frontend`, GitHub Actions, Docker e Terraform), `.pre-commit-config.yaml` com o nome correto e hooks do stack real.
+- `docker-compose.yml` e `docker-compose.prod.yml` com serviço PostgreSQL.
 
 ---
 
-## [0.2.5] - Fechamento de Versão
+## [0.2.6] - 2026-11-11
+*Revisão completa do frontend, testes automatizados e atualização de dependências.*
+
+### 🚀 Novidades
+- **Frontend / Base:** Cliente HTTP robusto, sessão com expiração, rotas protegidas por perfil, página 404, tela de erro e aviso de conexão. (PR #67)
+- **Frontend / Cliente:** Laudo com dados em destaque, estados da situação e download real do PDF. (PR #67)
+- **Frontend / Analista:** Na/K em cmolc/dm³, H+Al com fator NaOH, classe textural pelo triângulo do SBCS e situações da análise. (PR #67)
+- **Frontend / Qualidade:** ESLint, Vitest e Testing Library adicionados ao projeto. (PR #67)
+
+### 🔒 Segurança
+- **Backend:** Atualização de dependências vulneráveis (`cryptography`, `google-auth`, `httpx`, `pytest`, `hypothesis`). (PR #68)
+- **Infra/Docker:** Porta 8080 no frontend, cabeçalhos de segurança e cache no Nginx. (PR #67)
+
+---
+## [0.2.5] - 2026-11-04
 *Melhorias de design, correção de bugs de login e aprimoramentos no painel do analista.*
 
 ### 🚀 Novidades
@@ -39,7 +54,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [0.2.4]
+## [0.2.4] - 2026-10-19
 *Correções de pipeline e build de imagem.*
 
 ### 🐛 Correções
@@ -47,7 +62,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [0.2.3]
+## [0.2.3] - 2026-10-07
 *Correções de ambiente containerizado.*
 
 ### 🐛 Correções
@@ -55,7 +70,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [0.2.2]
+## [0.2.2] - 2026-09-29
 *Atualizações de infraestrutura, segurança e bibliotecas base.*
 
 ### 🔒 Segurança
@@ -74,7 +89,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [0.2.0] e [0.2.1]
+## [0.2.0] - 2026-09-26
 *Integração final entre frontend, backend e rotinas laboratoriais.*
 
 ### 🚀 Novidades
@@ -90,7 +105,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [0.1.0] - Primeira Versão (Release)
+## [0.1.0] - 2026-09-23
 *Configurações iniciais, arquitetura e fundação do projeto.*
 
 ### 🚀 Novidades
@@ -98,3 +113,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - **Backend:** Configuração da aplicação Python + Uvicorn utilizando FastAPI. (PR #1, #19)
 - **Frontend:** Inicialização da aplicação React com Vite e TypeScript. (PR #1)
 - **Infraestrutura:** Inclusão das rotinas de GitHub Actions e configuração da infraestrutura base como código (IaC) utilizando Terraform (HCL). (PR #1)
+
+[Unreleased]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.5...v0.2.6
+[0.2.5]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.4...v0.2.5
+[0.2.4]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.0...v0.2.2
+[0.2.0]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/ifpebj-ti/consulta-laudos-solo/releases/tag/v0.1.0
