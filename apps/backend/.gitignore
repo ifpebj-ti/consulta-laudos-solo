@@ -8,3 +8,6 @@ __pycache__/
 .venv/
 venv/
 *.db
+
+.coverage
+coverage.xml
