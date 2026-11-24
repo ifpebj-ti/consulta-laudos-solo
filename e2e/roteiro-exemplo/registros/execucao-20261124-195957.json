@@ -1,0 +1,233 @@
+{
+  "inicio": "2026-11-24T19:59:57.712736-03:00",
+  "fim": "2026-11-24T19:59:59.875302-03:00",
+  "base_url": "http://localhost:8002/api",
+  "passos": [
+    {
+      "numero": 1,
+      "titulo": "API saudável",
+      "requisicao": "GET /health",
+      "esperado": "200 e status ok",
+      "obtido": "200 {\"status\":\"ok\",\"ambiente\":\"dev\"}",
+      "status_http": 200,
+      "duracao_ms": 2053,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 2,
+      "titulo": "Analista entra no sistema",
+      "requisicao": "POST /auth/google {idToken: mock-dev-token}",
+      "esperado": "200, token Bearer e role ANALISTA",
+      "obtido": "200, usuário analista.dev@instituto.edu.br",
+      "status_http": 200,
+      "duracao_ms": 5,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 3,
+      "titulo": "Analista cadastra a amostra",
+      "requisicao": "POST /laudos (protocolo E2E-20261124-195957)",
+      "esperado": "201, status EM_ANALISE, versão 1",
+      "obtido": "201, status EM_ANALISE, versão 1",
+      "status_http": 201,
+      "duracao_ms": 22,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 4,
+      "titulo": "Protocolo duplicado é recusado",
+      "requisicao": "POST /laudos (mesmo protocolo)",
+      "esperado": "409",
+      "obtido": "409: O protocolo 'E2E-20261124-195957' já está cadastrado no sistema.",
+      "status_http": 409,
+      "duracao_ms": 5,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 5,
+      "titulo": "Analista abre a análise da amostra",
+      "requisicao": "GET /laudos/E2E-20261124-195957/analise",
+      "esperado": "200 com solicitante, propriedade e versão 1",
+      "obtido": "200, status EM_ANALISE, versão 1",
+      "status_http": 200,
+      "duracao_ms": 7,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 6,
+      "titulo": "Auto-save: rascunho com dados de química",
+      "requisicao": "PATCH /laudos/E2E-20261124-195957/analise/rascunho (versaoEsperada=1)",
+      "esperado": "200 e versão incrementada",
+      "obtido": "200, nova versão 2",
+      "status_http": 200,
+      "duracao_ms": 19,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 7,
+      "titulo": "Concorrência otimista: salvar com versão desatualizada",
+      "requisicao": "PATCH rascunho (versaoEsperada=1, já superada)",
+      "esperado": "409",
+      "obtido": "409: Conflito de edição: a análise foi atualizada por outro analista ou aba. Recarregue os dados mais recentes.",
+      "status_http": 409,
+      "duracao_ms": 4,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 8,
+      "titulo": "Processar sem calibração e sem TFSA é bloqueado",
+      "requisicao": "POST /laudos/E2E-20261124-195957/analise/processar (payload incompleto)",
+      "esperado": "422",
+      "obtido": "422",
+      "status_http": 422,
+      "duracao_ms": 3,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 9,
+      "titulo": "Analista processa os cálculos oficiais",
+      "requisicao": "POST /laudos/E2E-20261124-195957/analise/processar (dados completos)",
+      "esperado": "200 e status AGUARDANDO_HOMOLOGACAO",
+      "obtido": "200, status AGUARDANDO_HOMOLOGACAO, versão 3",
+      "status_http": 200,
+      "duracao_ms": 20,
+      "resultado": "PASSOU",
+      "evidencia": {
+        "complexoSortivo": {
+          "somaBases": 3.1173,
+          "ctcEfetiva": 3.4173,
+          "ctcPotencial": 6.3173,
+          "saturacaoBases": 49.35,
+          "saturacaoAluminio": 8.78,
+          "relacaoCaMg": 2.47,
+          "relacaoCaK": 18.25,
+          "relacaoMgK": 7.39,
+          "caSobreT": 33.24,
+          "mgSobreT": 13.46,
+          "hAlSobreT": 50.65
+        },
+        "conversoes": {
+          "sodioCmolc": 0.0522,
+          "potassioCmolc": 0.1151
+        },
+        "granulometria": {
+          "pesoAreia": 11.4392,
+          "pesoSecoNaoh": 0.0079,
+          "argila10mlCorrigido": 0.0846,
+          "argila1000ml": 8.46,
+          "pctAreia": 57.2,
+          "pctSilte": 0.5,
+          "pctArgila": 42.3,
+          "classeTextural": "Argilo Arenoso"
+        }
+      }
+    },
+    {
+      "numero": 10,
+      "titulo": "Resultado persistido: reabrir a análise",
+      "requisicao": "GET /laudos/E2E-20261124-195957/analise",
+      "esperado": "status AGUARDANDO_HOMOLOGACAO e pH 5.4 gravado",
+      "obtido": "200, status AGUARDANDO_HOMOLOGACAO, pH 5.4",
+      "status_http": 200,
+      "duracao_ms": 4,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 11,
+      "titulo": "Homologação pelo servidor",
+      "requisicao": "POST /laudos/E2E-20261124-195957/homologar",
+      "esperado": "200 e status CONCLUIDO (endpoint ainda não existe no backend)",
+      "obtido": "404: endpoint não implementado (lacuna conhecida, ver ESTRATEGIA.md §7)",
+      "status_http": 404,
+      "duracao_ms": 1,
+      "resultado": "PULADO",
+      "evidencia": {}
+    },
+    {
+      "numero": 12,
+      "titulo": "Cliente não acessa a bancada (RBAC)",
+      "requisicao": "GET /laudos/E2E-20261124-195957/analise com token de cliente",
+      "esperado": "403",
+      "obtido": "403: Acesso negado para o perfil 'CLIENTE'.",
+      "status_http": 403,
+      "duracao_ms": 2,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 13,
+      "titulo": "Cliente consulta com protocolo e CPF corretos",
+      "requisicao": "POST /auth/cliente (protocolo 20101.2306)",
+      "esperado": "200, laudo com CPF mascarado",
+      "obtido": "200, CPF exibido como ***.982.247-**, status do laudo CONCLUIDO",
+      "status_http": 200,
+      "duracao_ms": 1,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 14,
+      "titulo": "Cliente com CPF errado recebe resposta neutra",
+      "requisicao": "POST /auth/cliente (CPF válido, mas de outra pessoa)",
+      "esperado": "401 sem indicar qual campo falhou",
+      "obtido": "401: Dados de consulta inválidos ou laudo indisponível.",
+      "status_http": 401,
+      "duracao_ms": 1,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 15,
+      "titulo": "Amostra recém-cadastrada na consulta do cliente",
+      "requisicao": "POST /auth/cliente (protocolo E2E-20261124-195957)",
+      "esperado": "200 quando a consulta do cliente ler o banco; hoje usa base em memória",
+      "obtido": "401: consulta do cliente ainda usa BASE_LAUDOS_MOCK (lacuna conhecida, ver ESTRATEGIA.md §7)",
+      "status_http": 401,
+      "duracao_ms": 2,
+      "resultado": "PULADO",
+      "evidencia": {}
+    },
+    {
+      "numero": 16,
+      "titulo": "Download do PDF pelo cliente",
+      "requisicao": "GET /laudos/20101.2306/pdf",
+      "esperado": "200 application/pdf (exige --storage-dir para criar o PDF de teste)",
+      "obtido": "200, application/pdf, 193 bytes",
+      "status_http": 200,
+      "duracao_ms": 6,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 17,
+      "titulo": "Cliente não baixa PDF de outro protocolo (BOLA)",
+      "requisicao": "GET /laudos/2026-SOLO-00123/pdf com token do protocolo 20101.2306",
+      "esperado": "403",
+      "obtido": "403: Você não possui permissão para acessar este laudo.",
+      "status_http": 403,
+      "duracao_ms": 3,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    },
+    {
+      "numero": 18,
+      "titulo": "Path traversal no download é barrado",
+      "requisicao": "GET /laudos/..%2F..%2Fetc%2Fpasswd/pdf",
+      "esperado": "400, 403 ou 404, nunca 200",
+      "obtido": "404",
+      "status_http": 404,
+      "duracao_ms": 1,
+      "resultado": "PASSOU",
+      "evidencia": {}
+    }
+  ]
+}
