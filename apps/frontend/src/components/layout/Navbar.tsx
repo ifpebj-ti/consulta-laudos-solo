@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { VERSAO_APP } from '@/config/ambiente';
 import { BrandMark } from './BrandMark';
 import './Navbar.css';
 
@@ -13,15 +14,22 @@ export function Navbar({ titulo }: { titulo: string }) {
   }
 
   return (
-    <header className="navbar">
-      <BrandMark />
-      <span className="navbar__titulo">{titulo}</span>
-      <div className="navbar__conta">
-        {session?.nome && <span className="navbar__usuario">{session.nome}</span>}
-        <button type="button" className="navbar__sair" onClick={aoSair}>
-          Sair
-        </button>
-      </div>
-    </header>
+    <>
+      <header className="navbar">
+        <BrandMark />
+        <span className="navbar__titulo">{titulo}</span>
+        <div className="navbar__conta">
+          {session?.nome && <span className="navbar__usuario">{session.nome}</span>}
+          <button type="button" className="navbar__sair" onClick={aoSair}>
+            Sair
+          </button>
+        </div>
+      </header>
+      {session && (
+        <div className="navbar-versao" aria-label="Versão da aplicação">
+          <span>Versão {VERSAO_APP}</span>
+        </div>
+      )}
+    </>
   );
 }

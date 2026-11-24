@@ -38,18 +38,35 @@ export class ErrorBoundary extends Component<Props, State> {
     const { erro } = this.state;
     if (!erro) return this.props.children;
 
-    const novaVersao = ehFalhaDeCarregamentoDeModulo(erro);
+    const falhaModulo = ehFalhaDeCarregamentoDeModulo(erro);
+    const semConexao = falhaModulo && typeof navigator !== 'undefined' && navigator.onLine === false;
+    const textos = semConexao
+      ? {
+          codigo: 'Sem conexão',
+          titulo: 'Sem',
+          destaque: 'internet',
+          descricao: 'Não foi possível carregar esta tela porque você está sem conexão. Conecte-se e recarregue a página.',
+        }
+      : falhaModulo
+        ? {
+            codigo: 'Atualização disponível',
+            titulo: 'Nova versão',
+            destaque: 'do sistema',
+            descricao: 'O sistema foi atualizado enquanto você navegava. Recarregue a página para continuar.',
+          }
+        : {
+            codigo: 'Erro inesperado',
+            titulo: 'Algo deu',
+            destaque: 'errado',
+            descricao: 'Não foi possível exibir esta tela. Recarregue a página; se o problema continuar, procure o laboratório.',
+          };
 
     return (
       <EstadoTela
-        codigo={novaVersao ? 'Atualização disponível' : 'Erro inesperado'}
-        titulo={novaVersao ? 'Nova versão' : 'Algo deu'}
-        destaque={novaVersao ? 'do sistema' : 'errado'}
-        descricao={
-          novaVersao
-            ? 'O sistema foi atualizado enquanto você navegava. Recarregue a página para continuar.'
-            : 'Não foi possível exibir esta tela. Recarregue a página; se o problema continuar, procure o laboratório.'
-        }
+        codigo={textos.codigo}
+        titulo={textos.titulo}
+        destaque={textos.destaque}
+        descricao={textos.descricao}
         acoes={
           <>
             <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>

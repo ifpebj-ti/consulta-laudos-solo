@@ -25,6 +25,7 @@ type EstadoPdf =
   | { tipo: 'falha'; falha: FalhaPdf };
 
 const TEMPO_FEEDBACK_COPIA_MS = 2000;
+const TEMPO_SAIDA_AVISO_MS = 320;
 
 const textoOuTraco = (valor: string | null | undefined) => (valor && valor.trim() ? valor.trim() : '—');
 
@@ -94,24 +95,52 @@ export function LaudoDetalhePage() {
   const online = useConexao();
   const [estadoPdf, setEstadoPdf] = useState<EstadoPdf>({ tipo: 'ocioso' });
   const [copiado, setCopiado] = useState(false);
+  const [falhaSaindo, setFalhaSaindo] = useState<FalhaPdf | null>(null);
+  const [avisoLiberacao, setAvisoLiberacao] = useState(false);
   const controladorRef = useRef<AbortController | null>(null);
+  const baixandoRef = useRef(false);
   const avisoPdfRef = useRef<HTMLDivElement>(null);
   const laudo = session?.laudo;
   const status = infoStatusLaudo(laudo?.status);
+  const pdfLiberado = status.categoria === 'emitido' && laudo?.temPdfDisponivel === true;
+  const [pdfLiberadoAnterior, setPdfLiberadoAnterior] = useState(pdfLiberado);
   useTituloPagina(laudo ? `Laudo ${laudo.protocolo}` : 'Laudo');
+
+  if (pdfLiberado !== pdfLiberadoAnterior) {
+    setPdfLiberadoAnterior(pdfLiberado);
+    if (pdfLiberado) {
+      setAvisoLiberacao(true);
+      if (estadoPdf.tipo === 'falha') {
+        setFalhaSaindo(estadoPdf.falha);
+        setEstadoPdf({ tipo: 'ocioso' });
+      }
+    }
+  }
 
   const situacao = useSituacaoLaudo({
     protocolo: laudo?.protocolo ?? '',
     token: session?.token ?? '',
-    emAndamento: status.categoria === 'aguardando' || status.categoria === 'andamento',
+    emAndamento:
+      status.categoria === 'aguardando' || status.categoria === 'andamento' || (status.categoria === 'emitido' && !pdfLiberado),
     onAtualizado: atualizarLaudo,
   });
 
   useEffect(() => () => controladorRef.current?.abort(), []);
 
   useEffect(() => {
-    if (estadoPdf.tipo === 'falha') avisoPdfRef.current?.focus();
+    if (estadoPdf.tipo !== 'falha') return;
+    avisoPdfRef.current?.focus();
+    const temporizador = window.setTimeout(() => {
+      if (avisoPdfRef.current && document.activeElement !== avisoPdfRef.current) avisoPdfRef.current.focus();
+    }, 50);
+    return () => window.clearTimeout(temporizador);
   }, [estadoPdf]);
+
+  useEffect(() => {
+    if (!falhaSaindo) return;
+    const temporizador = window.setTimeout(() => setFalhaSaindo(null), TEMPO_SAIDA_AVISO_MS);
+    return () => window.clearTimeout(temporizador);
+  }, [falhaSaindo]);
 
   useEffect(() => {
     if (!copiado) return;
@@ -149,10 +178,13 @@ export function LaudoDetalhePage() {
   }
 
   const aoBaixarPdf = async () => {
-    if (baixando) return;
+    if (baixandoRef.current) return;
+    baixandoRef.current = true;
     controladorRef.current?.abort();
     const controlador = new AbortController();
     controladorRef.current = controlador;
+    if (estadoPdf.tipo === 'falha') setFalhaSaindo(estadoPdf.falha);
+    setAvisoLiberacao(false);
     setEstadoPdf({ tipo: 'baixando' });
     try {
       const nomeArquivo = await laudoService.baixarPdf(laudo.protocolo, token, controlador.signal);
@@ -160,15 +192,38 @@ export function LaudoDetalhePage() {
     } catch (erro) {
       const falha = classificarFalhaPdf(erro);
       if (falha.motivo !== 'cancelado' && !controlador.signal.aborted) setEstadoPdf({ tipo: 'falha', falha });
+    } finally {
+      if (controladorRef.current === controlador) baixandoRef.current = false;
     }
+  }
+
+  const tituloFalhaPdf = (falha: FalhaPdf) =>
+    falha.motivo === 'indisponivel' ? 'PDF ainda não disponível' : 'Não foi possível baixar o PDF';
+
+  const renderizarAvisoSaindo = () => {
+    if (!falhaSaindo || estadoPdf.tipo === 'falha') return null;
+    return (
+      <div
+        className={`estado-bloco ${falhaSaindo.motivo === 'indisponivel' ? 'estado-bloco--info' : 'estado-bloco--erro'} estado-bloco--saindo`}
+        aria-hidden="true"
+      >
+        <strong className="estado-bloco__titulo">{tituloFalhaPdf(falhaSaindo)}</strong>
+        {falhaSaindo.mensagem}
+      </div>
+    );
   }
 
   const renderizarAvisoPdf = () => {
     if (estadoPdf.tipo === 'concluido') {
       return (
-        <p className="download-status">
+        <p className="download-status download-status--entrando">
           Download iniciado: <strong>{estadoPdf.nomeArquivo}</strong>
         </p>
+      );
+    }
+    if (estadoPdf.tipo === 'ocioso' && avisoLiberacao && pdfLiberado) {
+      return (
+        <p className="download-status download-status--entrando">O PDF do laudo foi liberado. Você já pode baixar.</p>
       );
     }
     if (estadoPdf.tipo !== 'falha') return null;
@@ -181,9 +236,7 @@ export function LaudoDetalhePage() {
         className={`estado-bloco ${informativo ? 'estado-bloco--info' : 'estado-bloco--erro'}`}
         role="alert"
       >
-        <strong className="estado-bloco__titulo">
-          {informativo ? 'PDF ainda não disponível' : 'Não foi possível baixar o PDF'}
-        </strong>
+        <strong className="estado-bloco__titulo">{tituloFalhaPdf(falha)}</strong>
         {falha.mensagem}
         {falha.podeTentarNovamente && (
           <div className="estado-bloco__acoes">
@@ -297,6 +350,7 @@ export function LaudoDetalhePage() {
             <p className="download-laudo__texto">{textoDownload()}</p>
             {renderizarAcaoPdf()}
           </div>
+          {renderizarAvisoSaindo()}
           <div aria-live="polite">{renderizarAvisoPdf()}</div>
         </section>
 

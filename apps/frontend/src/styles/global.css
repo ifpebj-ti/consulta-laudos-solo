@@ -139,6 +139,14 @@ html .form-field :is(.select, .datepicker):is(:focus-visible, .select--aberto, .
 
 
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   :is(.form-field, .calib-calculadora__campo, .entrada-campo, .dashboard-busca),
   .form-field--com-branco::before {
     transition: none;

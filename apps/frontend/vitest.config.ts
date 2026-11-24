@@ -1,9 +1,13 @@
 import path from 'path';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { resolverVersaoApp } from './vite.config.ts';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(resolverVersaoApp()),
+  },
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

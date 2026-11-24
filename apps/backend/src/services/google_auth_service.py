@@ -11,17 +11,8 @@ logger = logging.getLogger(__name__)
 # Mock controlado para ambiente de desenvolvimento seguro (SEC-001 / VULN-03)
 MOCK_ANALISTA_PAYLOAD = {
     "email": "analista.dev@instituto.edu.br",
-    "name": "Analista de Solo Dev",
+    "name": "Prof. Msc. Carla Andrade Ferreira",
     "email_verified": True,
-}
-
-# Lista autorizada temporária (whitelist) de analistas até persistência em banco
-ANALISTAS_AUTORIZADOS = {
-    "analista.dev@instituto.edu.br",
-    "analista@instituto.edu.br",
-    "inrp@discente.ifpe.edu.br",
-    "glos@discente.ifpe.edu.br",
-    "gscb@discente.ifpe.edu.br",
 }
 
 
@@ -37,7 +28,7 @@ class GoogleAuthService:
         1. aud == settings.GOOGLE_CLIENT_ID
         2. iss in Google issuers
         3. email_verified is True
-        4. Checagem de whitelist de analistas autorizados
+        A autorização da conta é validada em seguida na tabela `usuarios` do banco de dados.
         """
         # Em modo dev com flag explícita, se não houver credencial do Google configurada, aceita token 'mock-dev-token'
         if settings.ENVIRONMENT == "dev" and settings.ENABLE_MOCK_AUTH:
@@ -70,11 +61,8 @@ class GoogleAuthService:
                 raise GoogleAuthError("O e-mail da conta Google não está verificado.")
 
             email = payload.get("email")
-            if not email or email not in ANALISTAS_AUTORIZADOS:
-                logger.warning(
-                    f"AUDIT: Tentativa de acesso negada para e-mail não cadastrado como analista: {email}"
-                )
-                raise GoogleAuthError("Usuário não cadastrado como analista ativo.")
+            if not email:
+                raise GoogleAuthError("Token Google não contém endereço de e-mail.")
 
             return payload
 

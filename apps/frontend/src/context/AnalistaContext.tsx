@@ -1,4 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { analiseService, type LaudoResumoItem } from '@/services/analiseService';
+import { calcularPrevisaoEntrega } from '@/features/laudos/analista/statusAmostra';
 import {
   DADOS_ANALISE_VAZIOS,
   type AmostraRegistro,
@@ -6,6 +9,7 @@ import {
   type Identificacao,
   type StatusAmostra,
 } from '@/features/laudos/analista/tipos';
+import { chavePersistenciaAnalista } from '@/lib/persistenciaAnalista';
 
 interface AnalistaContextValue {
   amostras: AmostraRegistro[];
@@ -20,32 +24,110 @@ interface AnalistaContextValue {
 
 const AnalistaContext = createContext<AnalistaContextValue | undefined>(undefined);
 
-const CHAVE_PERSISTENCIA_DEV = 'consulta-laudos-solo:amostras-analista';
 const PERSISTIR = import.meta.env.DEV;
 
-function carregarAmostrasSalvas(): AmostraRegistro[] {
-  if (!PERSISTIR) return [];
+function mapearStatusBackend(statusBackend: string, statusLocal?: StatusAmostra): StatusAmostra {
+  if (statusLocal === 'concluido' || statusBackend === 'CONCLUIDO') return 'concluido';
+  if (statusBackend === 'AGUARDANDO_HOMOLOGACAO') return 'aguardando_homologacao';
+  if (statusBackend === 'EM_ANALISE') return 'em_andamento';
+  return statusLocal ?? 'nao_iniciado';
+}
+
+function resumoParaAmostraRegistro(item: LaudoResumoItem, existente?: AmostraRegistro): AmostraRegistro {
+  const dataRec = item.dataRecebimento || existente?.dados.identificacao.dataRecebimento || item.criadoEm.slice(0, 10);
+  const prazo = existente?.dados.identificacao.prazo || calcularPrevisaoEntrega(dataRec);
+
+  const identificacao: Identificacao = {
+    protocolo: item.protocolo,
+    cpfCliente: item.cpfCliente || existente?.dados.identificacao.cpfCliente || '',
+    dataRecebimento: dataRec,
+    prazo,
+    tipoAnalise: item.tipoAnalise ?? existente?.dados.identificacao.tipoAnalise ?? 'fisico_quimica',
+    solicitante: item.solicitante,
+    dataEmissao: existente?.dados.identificacao.dataEmissao ?? '',
+    propriedade: item.propriedade,
+    localizacao: item.localizacao ?? existente?.dados.identificacao.localizacao ?? '',
+    areaIdentificacao: item.areaIdentificacao ?? existente?.dados.identificacao.areaIdentificacao ?? '',
+    areaHectares: item.areaHectares ?? existente?.dados.identificacao.areaHectares ?? '',
+    profundidadeColeta: item.profundidadeColeta ?? existente?.dados.identificacao.profundidadeColeta ?? '',
+    cultivo: item.cultivo ?? existente?.dados.identificacao.cultivo ?? '',
+    culturaExistente: item.culturaExistente ?? existente?.dados.identificacao.culturaExistente ?? '',
+    email: item.email ?? existente?.dados.identificacao.email ?? '',
+    telefone: item.telefone ?? existente?.dados.identificacao.telefone ?? '',
+  };
+
+  return {
+    dados: {
+      ...(existente?.dados ?? DADOS_ANALISE_VAZIOS),
+      identificacao,
+    },
+    status: mapearStatusBackend(item.status, existente?.status),
+    criadaEm: item.criadoEm,
+    atualizadaEm: existente?.atualizadaEm,
+  };
+}
+
+function carregarAmostrasSalvas(chave: string | null): AmostraRegistro[] {
+  if (!PERSISTIR || !chave) return [];
   try {
-    const bruto = localStorage.getItem(CHAVE_PERSISTENCIA_DEV);
+    const bruto = localStorage.getItem(chave);
     const lista = bruto ? (JSON.parse(bruto) as AmostraRegistro[]) : [];
-    return Array.isArray(lista) ? lista : [];
+    if (!Array.isArray(lista)) return [];
+    return lista.map((amostra) => ({
+      ...amostra,
+      dados: {
+        ...amostra.dados,
+        quimica: { ...DADOS_ANALISE_VAZIOS.quimica, ...amostra.dados?.quimica },
+      },
+    }));
   } catch {
     return [];
   }
 }
 
 export function AnalistaProvider({ children }: { children: ReactNode }) {
-  const [amostras, setAmostras] = useState<AmostraRegistro[]>(carregarAmostrasSalvas);
+  const { session } = useAuth();
+  const chave = chavePersistenciaAnalista(session?.escopoAnalistaId ?? session?.email ?? session?.nome);
+  const [amostras, setAmostras] = useState<AmostraRegistro[]>(() => carregarAmostrasSalvas(chave));
   const [protocoloAtual, setProtocoloAtual] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!PERSISTIR) return;
+    setAmostras(carregarAmostrasSalvas(chave));
+    setProtocoloAtual(null);
+  }, [chave]);
+
+  useEffect(() => {
+    if (!PERSISTIR || !chave) return;
     try {
-      localStorage.setItem(CHAVE_PERSISTENCIA_DEV, JSON.stringify(amostras));
+      localStorage.setItem(chave, JSON.stringify(amostras));
     } catch {
       return;
     }
-  }, [amostras]);
+  }, [amostras, chave]);
+
+  useEffect(() => {
+    if (!session?.token) return;
+    let ativo = true;
+
+    analiseService
+      .listarAmostras(session.token)
+      .then((res) => {
+        if (!ativo || !res.sucesso) return;
+        setAmostras((atuais) => {
+          const porProtocolo = new Map(atuais.map((a) => [a.dados.identificacao.protocolo, a]));
+          return res.dados.map((item) =>
+            resumoParaAmostraRegistro(item, porProtocolo.get(item.protocolo)),
+          );
+        });
+      })
+      .catch(() => {
+        // mantém cache local caso offline
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [session?.token, chave]);
 
   const registroAtual = useMemo(
     () => amostras.find((a) => a.dados.identificacao.protocolo === protocoloAtual) ?? null,
@@ -56,7 +138,11 @@ export function AnalistaProvider({ children }: { children: ReactNode }) {
 
   const criarAmostra = useCallback((identificacao: Identificacao) => {
     const dados: DadosAnalise = { ...DADOS_ANALISE_VAZIOS, identificacao };
-    setAmostras((atual) => [...atual, { dados, status: 'nao_iniciado', criadaEm: new Date().toISOString(), atualizadaEm: new Date().toISOString() }]);
+    const agora = new Date().toISOString();
+    setAmostras((atual) => [
+      { dados, status: 'nao_iniciado', criadaEm: agora, atualizadaEm: agora },
+      ...atual.filter((a) => a.dados.identificacao.protocolo !== identificacao.protocolo),
+    ]);
     setProtocoloAtual(identificacao.protocolo);
   }, []);
 
@@ -79,6 +165,7 @@ export function AnalistaProvider({ children }: { children: ReactNode }) {
       }),
     );
   }, []);
+
   const concluirAmostraAtual = useCallback(() => {
     setAmostras((atual) =>
       atual.map((amostra) =>

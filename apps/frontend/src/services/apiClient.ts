@@ -35,6 +35,22 @@ export function registrarManipuladorNaoAutorizado(manipulador: ManipuladorNaoAut
   manipuladorNaoAutorizado = manipulador;
 }
 
+type VerificadorSessao = (token: string) => boolean;
+
+let verificadorSessao: VerificadorSessao | null = null;
+
+export const MENSAGEM_SESSAO_ENCERRADA = 'Sua sessão foi encerrada. Entre novamente para continuar.';
+
+export function registrarVerificadorSessao(verificador: VerificadorSessao | null): void {
+  verificadorSessao = verificador;
+}
+
+function garantirSessaoAtiva(token: string | undefined) {
+  if (token && verificadorSessao && !verificadorSessao(token)) {
+    throw new ApiError(401, MENSAGEM_SESSAO_ENCERRADA, 'SESSAO_ENCERRADA');
+  }
+}
+
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
@@ -151,10 +167,31 @@ export async function interpretarFalha(response: Response): Promise<ApiError> {
     erro.message = mensagemPadrao(response.status);
   }
 
-  const retryAfter = Number(response.headers.get('retry-after'));
-  if (Number.isFinite(retryAfter) && retryAfter > 0) erro.tentarAposSegundos = Math.ceil(retryAfter);
+  const espera = segundosParaTentarNovamente(response.headers.get('retry-after'));
+  if (espera) {
+    erro.tentarAposSegundos = espera;
+    if (response.status === 429) erro.message = mensagemLimiteRequisicoes(espera);
+  }
 
   return erro;
+}
+
+export function segundosParaTentarNovamente(valor: string | null, agora = Date.now()): number | undefined {
+  if (!valor || !valor.trim()) return undefined;
+  const segundos = Number(valor.trim());
+  if (Number.isFinite(segundos)) return segundos > 0 ? Math.ceil(segundos) : undefined;
+  const data = Date.parse(valor);
+  if (Number.isNaN(data)) return undefined;
+  const restante = Math.ceil((data - agora) / 1000);
+  return restante > 0 ? restante : undefined;
+}
+
+export function mensagemLimiteRequisicoes(segundos: number): string {
+  return `Muitas tentativas em pouco tempo. Aguarde ${segundos} segundo${segundos > 1 ? 's' : ''} e tente novamente.`;
+}
+
+export function ehConflitoDeVersao(erro: unknown): boolean {
+  return erro instanceof ApiError && (erro.status === 409 || erro.status === 412);
 }
 
 function notificarSeNaoAutorizado(erro: ApiError, token?: string) {
@@ -165,6 +202,7 @@ async function request<T>(
   path: string,
   { method = 'GET', body, token, signal, timeoutMs = TEMPO_LIMITE_REQUISICAO_MS, query }: RequestOptions = {},
 ): Promise<T> {
+  garantirSessaoAtiva(token);
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -195,7 +233,10 @@ export interface ArquivoBaixado {
   blob: Blob;
   nomeArquivo: string | null;
   tipo: string;
+  inicio: string;
 }
+
+const BYTES_INICIAIS_ARQUIVO = 1024;
 
 export function extrairNomeArquivo(contentDisposition: string | null): string | null {
   if (!contentDisposition) return null;
@@ -222,6 +263,7 @@ async function requestArquivo(
     tiposAceitos,
   }: { token: string; signal?: AbortSignal; timeoutMs?: number; tiposAceitos: string[] },
 ): Promise<ArquivoBaixado> {
+  garantirSessaoAtiva(token);
   const response = await executar(
     montarUrl(path),
     { headers: { Authorization: `Bearer ${token}`, Accept: tiposAceitos.join(', ') } },
@@ -240,12 +282,17 @@ async function requestArquivo(
     throw new ApiError(response.status, 'O servidor enviou um arquivo em formato inesperado.', 'INVALID_RESPONSE');
   }
 
-  const blob = await response.blob();
-  if (blob.size === 0) {
+  const conteudo = new Uint8Array(await response.arrayBuffer());
+  if (conteudo.byteLength === 0) {
     throw new ApiError(response.status, 'O servidor enviou um arquivo vazio.', 'INVALID_RESPONSE');
   }
 
-  return { blob, tipo, nomeArquivo: extrairNomeArquivo(response.headers.get('content-disposition')) };
+  return {
+    blob: new Blob([conteudo], { type: tipo }),
+    tipo,
+    inicio: String.fromCharCode(...conteudo.subarray(0, BYTES_INICIAIS_ARQUIVO)),
+    nomeArquivo: extrairNomeArquivo(response.headers.get('content-disposition')),
+  };
 }
 
 export const apiClient = { request, requestArquivo };

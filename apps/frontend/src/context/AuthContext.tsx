@@ -1,28 +1,44 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { authService } from '@/services/authService';
-import { registrarManipuladorNaoAutorizado } from '@/services/apiClient';
+import { registrarManipuladorNaoAutorizado, registrarVerificadorSessao } from '@/services/apiClient';
 import type { LaudoDetalhe } from '@/types/laudo';
 import type { Role } from '@/types/auth';
-import { expiracaoDoToken, tokenExpirado } from '@/lib/token';
+import { expiracaoDoToken, impressaoDoToken, tokenExpirado } from '@/lib/token';
+import { normalizarLaudo } from '@/services/respostasApi';
 
 const STORAGE_KEY = 'consulta-laudos-solo:auth';
+const CANAL_SESSAO = 'consulta-laudos-solo:sessao';
+
+interface MensagemSessao {
+  tipo: 'saida';
+  impressao: string;
+}
+
+function abrirCanalSessao(): BroadcastChannel | null {
+  return typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(CANAL_SESSAO);
+}
 
 export interface AuthSession {
   token: string;
   role: Role;
   nome?: string;
   email?: string;
+  crea?: string | null;
+  escopoAnalistaId?: string | null;
+  responsavelNome?: string | null;
+  responsavelCrea?: string | null;
   protocolo?: string;
   laudo?: LaudoDetalhe;
   consultadoEm?: string;
 }
 
-export type MotivoSaida = 'manual' | 'sessao_expirada';
+export type MotivoSaida = 'manual' | 'sessao_expirada' | 'sessao_encerrada';
 
 interface AuthContextValue {
   session: AuthSession | null;
   motivoUltimaSaida: MotivoSaida | null;
-  entrarComGoogle: (idToken: string) => Promise<void>;
+  entrarComCredenciais: (username: string, password: string) => Promise<Role>;
+  entrarComGoogle: (idToken: string) => Promise<Role>;
   entrarComProtocolo: (protocolo: string, cpf: string) => Promise<LaudoDetalhe>;
   sair: (motivo?: MotivoSaida) => void;
   limparMotivoSaida: () => void;
@@ -34,7 +50,8 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 function sessaoValida(valor: unknown): valor is AuthSession {
   if (!valor || typeof valor !== 'object') return false;
   const sessao = valor as Partial<AuthSession>;
-  return typeof sessao.token === 'string' && (sessao.role === 'ANALISTA' || sessao.role === 'CLIENTE');
+  const rolesValidas: Role[] = ['POWER_USER', 'ANALISTA', 'AUXILIAR', 'CLIENTE'];
+  return typeof sessao.token === 'string' && typeof sessao.role === 'string' && rolesValidas.includes(sessao.role);
 }
 
 function lerSessaoArmazenada(): AuthSession | null {
@@ -46,18 +63,37 @@ function lerSessaoArmazenada(): AuthSession | null {
       sessionStorage.removeItem(STORAGE_KEY);
       return null;
     }
+    if (sessao.laudo !== undefined) {
+      try {
+        return { ...sessao, laudo: normalizarLaudo(sessao.laudo) };
+      } catch {
+        return { ...sessao, laudo: undefined };
+      }
+    }
     return sessao;
   } catch {
     return null;
   }
 }
 
-function gravarSessao(sessao: AuthSession | null) {
+function gravarSessao(sessao: AuthSession | null): boolean {
   try {
     if (sessao) sessionStorage.setItem(STORAGE_KEY, JSON.stringify(sessao));
     else sessionStorage.removeItem(STORAGE_KEY);
+    return true;
   } catch {
-    return;
+    return false;
+  }
+}
+
+function tokenArmazenado(): string | null | undefined {
+  try {
+    const bruto = sessionStorage.getItem(STORAGE_KEY);
+    if (!bruto) return null;
+    const sessao: unknown = JSON.parse(bruto);
+    return sessaoValida(sessao) ? sessao.token : null;
+  } catch {
+    return undefined;
   }
 }
 
@@ -65,17 +101,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(lerSessaoArmazenada);
   const [motivoUltimaSaida, setMotivoUltimaSaida] = useState<MotivoSaida | null>(null);
 
+  const sessaoRef = useRef(session);
+  sessaoRef.current = session;
+  const persistidaRef = useRef(session !== null);
+  const canalRef = useRef<BroadcastChannel | null>(null);
+
   const salvarSessao = useCallback((proxima: AuthSession) => {
-    gravarSessao(proxima);
+    persistidaRef.current = gravarSessao(proxima);
+    sessaoRef.current = proxima;
     setMotivoUltimaSaida(null);
     setSession(proxima);
   }, []);
 
-  const sair = useCallback((motivo: MotivoSaida = 'manual') => {
+  const encerrarLocalmente = useCallback((motivo: MotivoSaida) => {
+    sessaoRef.current = null;
     gravarSessao(null);
     setMotivoUltimaSaida(motivo);
     setSession(null);
   }, []);
+
+  const sessaoContinuaValida = useCallback(
+    (token?: string) => {
+      const atual = sessaoRef.current;
+      if (!atual) return false;
+      if (token !== undefined && token !== atual.token) return false;
+      if (!persistidaRef.current) return true;
+      const armazenado = tokenArmazenado();
+      if (armazenado === undefined || armazenado === atual.token) return true;
+      encerrarLocalmente('sessao_encerrada');
+      return false;
+    },
+    [encerrarLocalmente],
+  );
+
+  useEffect(() => {
+    registrarVerificadorSessao((token) => sessaoContinuaValida(token));
+    return () => registrarVerificadorSessao(null);
+  }, [sessaoContinuaValida]);
+
+  useEffect(() => {
+    const verificar = () => {
+      if (document.visibilityState === 'visible') sessaoContinuaValida();
+    };
+    window.addEventListener('focus', verificar);
+    document.addEventListener('visibilitychange', verificar);
+    window.addEventListener('pageshow', verificar);
+    return () => {
+      window.removeEventListener('focus', verificar);
+      document.removeEventListener('visibilitychange', verificar);
+      window.removeEventListener('pageshow', verificar);
+    };
+  }, [sessaoContinuaValida]);
+
+  const sair = useCallback(
+    (motivo: MotivoSaida = 'manual') => {
+      const atual = sessaoRef.current;
+      if (atual) {
+        const mensagem: MensagemSessao = { tipo: 'saida', impressao: impressaoDoToken(atual.token) };
+        canalRef.current?.postMessage(mensagem);
+      }
+      encerrarLocalmente(motivo);
+    },
+    [encerrarLocalmente],
+  );
+
+  useEffect(() => {
+    const canal = abrirCanalSessao();
+    canalRef.current = canal;
+    if (!canal) return;
+    canal.onmessage = (evento: MessageEvent<unknown>) => {
+      const dados = evento.data as Partial<MensagemSessao> | null;
+      const atual = sessaoRef.current;
+      if (dados?.tipo === 'saida' && atual && dados.impressao === impressaoDoToken(atual.token)) {
+        encerrarLocalmente('manual');
+      }
+    };
+    return () => {
+      canal.close();
+      canalRef.current = null;
+    };
+  }, [encerrarLocalmente]);
 
   const limparMotivoSaida = useCallback(() => setMotivoUltimaSaida(null), []);
 
@@ -97,15 +202,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(temporizador);
   }, [session, sair]);
 
-  const entrarComGoogle = useCallback(
-    async (idToken: string) => {
-      const resposta = await authService.loginGoogle(idToken);
+  const entrarComCredenciais = useCallback(
+    async (username: string, password: string): Promise<Role> => {
+      const resposta = await authService.loginLocal(username, password);
+      const role = resposta.usuario.role;
       salvarSessao({
         token: resposta.token,
-        role: 'ANALISTA',
+        role,
         nome: resposta.usuario.nome,
         email: resposta.usuario.email,
+        crea: resposta.usuario.crea,
+        escopoAnalistaId: resposta.usuario.escopoAnalistaId ?? resposta.usuario.email,
+        responsavelNome: resposta.usuario.responsavelNome ?? resposta.usuario.nome,
+        responsavelCrea: resposta.usuario.responsavelCrea ?? resposta.usuario.crea,
       });
+      return role;
+    },
+    [salvarSessao],
+  );
+
+  const entrarComGoogle = useCallback(
+    async (idToken: string): Promise<Role> => {
+      const resposta = await authService.loginGoogle(idToken);
+      const role = resposta.usuario.role;
+      salvarSessao({
+        token: resposta.token,
+        role,
+        nome: resposta.usuario.nome,
+        email: resposta.usuario.email,
+        crea: resposta.usuario.crea,
+        escopoAnalistaId: resposta.usuario.escopoAnalistaId ?? resposta.usuario.email,
+        responsavelNome: resposta.usuario.responsavelNome ?? resposta.usuario.nome,
+        responsavelCrea: resposta.usuario.responsavelCrea ?? resposta.usuario.crea,
+      });
+      return role;
     },
     [salvarSessao],
   );
@@ -135,8 +265,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ session, motivoUltimaSaida, entrarComGoogle, entrarComProtocolo, sair, limparMotivoSaida, atualizarLaudo }),
-    [session, motivoUltimaSaida, entrarComGoogle, entrarComProtocolo, sair, limparMotivoSaida, atualizarLaudo],
+    () => ({
+      session,
+      motivoUltimaSaida,
+      entrarComCredenciais,
+      entrarComGoogle,
+      entrarComProtocolo,
+      sair,
+      limparMotivoSaida,
+      atualizarLaudo,
+    }),
+    [
+      session,
+      motivoUltimaSaida,
+      entrarComCredenciais,
+      entrarComGoogle,
+      entrarComProtocolo,
+      sair,
+      limparMotivoSaida,
+      atualizarLaudo,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -31,7 +31,7 @@ export function validarCpf(valor: string): string | null {
 
 export const PROTOCOLO_CONSULTA_REGEX = /^[A-Z0-9.-]{8,30}$/;
 
-export const PROTOCOLO_CADASTRO_REGEX = /^[A-Za-z0-9._/-]{3,32}$/;
+export const PROTOCOLO_CADASTRO_REGEX = PROTOCOLO_CONSULTA_REGEX;
 
 export function normalizarProtocolo(valor: string): string {
   return valor.trim().toUpperCase();
@@ -46,10 +46,10 @@ export function validarProtocoloConsulta(valor: string): string | null {
 }
 
 export function validarProtocoloCadastro(valor: string): string | null {
-  const protocolo = valor.trim();
+  const protocolo = normalizarProtocolo(valor);
   if (!protocolo) return 'Preencha este campo para continuar.';
   if (!PROTOCOLO_CADASTRO_REGEX.test(protocolo)) {
-    return 'Use de 3 a 32 caracteres: letras, números, ponto, traço, barra ou sublinhado.';
+    return 'Use de 8 a 30 caracteres: letras, números, ponto ou traço (o mesmo formato que o cliente digita na consulta).';
   }
   return null;
 }
