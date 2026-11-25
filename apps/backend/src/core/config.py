@@ -1,7 +1,11 @@
 import os
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Valor conhecido (público no repositório): só é aceito em dev/test.
+DEV_JWT_SECRET_KEY = "chave-super-secreta-de-desenvolvimento-local-minimo-32-chars"
+AMBIENTES_SEGUROS = {"staging", "production"}
 
 
 class Settings(BaseSettings):
@@ -10,7 +14,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Consulta Laudos Solo"
 
     # Segurança JWT
-    JWT_SECRET_KEY: str = "chave-super-secreta-de-desenvolvimento-local-minimo-32-chars"
+    JWT_SECRET_KEY: str = DEV_JWT_SECRET_KEY
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_ANALISTA_HOURS: int = 8
     JWT_EXPIRATION_CLIENTE_HOURS: int = 2
@@ -42,15 +46,20 @@ class Settings(BaseSettings):
             )
         return v
 
-    @field_validator("ENABLE_MOCK_AUTH")
-    @classmethod
-    def prevent_mock_in_production(cls, v: bool, info) -> bool:
-        env = info.data.get("ENVIRONMENT", "dev").lower()
-        if env == "production" and v is True:
+    @model_validator(mode="after")
+    def validate_secure_environments(self) -> "Settings":
+        """Regras que valem também para valores default (field validators não rodam neles)."""
+        if self.ENVIRONMENT.lower() not in AMBIENTES_SEGUROS:
+            return self
+        if self.ENABLE_MOCK_AUTH:
             raise ValueError(
-                "VULN-03 CRITICAL: ENABLE_MOCK_AUTH=True é estritamente proibido em ambiente de produção (ENVIRONMENT=production)."
+                "VULN-03 CRITICAL: ENABLE_MOCK_AUTH=True é estritamente proibido em staging/production."
             )
-        return v
+        if self.JWT_SECRET_KEY == DEV_JWT_SECRET_KEY:
+            raise ValueError(
+                "JWT_SECRET_KEY padrão de desenvolvimento não pode ser usada em staging/production. Defina um segredo próprio."
+            )
+        return self
 
 
 settings = Settings()

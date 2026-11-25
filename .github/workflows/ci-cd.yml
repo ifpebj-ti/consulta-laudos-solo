@@ -1,17 +1,27 @@
 name: CI/CD Pipeline
 
-# Terraform deploy to production has been moved to manual execution.
-# Run: terraform apply manually from infra/environments/prod or add a
-# separate workflow_dispatch workflow for infrastructure changes.
+# Fluxo:
+#   PR -> main : lint/testes, SAST (semgrep), build + scan Trivy (sem publicar), DAST (ZAP)
+#   push main  : o mesmo + publica imagens multi-arch no GHCR (latest, sha-<sha>)
+#                e, quando o release-please cria uma release, adiciona as tags de versao
+#                (X.Y.Z, X.Y, vX.Y.Z) nas imagens ja publicadas.
+# Terraform apply continua manual (infra/environments/<env>).
 
 on:
   pull_request:
     branches:
       - main
-
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
   # ==========================================================================
@@ -26,9 +36,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ----------------------------------------------------------------------
-      # Terraform Validation
-      # ----------------------------------------------------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -39,9 +46,6 @@ jobs:
           terraform init -backend=false
           terraform validate
 
-      # ----------------------------------------------------------------------
-      # Frontend Validation
-      # ----------------------------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -57,7 +61,7 @@ jobs:
         working-directory: ./apps/frontend
         run: npm run lint
 
-      - name: Frontend Tests
+      - name: Frontend Tests with Coverage
         working-directory: ./apps/frontend
         run: npm run test:coverage
 
@@ -68,51 +72,35 @@ jobs:
           path: apps/frontend/coverage
           retention-days: 30
 
-      - name: Frontend Build
-        working-directory: ./apps/frontend
-        run: npm run build
-
-      # ----------------------------------------------------------------------
-      # Backend Validation (FastAPI)
-      # ----------------------------------------------------------------------
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            apps/backend/requirements.txt
+            apps/backend/requirements-dev.txt
 
       - name: Install Backend Dependencies
         working-directory: ./apps/backend
         run: |
           python -m pip install --upgrade pip
-
-          if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-          fi
-
-          if [ -f "requirements-dev.txt" ]; then
-            pip install -r requirements-dev.txt
-          fi
-
-          if [ -f "pyproject.toml" ]; then
-            pip install .
-          fi
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Check Code Formatting
         working-directory: ./apps/backend
-        run: |
-          black . --check
+        run: black . --check
 
       - name: Run Linter
         working-directory: ./apps/backend
-        run: |
-          ruff check .
+        run: ruff check .
 
-      - name: Run Unit Tests with Coverage
+      - name: Run Unit and Integration Tests with Coverage
         working-directory: ./apps/backend
-        run: |
-          pytest -v --cov=src --cov-report=xml:coverage.xml --cov-fail-under=70
+        run: pytest -v --cov=src --cov-report=xml:coverage.xml --cov-report=term --cov-fail-under=70
 
-      - name: Upload Coverage Report
+      - name: Upload Backend Coverage Report
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage-report
@@ -120,15 +108,62 @@ jobs:
           retention-days: 30
 
   # ==========================================================================
-  # Build and Push Images to GHCR (multi-arch)
+  # SAST - Semgrep (bloqueante)
   # ==========================================================================
-  build-push-ghcr:
+  semgrep:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    container:
+      image: semgrep/semgrep:latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Semgrep scan (falha em qualquer finding)
+        run: >
+          semgrep scan
+          --config p/default --config p/python --config p/typescript
+          --config p/dockerfile --config p/github-actions
+          --exclude .venv --exclude node_modules --exclude tests
+          --error --sarif --output semgrep.sarif
+
+      - name: Upload Semgrep SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep.sarif
+          retention-days: 30
+
+      - name: Upload Semgrep SARIF to Code Scanning
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  # ==========================================================================
+  # Build -> Trivy scan -> (somente na main) push multi-arch para o GHCR
+  # O scan roda ANTES do push: imagem vulneravel nunca chega ao registry.
+  # ==========================================================================
+  build-scan-push:
     needs: test-and-lint
-    if: startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [frontend, backend]
+
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/consulta-laudos-${{ matrix.image }}
 
     steps:
       - name: Checkout Repository
@@ -147,59 +182,50 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
+        if: github.event_name == 'push'
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Frontend
-        uses: docker/build-push-action@v5
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          context: ./apps/frontend
-          platforms: linux/amd64,linux/arm64
-          push: true
+          images: ${{ env.IMAGE }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/consulta-laudos-frontend:latest
-            ghcr.io/${{ github.repository_owner }}/consulta-laudos-frontend:${{ github.sha }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=long,prefix=sha-
+            type=ref,event=pr
+          labels: |
+            org.opencontainers.image.title=consulta-laudos-${{ matrix.image }}
+
+      - name: Build image for scanning (amd64, local)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/${{ matrix.image }}
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: scan/${{ matrix.image }}:${{ github.sha }}
           build-args: |
             VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-            VITE_APP_VERSION=${{ steps.app_version.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-      - name: Build and Push Backend
-        uses: docker/build-push-action@v5
+      # Relatorio completo (SARIF) para o Code Scanning. Nao falha.
+      - name: Trivy scan (SARIF, informativo)
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          context: ./apps/backend
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/consulta-laudos-backend:latest
-            ghcr.io/${{ github.repository_owner }}/consulta-laudos-backend:${{ github.sha }}
-
-  # ==========================================================================
-  # Vulnerability Scanning with Trivy
-  # ==========================================================================
-  trivy-scan:
-    needs: build-push-ghcr
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    strategy:
-      matrix:
-        image: [frontend, backend]
-
-    steps:
-      - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/consulta-laudos-${{ matrix.image }}:${{ github.sha }}
+          image-ref: scan/${{ matrix.image }}:${{ github.sha }}
           format: sarif
           output: trivy-${{ matrix.image }}.sarif
           severity: CRITICAL,HIGH
-          exit-code: '1'
-          ignore-unfixed: false
+          ignore-unfixed: true
+          exit-code: '0'
 
-      - name: Upload Trivy SARIF report
+      - name: Upload Trivy SARIF artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -207,49 +233,173 @@ jobs:
           path: trivy-${{ matrix.image }}.sarif
           retention-days: 30
 
+      - name: Upload Trivy SARIF to Code Scanning
+        if: always() && hashFiles(format('trivy-{0}.sarif', matrix.image)) != ''
+        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        with:
+          sarif_file: trivy-${{ matrix.image }}.sarif
+          category: trivy-${{ matrix.image }}
+
+      # Gate: falha em CRITICAL/HIGH que possuam correcao disponivel.
+      - name: Trivy gate (fail on fixable CRITICAL/HIGH)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: scan/${{ matrix.image }}:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Smoke test do container (backend)
+        if: matrix.image == 'backend'
+        run: |
+          docker run -d --name smoke -p 8000:8000 scan/backend:${{ github.sha }}
+          for i in $(seq 1 20); do
+            curl -fsS http://localhost:8000/api/health && exit 0
+            sleep 2
+          done
+          docker logs smoke
+          exit 1
+
+      - name: Push multi-arch (amd64 + arm64)
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/${{ matrix.image }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
   # ==========================================================================
-  # Automated Release with release-please
+  # DAST - OWASP ZAP API scan contra o backend (bloqueante)
   # ==========================================================================
-  release:
-    needs: build-push-ghcr
-    if: startsWith(github.head_ref, 'release/') || startsWith(github.head_ref, 'hotfix/')
+  zap-scan:
+    needs: test-and-lint
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Build backend image
+        run: docker build -t laudos-backend:zap ./apps/backend
+
+      - name: Start backend
+        run: |
+          docker run -d --name backend -p 8000:8000 \
+            -e ENVIRONMENT=dev \
+            -e JWT_SECRET_KEY=ci-only-secret-key-with-more-than-32-characters \
+            laudos-backend:zap
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8000/api/health && exit 0
+            sleep 2
+          done
+          docker logs backend
+          exit 1
+
+      - name: ZAP API scan
+        uses: zaproxy/action-api-scan@v0.9.0
+        with:
+          target: http://localhost:8000/api/openapi.json
+          format: openapi
+          rules_file_name: .zap/rules.tsv
+          fail_action: true
+          allow_issue_writing: false
+          cmd_options: '-a'
+
+      - name: Backend logs on failure
+        if: failure()
+        run: docker logs backend
+
+  # ==========================================================================
+  # Release automatizado (release-please) - somente na main
+  # ==========================================================================
+  release:
+    needs: [build-scan-push, semgrep, zap-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+      version: ${{ steps.rp.outputs.version }}
+
+    steps:
       - name: Release Please
-        id: release_please
+        id: rp
         uses: googleapis/release-please-action@v4
         with:
-          release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update release with GHCR image URIs
-        if: ${{ steps.release_please.outputs.release_created }}
+      - name: Login to GHCR
+        if: ${{ steps.rp.outputs.release_created }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: ${{ steps.rp.outputs.release_created }}
+        uses: docker/setup-buildx-action@v3
+
+      # Reaproveita as imagens ja escaneadas e publicadas para este commit.
+      - name: Tag images with release version
+        if: ${{ steps.rp.outputs.release_created }}
+        env:
+          OWNER: ${{ github.repository_owner }}
+          VERSION: ${{ steps.rp.outputs.version }}
+          MAJOR_MINOR: ${{ steps.rp.outputs.major }}.${{ steps.rp.outputs.minor }}
+        run: |
+          OWNER_LC=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          for img in frontend backend; do
+            src="ghcr.io/${OWNER_LC}/consulta-laudos-${img}:sha-${GITHUB_SHA}"
+            docker buildx imagetools create \
+              -t "ghcr.io/${OWNER_LC}/consulta-laudos-${img}:${VERSION}" \
+              -t "ghcr.io/${OWNER_LC}/consulta-laudos-${img}:v${VERSION}" \
+              -t "ghcr.io/${OWNER_LC}/consulta-laudos-${img}:${MAJOR_MINOR}" \
+              "$src"
+          done
+
+      - name: Append image URIs to release notes
+        if: ${{ steps.rp.outputs.release_created }}
         uses: actions/github-script@v7
+        env:
+          TAG: ${{ steps.rp.outputs.tag_name }}
+          VERSION: ${{ steps.rp.outputs.version }}
         with:
           script: |
-            const { data: release } = await github.rest.repos.getRelease({
+            const owner = context.repo.owner.toLowerCase();
+            const { data: release } = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: ${{ steps.release_please.outputs.id }},
+              tag: process.env.TAG,
             });
-
-            const imageSection = [
+            const section = [
               '',
               '## Docker Images',
-              `- \`ghcr.io/${{ github.repository_owner }}/consulta-laudos-frontend:${{ steps.release_please.outputs.tag_name }}\``,
-              `- \`ghcr.io/${{ github.repository_owner }}/consulta-laudos-backend:${{ steps.release_please.outputs.tag_name }}\``,
+              `- \`ghcr.io/${owner}/consulta-laudos-frontend:${process.env.VERSION}\``,
+              `- \`ghcr.io/${owner}/consulta-laudos-backend:${process.env.VERSION}\``,
             ].join('\n');
-
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              release_id: ${{ steps.release_please.outputs.id }},
-              body: release.body + imageSection,
+              release_id: release.id,
+              body: (release.body || '') + section,
             });

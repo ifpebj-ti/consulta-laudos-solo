@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Escolha um template de issue
-    url: https://github.com/consulta-laudos-solo/consulta-laudos-solo/issues/new/choose
-    about: Selecione o tipo de issue adequado para seu relato ou sugestão.
+  - name: Vulnerabilidade de segurança
+    url: https://github.com/ifpebj-ti/consulta-laudos-solo/security/advisories/new
+    about: Reporte vulnerabilidades de forma privada. Não abra issue pública.
+  - name: Documentação (Wiki)
+    url: https://github.com/ifpebj-ti/consulta-laudos-solo/wiki
+    about: Consulte a documentação antes de abrir uma issue.

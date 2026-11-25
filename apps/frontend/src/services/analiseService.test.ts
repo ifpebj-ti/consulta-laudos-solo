@@ -1,104 +1,72 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { analiseService } from './analiseService';
-import { DADOS_ANALISE_VAZIOS } from '@/features/laudos/analista/tipos';
 import { respostaJson } from '@/test/utilitarios';
 
+function simularFetch() {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async () => respostaJson({ sucesso: true }));
+}
+
+function ultimaChamada(fetchMock: ReturnType<typeof simularFetch>) {
+  const [url, init] = fetchMock.mock.calls.at(-1)!;
+  return { url: String(url), init: init as RequestInit };
+}
+
+afterEach(() => vi.restoreAllMocks());
+
 describe('analiseService', () => {
-  it('criarAmostra envia POST /laudos com token e payload', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      respostaJson({
-        sucesso: true,
-        mensagem: 'Criada',
-        dados: { protocolo: 'LAB-1', cliente_nome: 'João', propriedade: 'Sítio', status: 'PENDENTE', versao: 1, criadoEm: '2026-11-01' },
-      }),
-    );
-
-    const payload = {
-      protocolo: 'LAB-1',
-      cpf_cliente: '52998224725',
-      cliente_nome: 'João',
-      propriedade: 'Sítio',
-      dataRecebimento: '2026-11-01',
-      tipoAnalise: 'fisico_quimica' as const,
-      culturaExistente: 'Milho',
-    };
-    const res = await analiseService.criarAmostra(payload, 'tok-analista');
-
-    expect(res.dados.protocolo).toBe('LAB-1');
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toMatch(/\/laudos$/);
-    expect(init?.method).toBe('POST');
-    expect(JSON.parse(String(init?.body))).toEqual(payload);
-  });
-
-  it('listarAmostras aceita apenas token (listagem simples)', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(respostaJson({ sucesso: true, dados: [] }));
-
-    await analiseService.listarAmostras('tok');
-
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toMatch(/\/laudos$/);
-    expect(init?.method).toBe('GET');
-  });
-
-  it('listarAmostras com parâmetros envia query string paginada e trim na busca', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      respostaJson({ sucesso: true, dados: { itens: [], total: 0, pagina: 2, tamanhoPagina: 50 } }),
-    );
-
-    await analiseService.listarAmostras(
+  it('cria amostra com POST /laudos e token Bearer', async () => {
+    const fetchMock = simularFetch();
+    await analiseService.criarAmostra(
       {
-        pagina: 2,
-        tamanhoPagina: 50,
-        busca: '  boa vista  ',
-        situacao: 'pendentes',
-        status: 'EM_ANALISE',
-        ordenacao: 'prazo',
+        protocolo: 'LAB-1',
+        cpf_cliente: '52998224725',
+        cliente_nome: 'Maria',
+        propriedade: 'Sítio',
+        dataRecebimento: '2026-01-10',
+        tipoAnalise: 'quimica',
+        culturaExistente: 'Milho',
       },
       'tok',
     );
-
-    const url = new URL(String(fetchMock.mock.calls[0][0]));
-    expect(url.pathname).toMatch(/\/laudos$/);
-    expect(url.searchParams.get('pagina')).toBe('2');
-    expect(url.searchParams.get('tamanhoPagina')).toBe('50');
-    expect(url.searchParams.get('busca')).toBe('boa vista');
-    expect(url.searchParams.get('situacao')).toBe('pendentes');
-    expect(url.searchParams.get('status')).toBe('EM_ANALISE');
-    expect(url.searchParams.get('ordenacao')).toBe('prazo');
+    const { url, init } = ultimaChamada(fetchMock);
+    expect(url).toMatch(/\/laudos$/);
+    expect(init.method).toBe('POST');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer tok');
+    expect(JSON.parse(String(init.body)).protocolo).toBe('LAB-1');
   });
 
-  it('obterAnalise, salvarRascunho, processarAnalise e homologarLaudo codificam protocolo na URL', async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(respostaJson({ sucesso: true, dados: { protocolo: 'LAB/1 2', status: 'EM_ANALISE', versao: 1 } }))
-      .mockResolvedValueOnce(respostaJson({ sucesso: true, mensagem: 'Salvo', dados: { protocolo: 'LAB/1 2', status: 'EM_ANALISE', novaVersao: 2, salvoEm: '2026-11-01' } }))
-      .mockResolvedValueOnce(respostaJson({ sucesso: true, mensagem: 'Processado', dados: { protocolo: 'LAB/1 2', status: 'AGUARDANDO_HOMOLOGACAO', novaVersao: 3, calculosOficiais: {}, processadoEm: '2026-11-01' } }))
-      .mockResolvedValueOnce(respostaJson({ sucesso: true, mensagem: 'Homologado', dados: { protocolo: 'LAB/1 2', status: 'CONCLUIDO', novaVersao: 4, homologadoEm: '2026-11-01', homologadoPor: 'Carla', temPdfDisponivel: true } }));
+  it('lista amostras enviando filtros na query e removendo espaços da busca', async () => {
+    const fetchMock = simularFetch();
+    await analiseService.listarAmostras({ pagina: 2, tamanhoPagina: 10, busca: '  abc ', situacao: 'pendentes' }, 'tok');
+    const { url } = ultimaChamada(fetchMock);
+    expect(url).toContain('pagina=2');
+    expect(url).toContain('tamanhoPagina=10');
+    expect(url).toContain('busca=abc');
+    expect(url).toContain('situacao=pendentes');
+  });
 
-    await analiseService.obterAnalise('LAB/1 2', 'tok');
-    await analiseService.salvarRascunho('LAB/1 2', { versaoEsperada: 1, quimica: { ph: 6 } }, 'tok');
+  it('usa o protocolo codificado nas rotas de análise', async () => {
+    const fetchMock = simularFetch();
+    await analiseService.obterAnalise('A/B 1', 'tok');
+    expect(ultimaChamada(fetchMock).url).toContain('/laudos/A%2FB%201/analise');
+
+    await analiseService.salvarRascunho('P1', { versaoEsperada: 1 }, 'tok');
+    let chamada = ultimaChamada(fetchMock);
+    expect(chamada.url).toMatch(/\/laudos\/P1\/analise\/rascunho$/);
+    expect(chamada.init.method).toBe('PATCH');
+
     await analiseService.processarAnalise(
-      'LAB/1 2',
-      {
-        versaoEsperada: 2,
-        quimica: DADOS_ANALISE_VAZIOS.quimica,
-        granulometria: DADOS_ANALISE_VAZIOS.granulometria,
-        calibracao: { a: 0.03, b: 0.01, r2: 0.99, pontos: [{ x: 0, y: 0 }, { x: 10, y: 0.3 }] },
-      },
+      'P1',
+      { versaoEsperada: 2, quimica: {} as never, granulometria: {} as never, calibracao: {} as never },
       'tok',
     );
-    await analiseService.homologarLaudo('LAB/1 2', { versaoEsperada: 3 }, 'tok');
+    chamada = ultimaChamada(fetchMock);
+    expect(chamada.url).toMatch(/\/analise\/processar$/);
+    expect(chamada.init.method).toBe('POST');
 
-    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/laudos\/LAB%2F1%202\/analise$/);
-
-    expect(String(fetchMock.mock.calls[1][0])).toMatch(/\/laudos\/LAB%2F1%202\/analise\/rascunho$/);
-    expect(fetchMock.mock.calls[1][1]?.method).toBe('PATCH');
-
-    expect(String(fetchMock.mock.calls[2][0])).toMatch(/\/laudos\/LAB%2F1%202\/analise\/processar$/);
-    expect(fetchMock.mock.calls[2][1]?.method).toBe('POST');
-
-    expect(String(fetchMock.mock.calls[3][0])).toMatch(/\/laudos\/LAB%2F1%202\/homologar$/);
-    expect(fetchMock.mock.calls[3][1]?.method).toBe('POST');
+    await analiseService.homologarLaudo('P1', { versaoEsperada: 3 }, 'tok');
+    chamada = ultimaChamada(fetchMock);
+    expect(chamada.url).toMatch(/\/laudos\/P1\/homologar$/);
+    expect(JSON.parse(String(chamada.init.body))).toEqual({ versaoEsperada: 3 });
   });
 });

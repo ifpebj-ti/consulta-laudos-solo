@@ -1,4 +1,20 @@
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env.dev
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-laudos}
+      POSTGRES_USER: ${POSTGRES_USER:-laudos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-laudos_dev_only}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-laudos} -d $${POSTGRES_DB:-laudos}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   frontend:
     build:
       context: ./apps/frontend
@@ -23,3 +39,10 @@ services:
       - ./apps/backend/.env
     environment:
       - ENVIRONMENT=dev
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-laudos}:${POSTGRES_PASSWORD:-laudos_dev_only}@db:5432/${POSTGRES_DB:-laudos}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
