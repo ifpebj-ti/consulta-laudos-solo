@@ -1,49 +1,62 @@
 name: Sincronizar Main com Develop
 
+# Depois que a main recebe um merge (release ou hotfix), traz de volta para a develop
+# o que existir so na main (ex.: commit de release do release-please: CHANGELOG, manifest, version.txt).
+
 on:
   pull_request:
     branches:
       - main
     types: [closed]
 
+permissions:
+  contents: read
+
 jobs:
   merge-main-back-to-develop:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    # Necessário para permitir que o bot crie branches e abra PRs
     permissions:
       contents: write
       pull-requests: write
-    
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
-      - name: Configurar Git
+      - name: Verificar se a develop precisa da main
+        id: diff
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          if git merge-base --is-ancestor origin/main origin/develop; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "A develop já contém a main. Nada a sincronizar."
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Criar branch de sincronização e aplicar merge
+      - name: Criar branch de sincronização (merge sem sobrescrever a develop)
+        if: steps.diff.outputs.needed == 'true'
         run: |
-          # 1. Cria uma branch temporária a partir da develop atual
-          git checkout -b sync-main-to-develop origin/develop
-          
-          # 2. Faz o merge da main mantendo a sua estratégia de prioridade
-          git merge -X theirs origin/main -m "Chore: Auto-merge da main para develop"
-          
-          # 3. Envia a branch temporária para o repositório remoto
-          git push -f origin sync-main-to-develop
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git checkout -B sync-main-to-develop origin/develop
+          # Merge comum: se houver conflito o job falha e a sincronização é feita à mão.
+          git merge --no-ff origin/main -m "chore: sincroniza main com develop"
+          git push --force-with-lease origin sync-main-to-develop
 
-      - name: Criar Pull Request para Develop
+      - name: Abrir Pull Request para a develop (se ainda não existir)
+        if: steps.diff.outputs.needed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Usa o CLI nativo do GitHub para abrir o PR
-          gh pr create \
-            --base develop \
-            --head sync-main-to-develop \
-            --title "Chore: Sincronização automática (Main ➔ Develop)" \
-            --body "Este PR foi criado automaticamente pelo GitHub Actions para garantir que a \`develop\` esteja atualizada com as últimas mudanças da \`main\`."
+          existente=$(gh pr list --base develop --head sync-main-to-develop --state open --json number --jq 'length')
+          if [ "$existente" = "0" ]; then
+            gh pr create \
+              --base develop \
+              --head sync-main-to-develop \
+              --title "chore: sincroniza main com develop" \
+              --body "Criado automaticamente após o merge na main, para manter a develop atualizada."
+          else
+            echo "Já existe um PR aberto de sync-main-to-develop."
+          fi

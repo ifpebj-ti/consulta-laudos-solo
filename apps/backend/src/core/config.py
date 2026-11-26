@@ -1,7 +1,18 @@
 import os
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Valor conhecido (público no repositório): só é aceito em dev/test.
+DEV_JWT_SECRET_KEY = "chave-super-secreta-de-desenvolvimento-local-minimo-32-chars"
+AMBIENTES_SEGUROS = {"staging", "production"}
+ORIGENS_DEV = (
+    "http://localhost",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1",
+    "http://127.0.0.1:5173",
+)
 
 
 class Settings(BaseSettings):
@@ -10,13 +21,17 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Consulta Laudos Solo"
 
     # Segurança JWT
-    JWT_SECRET_KEY: str = "chave-super-secreta-de-desenvolvimento-local-minimo-32-chars"
+    JWT_SECRET_KEY: str = DEV_JWT_SECRET_KEY
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_ANALISTA_HOURS: int = 8
     JWT_EXPIRATION_CLIENTE_HOURS: int = 2
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
+
+    # CORS: origens permitidas (JSON, ex.: ["https://laudos.exemplo.br"]).
+    # Vazio: dev usa as origens locais abaixo; staging/production exigem valor explícito.
+    CORS_ALLOWED_ORIGINS: list[str] = []
 
     # Mock Auth para ambiente dev
     ENABLE_MOCK_AUTH: bool = True
@@ -33,6 +48,12 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
+    @property
+    def cors_origins(self) -> list[str]:
+        if self.CORS_ALLOWED_ORIGINS:
+            return self.CORS_ALLOWED_ORIGINS
+        return list(ORIGENS_DEV)
+
     @field_validator("JWT_SECRET_KEY")
     @classmethod
     def validate_jwt_secret_entropy(cls, v: str) -> str:
@@ -42,15 +63,24 @@ class Settings(BaseSettings):
             )
         return v
 
-    @field_validator("ENABLE_MOCK_AUTH")
-    @classmethod
-    def prevent_mock_in_production(cls, v: bool, info) -> bool:
-        env = info.data.get("ENVIRONMENT", "dev").lower()
-        if env == "production" and v is True:
+    @model_validator(mode="after")
+    def validate_secure_environments(self) -> "Settings":
+        """Regras que valem também para valores default (field validators não rodam neles)."""
+        if self.ENVIRONMENT.lower() not in AMBIENTES_SEGUROS:
+            return self
+        if self.ENABLE_MOCK_AUTH:
             raise ValueError(
-                "VULN-03 CRITICAL: ENABLE_MOCK_AUTH=True é estritamente proibido em ambiente de produção (ENVIRONMENT=production)."
+                "VULN-03 CRITICAL: ENABLE_MOCK_AUTH=True é estritamente proibido em staging/production."
             )
-        return v
+        if self.JWT_SECRET_KEY == DEV_JWT_SECRET_KEY:
+            raise ValueError(
+                "JWT_SECRET_KEY padrão de desenvolvimento não pode ser usada em staging/production. Defina um segredo próprio."
+            )
+        if not self.CORS_ALLOWED_ORIGINS or "*" in self.CORS_ALLOWED_ORIGINS:
+            raise ValueError(
+                "CORS_ALLOWED_ORIGINS deve listar as origens do frontend (sem *) em staging/production."
+            )
+        return self
 
 
 settings = Settings()

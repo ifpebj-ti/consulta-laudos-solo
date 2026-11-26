@@ -1,7 +1,7 @@
 {
   "name": "consulta-laudos-solo-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.7",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0 && tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "verificar": "npm run lint && npm run test && npm run build"
   },
@@ -32,6 +33,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^4.1.12",
     "eslint": "9.39.5",
     "eslint-plugin-jsx-a11y": "6.10.2",
     "eslint-plugin-react-hooks": "7.1.1",

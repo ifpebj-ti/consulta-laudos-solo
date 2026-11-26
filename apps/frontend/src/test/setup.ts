@@ -26,6 +26,30 @@ if (!window.matchMedia) {
 
 window.scrollTo = () => undefined;
 
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+if (!Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = () => undefined;
+}
+
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => undefined;
+}
+
+if (!Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = () => undefined;
+}
+
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe = () => undefined;
+    unobserve = () => undefined;
+    disconnect = () => undefined;
+  };
 }

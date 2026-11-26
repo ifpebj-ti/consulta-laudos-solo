@@ -15,7 +15,7 @@ repos:
       - id: detect-private-key          # CRÍTICO: Impede o vazamento acidental de chaves (.pem, rsa, etc)
 
   # 2. PADRONIZAÇÃO DE COMMITS (CONVENTIONAL COMMITS)
-  # Essencial para que o Semantic Release consiga gerar as tags e o Changelog automaticamente
+  # Essencial para que o release-please gere as tags, o CHANGELOG e as releases automaticamente
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.2.0
     hooks:
@@ -33,21 +33,27 @@ repos:
           - --tf-init-args=-upgrade
 
   # 4. APLICAÇÕES (HOOKS LOCAIS PARA FRONTEND E BACKEND)
-  # Usamos 'repo: local' para aproveitar o SDK do .NET e o Node.js do ambiente
   - repo: local
     hooks:
-      # Frontend: Executa o linter do Vite/React apenas se arquivos TS/JS mudarem
+      # Frontend: ESLint + tsc apenas se arquivos TS/JS mudarem
       - id: frontend-lint
-        name: Frontend Lint (Vite/React)
-        entry: bash -c 'cd apps/frontend && npm run lint'
+        name: Frontend Lint (ESLint + tsc)
+        entry: npm --prefix apps/frontend run lint
         language: system
         files: ^apps/frontend/.*\.(ts|tsx|js|jsx)$
         pass_filenames: false
 
-      # Backend: Verifica se o código .NET segue o padrão do .editorconfig
-      - id: backend-format
-        name: Backend Format (.NET)
-        entry: bash -c 'dotnet format apps/backend/Backend.sln --verify-no-changes'
+      # Backend: mesmas verificações da CI (black + ruff)
+      - id: backend-black
+        name: Backend Format (black)
+        entry: python -m black --check apps/backend
         language: system
-        files: ^apps/backend/.*\.cs$
+        files: ^apps/backend/.*\.py$
+        pass_filenames: false
+
+      - id: backend-ruff
+        name: Backend Lint (ruff)
+        entry: python -m ruff check apps/backend
+        language: system
+        files: ^apps/backend/.*\.py$
         pass_filenames: false

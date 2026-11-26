@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-v-in-tag": true,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "changelog-path": "CHANGELOG.md",
+  "last-release-sha": "0a0ecaab3c0de8b63bf51aa7c8918792e747a3e1",
+  "packages": {
+    ".": {
+      "package-name": "consulta-laudos-solo",
+      "release-as": "0.2.9",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "apps/frontend/package.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}

@@ -102,9 +102,22 @@
   outline-offset: 4px;
 }
 
+.navbar-versao {
+  display: flex;
+  justify-content: flex-end;
+  padding: calc(var(--u) * 0.75) calc(var(--u) * 8);
+  font-size: 11.5px;
+  color: var(--cinza);
+  background: rgba(250, 250, 247, 0.94);
+  border-bottom: 1px solid var(--filete);
+}
+
 @media (max-width: 900px) {
   .navbar {
     padding: calc(var(--u) * 1.5) calc(var(--u) * 3);
+  }
+  .navbar-versao {
+    padding: calc(var(--u) * 0.75) calc(var(--u) * 3);
   }
 }
 

@@ -17,10 +17,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Falha rápida: sem banco a API não deve subir como saudável e responder 500 em todas as rotas.
     try:
         await init_db()
-    except Exception as e:
-        logger.error(f"Erro ao inicializar banco de dados: {e}")
+    except Exception:
+        logger.exception("Erro ao inicializar banco de dados; encerrando a aplicação.")
+        raise
     yield
 
 
@@ -42,12 +44,10 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS (Liberado GET, POST, PATCH, PUT, DELETE, OPTIONS)
+# CORS: apenas as origens configuradas (nunca "*" com credenciais)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=(
-        ["*"] if settings.ENVIRONMENT == "dev" else ["https://laudos.instituto.edu.br"]
-    ),
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -61,6 +61,12 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    # API pura: nenhum recurso ativo e permitido (a UI interativa /docs fica fora da regra).
+    if request.url.path != f"{settings.API_PREFIX}/docs":
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; frame-ancestors 'none'"
+        )
     return response
 
 

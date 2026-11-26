@@ -32,6 +32,7 @@ export function LoginAnalistaPage() {
   const [errosCampos, setErrosCampos] = useState<{ username?: string; password?: string }>({});
   const [mensagemErro, setMensagemErro] = useState<string | null>(null);
   const [autenticando, setAutenticando] = useState(false);
+  const [mostrarAcessoLocal, setMostrarAcessoLocal] = useState(false);
   const montadoRef = useRef(true);
   const destino = destinoAposLogin(location.state, '/analista', '/analista');
 
@@ -105,8 +106,7 @@ export function LoginAnalistaPage() {
         <span className="home-titulo__destaque">Entrar</span>
       </h1>
       <p className="entrada-texto">
-        Entre com sua conta Google autorizada para registrar análises e homologar laudos técnicos, ou utilize suas
-        credenciais administrativas locais.
+        Entre com sua conta Google autorizada para registrar análises e homologar laudos técnicos.
       </p>
 
       <div aria-live="assertive">
@@ -142,58 +142,71 @@ export function LoginAnalistaPage() {
         </button>
       )}
 
-      <div className="entrada-divisor">Acesso local (PowerUser)</div>
+      <button
+        type="button"
+        className="entrada-teste"
+        aria-expanded={mostrarAcessoLocal}
+        onClick={() => setMostrarAcessoLocal((atual) => !atual)}
+      >
+        Acesso administrativo
+      </button>
 
-      <form className="entrada-form" onSubmit={aoEntrarLocal} noValidate>
-        <div className={`entrada-campo ${errosCampos.username ? 'entrada-campo--invalido' : ''}`.trim()}>
-          <span className="entrada-campo__rotulo" aria-hidden="true">
-            Usuário
-          </span>
-          <input
-            type="text"
-            placeholder="Usuário"
-            aria-label="Usuário"
-            autoComplete="username"
-            aria-invalid={errosCampos.username ? true : undefined}
-            aria-describedby={errosCampos.username ? 'login-username-erro' : undefined}
-            value={username}
-            onChange={(e) => {
-              setUsername(e.target.value);
-              setErrosCampos((atual) => ({ ...atual, username: undefined }));
-            }}
-            disabled={autenticando}
-            required
-          />
-          <MensagemErroCampo id="login-username-erro" mensagem={errosCampos.username} />
-        </div>
+      {mostrarAcessoLocal && (
+        <>
+          <div className="entrada-divisor">Acesso administrativo</div>
 
-        <div className={`entrada-campo ${errosCampos.password ? 'entrada-campo--invalido' : ''}`.trim()}>
-          <span className="entrada-campo__rotulo" aria-hidden="true">
-            Senha
-          </span>
-          <input
-            type="password"
-            placeholder="Senha"
-            aria-label="Senha"
-            autoComplete="current-password"
-            aria-invalid={errosCampos.password ? true : undefined}
-            aria-describedby={errosCampos.password ? 'login-password-erro' : undefined}
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setErrosCampos((atual) => ({ ...atual, password: undefined }));
-            }}
-            disabled={autenticando}
-            required
-          />
-          <MensagemErroCampo id="login-password-erro" mensagem={errosCampos.password} />
-        </div>
+          <form className="entrada-form" onSubmit={aoEntrarLocal} noValidate>
+            <div className={`entrada-campo ${errosCampos.username ? 'entrada-campo--invalido' : ''}`.trim()}>
+              <span className="entrada-campo__rotulo" aria-hidden="true">
+                Usuário
+              </span>
+              <input
+                type="text"
+                placeholder="Usuário"
+                aria-label="Usuário"
+                autoComplete="username"
+                aria-invalid={errosCampos.username ? true : undefined}
+                aria-describedby={errosCampos.username ? 'login-username-erro' : undefined}
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setErrosCampos((atual) => ({ ...atual, username: undefined }));
+                }}
+                disabled={autenticando}
+                required
+              />
+              <MensagemErroCampo id="login-username-erro" mensagem={errosCampos.username} />
+            </div>
 
-        <Button type="submit" disabled={autenticando}>
-          {autenticando ? 'Autenticando...' : 'Entrar com Usuário e Senha'}
-          <SetaVelocidade />
-        </Button>
-      </form>
+            <div className={`entrada-campo ${errosCampos.password ? 'entrada-campo--invalido' : ''}`.trim()}>
+              <span className="entrada-campo__rotulo" aria-hidden="true">
+                Senha
+              </span>
+              <input
+                type="password"
+                placeholder="Senha"
+                aria-label="Senha"
+                autoComplete="current-password"
+                aria-invalid={errosCampos.password ? true : undefined}
+                aria-describedby={errosCampos.password ? 'login-password-erro' : undefined}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setErrosCampos((atual) => ({ ...atual, password: undefined }));
+                }}
+                disabled={autenticando}
+                required
+              />
+              <MensagemErroCampo id="login-password-erro" mensagem={errosCampos.password} />
+            </div>
+
+            <Button type="submit" disabled={autenticando}>
+              {autenticando ? 'Autenticando...' : 'Entrar com Usuário e Senha'}
+              <SetaVelocidade />
+            </Button>
+          </form>
+        </>
+      )}
     </LayoutEntrada>
   );
 }
