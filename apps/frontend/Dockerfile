@@ -1,5 +1,7 @@
 # Estágio 1: Build
-FROM node:20-alpine AS builder
+# Roda na arquitetura do runner (BUILDPLATFORM): o resultado é estático e independe da CPU.
+# Evita executar npm/Node sob emulação QEMU no build arm64, que falha com 'Illegal instruction'.
+FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
