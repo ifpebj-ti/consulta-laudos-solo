@@ -220,7 +220,7 @@ jobs:
 
       # Relatorio completo (SARIF) para o Code Scanning. Nao falha.
       - name: Trivy scan (SARIF, informativo)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: scan/${{ matrix.image }}:${{ github.sha }}
           format: sarif
@@ -247,7 +247,7 @@ jobs:
 
       # Gate: falha em CRITICAL/HIGH que possuam correcao disponivel.
       - name: Trivy gate (fail on fixable CRITICAL/HIGH)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: scan/${{ matrix.image }}:${{ github.sha }}
           format: table
