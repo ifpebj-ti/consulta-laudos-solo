@@ -27,6 +27,11 @@ type Rota = (url: URL, init: RequestInit) => Response | undefined;
 function simularApi(...rotas: Rota[]) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (entrada, init) => {
     const url = new URL(String(entrada));
+    // O AnalistaProvider lista as amostras ao montar: responde com lista vazia por padrão.
+    if (url.pathname.endsWith('/laudos') && (init?.method ?? 'GET') === 'GET') {
+      const propria = rotas.map((rota) => rota(url, init ?? {})).find(Boolean);
+      return propria ?? respostaJson({ sucesso: true, dados: [], total: 0, pagina: 1, tamanhoPagina: 20 });
+    }
     for (const rota of rotas) {
       const resposta = rota(url, init ?? {});
       if (resposta) return resposta;
@@ -77,7 +82,7 @@ describe('login do analista', () => {
     renderizar('/analista/login');
     await usuario.click(await screen.findByRole('button', { name: /analista de teste/ }));
     expect(await screen.findByRole('heading', { name: /Painel do\s*Analista/ })).toBeInTheDocument();
-    expect(screen.getByText('Ana Analista')).toBeInTheDocument();
+    expect(screen.getAllByText('Ana Analista').length).toBeGreaterThan(0);
   });
 
   it('mostra mensagem específica quando a conta não é autorizada (403)', async () => {
@@ -156,7 +161,8 @@ describe('tela de análise', () => {
 
   it('mostra erro e permite tentar novamente', async () => {
     let tentativas = 0;
-    simularApi(() => {
+    simularApi((url) => {
+      if (!url.pathname.includes('/analise')) return undefined;
       tentativas += 1;
       return tentativas === 1 ? respostaJson({ sucesso: false, mensagem: 'falhou' }, 500) : respostaJson(analiseApi());
     });

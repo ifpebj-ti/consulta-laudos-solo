@@ -32,9 +32,13 @@ COPY --from=builder /install /usr/local
 
 COPY . .
 
+# /app (código) fica somente leitura para o processo; dados graváveis só em /app/data e /app/storage.
+# Sem PostgreSQL configurado, o SQLite de fallback é criado em /app/data (volume recomendado).
 RUN useradd --create-home --shell /bin/bash appuser && \
-    mkdir -p /app/storage && \
-    chown -R appuser:appuser /app/storage
+    mkdir -p /app/storage /app/data && \
+    chown -R appuser:appuser /app/storage /app/data
+
+ENV DATABASE_URL=sqlite+aiosqlite:////app/data/laudos.db
 
 USER appuser
 

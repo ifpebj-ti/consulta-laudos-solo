@@ -27,6 +27,7 @@ O projeto adota arquitetura de monorepo, isolando frontend, backend e infraestru
 | Segurança | [SECURITY.md](SECURITY.md) |
 | Como contribuir | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Histórico de versões | [CHANGELOG.md](CHANGELOG.md) |
+| Fluxo de releases | [docs/conventions/RELEASES.md](docs/conventions/RELEASES.md) |
 
 ## 👥 Equipe
 
@@ -97,7 +98,7 @@ Cada aplicação em `apps/` conta com um `Dockerfile` otimizado em múltiplos es
 - **Backend**: Usa `python:3.12-slim` como imagem base, instala dependências via `pip` e expõe o servidor Uvicorn na porta 8000.
 
 As imagens de produção são publicadas automaticamente no **GHCR** pelo pipeline CI/CD:
-- `ghcr.io/ifpebj-ti/consulta-laudos-frontend:<versão>` (ex.: `0.2.6`)
+- `ghcr.io/ifpebj-ti/consulta-laudos-frontend:<versão>` (ex.: `0.2.9`)
 - `ghcr.io/ifpebj-ti/consulta-laudos-backend:<versão>`
 
 Cada imagem recebe as tags `latest`, `sha-<commit>`, `X.Y.Z`, `vX.Y.Z` e `X.Y`, em `linux/amd64` e `linux/arm64`. Em produção use sempre uma tag de versão: `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d` (defina `APP_VERSION` no `.env.prod`).

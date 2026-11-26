@@ -10,10 +10,12 @@ resource "aws_internet_gateway" "igw" {
   tags   = { Name = "${var.app_name}-igw" }
 }
 
+# Decisao: a instancia unica (Free Tier) e o ponto de entrada publico e nao ha NAT/ALB; o acesso e restrito por security group.
+# nosemgrep: terraform.aws.security.aws-subnet-has-public-ip-address.aws-subnet-has-public-ip-address
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.subnet_cidr
-  map_public_ip_on_launch = true # Garante que a EC2 receba IP público
+  map_public_ip_on_launch = true # nosemgrep: terraform.aws.security.aws-subnet-has-public-ip-address.aws-subnet-has-public-ip-address
   tags                    = { Name = "${var.app_name}-public-subnet" }
 }
 
