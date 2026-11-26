@@ -12,6 +12,25 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
   Não edite à mão a versão em andamento. Veja docs/conventions/RELEASES.md.
 -->
 
+## [0.2.9](https://github.com/ifpebj-ti/consulta-laudos-solo/compare/consulta-laudos-solo-v0.2.7...consulta-laudos-solo-v0.2.9) (2026-11-26)
+
+
+### Features
+
+* **frontend:** oculta login local, exibe versao da tag e ajusta textos de desativacao ([61c5031](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/61c5031a028abfb0ab904edc81fd7bde0dd50241))
+
+
+### Bug Fixes
+
+* **backend:** falhar na inicializacao sem banco e enviar Cross-Origin-Resource-Policy ([2fde4ff](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/2fde4ffa81975c78aa4e6bb59ff55cb97e3b7fb2))
+* **backend:** gravar o SQLite em /app/data e nao copiar bancos locais para a imagem ([09aff40](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/09aff40c73fff2a8a3d932cd7d62d08b71eca4e1))
+* **backend:** recusar mock auth e JWT padrao em staging e production ([b9f1321](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/b9f132113c72615fc5e01555a8bd113047749605))
+* **backend:** restringir CORS a origens configuradas ([e04813b](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/e04813bbdf1b8d1ad6234783d262a23553b64701))
+* **frontend:** compilar o frontend na arquitetura do runner no build multi-arch ([d47542e](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/d47542e568f5ebfb491b21d33248acee5cf4663f))
+* **frontend:** compilar o frontend na arquitetura do runner no build multi-arch ([e5b49fe](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/e5b49fe29027248fa352146b837b780abdf71eaa))
+* **frontend:** corrige status, metadados e amplia testes com cobertura ([6f5428b](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/6f5428b3c951364d277c0b3f87f482887411e93f))
+* **frontend:** corrige status, metadados e amplia testes com cobertura ([79036da](https://github.com/ifpebj-ti/consulta-laudos-solo/commit/79036dabe04d931c23e54d1f1dcdfaee647d49e0))
+
 ## [0.2.7] - 2026-11-18
 *Controle de acesso por perfis e gestão de analistas. Publicada a partir da `develop`, fora do fluxo correto (ver nota abaixo).*
 
