@@ -7,24 +7,30 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [Unreleased]
+<!--
+  As seções a partir da 0.2.9 são geradas pelo release-please ao mergear o PR "chore(main): release X.Y.Z".
+  Não edite à mão a versão em andamento. Veja docs/conventions/RELEASES.md.
+-->
 
-### 🔒 Segurança e CI/CD
-- Esteira reescrita: scan Trivy antes do push (falha em CRITICAL/HIGH com correção), Semgrep e OWASP ZAP bloqueantes, SARIF enviado ao Code Scanning, build multi-arch (amd64/arm64) também no frontend e SBOM/provenance nas imagens.
-- Imagens do GHCR com tags `latest`, `sha-<commit>` e de versão (`X.Y.Z`, `vX.Y.Z`, `X.Y`); `docker-compose.prod.yml` passa a exigir `APP_VERSION`.
-- release-please configurado (manifest + config) e executado somente na `main`.
-- Backend: `ENABLE_MOCK_AUTH` e a `JWT_SECRET_KEY` padrão de desenvolvimento são rejeitados em `staging`/`production`, inclusive quando vêm de valores default; cabeçalho `Content-Security-Policy` na API.
-- Dockerfiles aplicam atualizações de segurança do sistema base (`apt-get upgrade`/`apk upgrade`).
+## [0.2.7] - 2026-11-18
+*Controle de acesso por perfis e gestão de analistas. Publicada a partir da `develop`, fora do fluxo correto (ver nota abaixo).*
 
-### 🧪 Testes
-- Frontend com cobertura (`npm run test:coverage`, limite mínimo de 70%) e novos testes de componentes, serviços, hooks e fluxo do analista.
+### 🚀 Novidades
+- **Backend / Usuários:** modelo de usuário com perfis (Power User, Analista, Auxiliar), login local com hash PBKDF2 e endpoints de gestão de analistas e auxiliares. A lista fixa de e-mails autorizados foi removida.
+- **Backend / Laudos:** listagem de laudos com escopo por analista e novos metadados da amostra.
+- **Frontend:** login local do Power User, gestão de analistas e de auxiliares, sincronização das amostras com o servidor e isolamento do cache por analista.
+- **Frontend / Laudo:** nome e CREA do responsável técnico exibidos no rodapé do laudo.
 
-### 📚 Governança e documentação
-- `SECURITY.md`, `CONTRIBUTING.md`, `CODEOWNERS` preenchido, `dependabot.yml` corrigido (npm em `/apps/frontend`, GitHub Actions, Docker e Terraform), `.pre-commit-config.yaml` com o nome correto e hooks do stack real.
-- `docker-compose.yml` e `docker-compose.prod.yml` com serviço PostgreSQL.
+### 🐛 Correções
+- **Frontend:** validação das respostas da API, tratamento de PDF corrompido, HTTP 412 e `Retry-After`.
 
 ---
 
+## Nota sobre as versões 0.2.6, 0.2.7 e 0.2.8
+
+Essas versões foram fechadas fora do fluxo definido: as tags `v0.2.6` e `v0.2.7` apontam para commits da `develop`, e a `v0.2.8` nunca foi publicada (o PR da `release/v0.2.8` foi substituído). O conteúdo da 0.2.8 (esteira de CI/CD, cobertura de testes, E2E e governança) é entregue na **0.2.9**, a primeira versão no fluxo `develop → release/* → main → tag`. As tags antigas foram mantidas para não quebrar quem já usa essas imagens.
+
+---
 ## [0.2.6] - 2026-11-11
 *Revisão completa do frontend, testes automatizados e atualização de dependências.*
 
@@ -114,7 +120,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - **Frontend:** Inicialização da aplicação React com Vite e TypeScript. (PR #1)
 - **Infraestrutura:** Inclusão das rotinas de GitHub Actions e configuração da infraestrutura base como código (IaC) utilizando Terraform (HCL). (PR #1)
 
-[Unreleased]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.6...HEAD
+[0.2.7]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/ifpebj-ti/consulta-laudos-solo/compare/v0.2.3...v0.2.4
