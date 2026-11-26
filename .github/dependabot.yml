@@ -2,6 +2,7 @@ version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/apps/backend"
+    target-branch: "develop"
     commit-message:
       prefix: "deps"
     schedule:
@@ -12,6 +13,7 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/apps/frontend"
+    target-branch: "develop"
     commit-message:
       prefix: "deps"
     schedule:
@@ -22,6 +24,7 @@ updates:
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "develop"
     commit-message:
       prefix: "ci"
     schedule:
@@ -29,6 +32,7 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/apps/backend"
+    target-branch: "develop"
     commit-message:
       prefix: "deps"
     schedule:
@@ -36,6 +40,7 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/apps/frontend"
+    target-branch: "develop"
     commit-message:
       prefix: "deps"
     schedule:
@@ -43,6 +48,7 @@ updates:
 
   - package-ecosystem: "terraform"
     directory: "/infra/environments/prod"
+    target-branch: "develop"
     commit-message:
       prefix: "deps"
     schedule:

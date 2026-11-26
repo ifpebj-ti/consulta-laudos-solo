@@ -1,7 +1,7 @@
 name: CI/CD Pipeline
 
 # Fluxo:
-#   PR -> main : lint/testes, SAST (semgrep), build + scan Trivy (sem publicar), DAST (ZAP)
+#   PR -> main/develop : lint/testes, SAST (semgrep), build + scan Trivy (sem publicar), DAST (ZAP)
 #   push main  : o mesmo + publica imagens multi-arch no GHCR (latest, sha-<sha>)
 #                e, quando o release-please cria uma release, adiciona as tags de versao
 #                (X.Y.Z, X.Y, vX.Y.Z) nas imagens ja publicadas.
@@ -11,6 +11,7 @@ on:
   pull_request:
     branches:
       - main
+      - develop
   push:
     branches:
       - main
@@ -171,9 +172,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Versao exibida no frontend: vem de version.txt (mantido pelo release-please), nao de git describe.
+      # Na main, o commit de release ja traz a nova versao; nos demais, a ultima publicada.
       - name: Resolve App Version
         id: app_version
-        run: echo "version=$(git describe --tags --abbrev=0 2>/dev/null || echo 'dev')" >> "$GITHUB_OUTPUT"
+        run: echo "version=v$(tr -d '[:space:]' < version.txt)" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -211,6 +214,7 @@ jobs:
           tags: scan/${{ matrix.image }}:${{ github.sha }}
           build-args: |
             VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            VITE_APP_VERSION=${{ steps.app_version.outputs.version }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
@@ -275,6 +279,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            VITE_APP_VERSION=${{ steps.app_version.outputs.version }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
@@ -345,7 +350,9 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Com GITHUB_TOKEN o PR de release nao dispara a CI (limitacao do GitHub).
+          # Defina o segredo RELEASE_PLEASE_TOKEN (PAT ou GitHub App) para que os checks rodem no PR.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Login to GHCR
         if: ${{ steps.rp.outputs.release_created }}
