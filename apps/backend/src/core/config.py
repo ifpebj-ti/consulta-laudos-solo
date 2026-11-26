@@ -6,6 +6,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Valor conhecido (público no repositório): só é aceito em dev/test.
 DEV_JWT_SECRET_KEY = "chave-super-secreta-de-desenvolvimento-local-minimo-32-chars"
 AMBIENTES_SEGUROS = {"staging", "production"}
+ORIGENS_DEV = (
+    "http://localhost",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://127.0.0.1",
+    "http://127.0.0.1:5173",
+)
 
 
 class Settings(BaseSettings):
@@ -22,6 +29,10 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
 
+    # CORS: origens permitidas (JSON, ex.: ["https://laudos.exemplo.br"]).
+    # Vazio: dev usa as origens locais abaixo; staging/production exigem valor explícito.
+    CORS_ALLOWED_ORIGINS: list[str] = []
+
     # Mock Auth para ambiente dev
     ENABLE_MOCK_AUTH: bool = True
 
@@ -36,6 +47,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        if self.CORS_ALLOWED_ORIGINS:
+            return self.CORS_ALLOWED_ORIGINS
+        return list(ORIGENS_DEV)
 
     @field_validator("JWT_SECRET_KEY")
     @classmethod
@@ -58,6 +75,10 @@ class Settings(BaseSettings):
         if self.JWT_SECRET_KEY == DEV_JWT_SECRET_KEY:
             raise ValueError(
                 "JWT_SECRET_KEY padrão de desenvolvimento não pode ser usada em staging/production. Defina um segredo próprio."
+            )
+        if not self.CORS_ALLOWED_ORIGINS or "*" in self.CORS_ALLOWED_ORIGINS:
+            raise ValueError(
+                "CORS_ALLOWED_ORIGINS deve listar as origens do frontend (sem *) em staging/production."
             )
         return self
 

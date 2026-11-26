@@ -5,7 +5,7 @@
 1. Crie uma branch a partir de `develop` seguindo [docs/conventions/BRANCHES.md](docs/conventions/BRANCHES.md) (`feat/`, `fix/`, `docs/`, `chore/`, `hotfix/`).
 2. Faça commits no padrão [Conventional Commits](docs/conventions/COMMITS.md). O release-please usa essas mensagens para definir a versão e gerar o `CHANGELOG.md`.
 3. Abra um Pull Request preenchendo o template. Merge somente via PR, com a CI verde e revisão de um dono (`.github/CODEOWNERS`).
-4. Releases são criadas pelo release-please a partir da `main`. Não crie tags manualmente.
+4. Releases seguem [docs/conventions/RELEASES.md](docs/conventions/RELEASES.md): `develop` → `release/vX.Y.Z` → `main`, e o release-please cria tag, release e CHANGELOG. Não crie tags manualmente.
 
 ## Ambiente local
 

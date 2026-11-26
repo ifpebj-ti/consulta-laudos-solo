@@ -12,6 +12,10 @@ Este documento descreve o padrão adotado para nomenclatura de branches no repos
 | `fix/`   | Correção de bug |
 | `chore/` | Tarefas de manutenção (dependências, CI, configuração) |
 | `docs/`  | Apenas documentação |
+| `release/` | Fechamento de versão (`release/vX.Y.Z`), a partir da `develop` |
+| `hotfix/` | Correção urgente a partir da `main` |
+
+Fluxo completo de releases em [RELEASES.md](RELEASES.md).
 
 ---
 
