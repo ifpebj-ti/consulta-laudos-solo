@@ -26,7 +26,9 @@ RUN npm run build
 # Imagem sem privilégios: o processo roda como o usuário "nginx" (não root) e já escuta em 8080.
 FROM nginxinc/nginx-unprivileged:alpine
 USER root
-RUN apk update && apk upgrade --no-cache
+# Atualiza todos os pacotes e forca o libxml2 (CVEs HIGH corrigidas em 2.13.9-r5).
+# Alterar esta linha invalida o cache de build (type=gha) que mantinha a camada antiga.
+RUN apk update && apk upgrade --no-cache && apk add --no-cache --upgrade libxml2
 # Copia o build gerado para a pasta pública do Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 # Copia uma configuração customizada do Nginx (para lidar com rotas do React Router)
