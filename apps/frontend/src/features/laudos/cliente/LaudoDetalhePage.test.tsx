@@ -39,10 +39,10 @@ afterEach(() => {
 });
 
 describe('laudo do cliente por situação', () => {
-  it('não mostra números da análise em nenhum estado', () => {
+  it('exibe os resultados da análise de solo quando o laudo está concluído', () => {
     renderizar({});
-    expect(screen.queryByText('6.20')).not.toBeInTheDocument();
-    expect(screen.queryByText(/Indicadores/)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Resultados da análise de solo' })).toBeInTheDocument();
+    expect(screen.getByText('6.20')).toBeInTheDocument();
   });
 
   it('amostra recebida: explica que a análise não começou, mostra etapas e não libera download', () => {

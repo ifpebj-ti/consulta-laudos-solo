@@ -174,7 +174,7 @@ describe('AnaliseLaudoPage', () => {
     const botaoProcessar = await screen.findByRole('button', { name: /Salvar e Processar Cálculos/ });
     await usuario.click(botaoProcessar);
 
-    expect(await screen.findByRole('button', { name: /Assinar Digitalmente e Liberar Laudo/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Homologar e Liberar Laudo/ })).toBeInTheDocument();
     expect(screen.getByText('Aguardando homologação')).toBeInTheDocument();
   });
 

@@ -138,34 +138,35 @@ async def init_db():
                 )
                 session.add(dev_analista)
 
-        # 3. Seed das amostras iniciais
-        for seed in AMOSTRAS_SEED:
-            stmt = select(Laudo).where(Laudo.protocolo == seed["protocolo"])
-            result = await session.execute(stmt)
-            existente = result.scalar_one_or_none()
+        # 3. Seed das amostras iniciais apenas fora de produção
+        if settings.ENVIRONMENT.lower() != "production":
+            for seed in AMOSTRAS_SEED:
+                stmt = select(Laudo).where(Laudo.protocolo == seed["protocolo"])
+                result = await session.execute(stmt)
+                existente = result.scalar_one_or_none()
 
-            if not existente:
-                laudo = Laudo(
-                    protocolo=seed["protocolo"],
-                    cpf_cliente=seed["cpf_cliente"],
-                    cliente_nome=seed["cliente_nome"],
-                    propriedade=seed["propriedade"],
-                    status=seed["status"],
-                    versao=seed["versao"],
-                    analista_id=seed.get("analista_id"),
-                    analista_nome=seed.get("analista_nome"),
-                    analista_crea=seed.get("analista_crea"),
-                )
-                session.add(laudo)
-                await session.flush()
-
-                if "quimica" in seed:
-                    bancada = AnaliseBancada(
-                        laudo_id=laudo.id,
-                        **seed["quimica"],
-                        **seed["granulometria"],
-                        **seed["calibracao"],
+                if not existente:
+                    laudo = Laudo(
+                        protocolo=seed["protocolo"],
+                        cpf_cliente=seed["cpf_cliente"],
+                        cliente_nome=seed["cliente_nome"],
+                        propriedade=seed["propriedade"],
+                        status=seed["status"],
+                        versao=seed["versao"],
+                        analista_id=seed.get("analista_id"),
+                        analista_nome=seed.get("analista_nome"),
+                        analista_crea=seed.get("analista_crea"),
                     )
-                    session.add(bancada)
+                    session.add(laudo)
+                    await session.flush()
+
+                    if "quimica" in seed:
+                        bancada = AnaliseBancada(
+                            laudo_id=laudo.id,
+                            **seed["quimica"],
+                            **seed["granulometria"],
+                            **seed["calibracao"],
+                        )
+                        session.add(bancada)
 
         await session.commit()

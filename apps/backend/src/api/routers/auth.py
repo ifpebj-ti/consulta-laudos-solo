@@ -19,12 +19,7 @@ from src.schemas.auth import (
     UsuarioAnalistaResponse,
     UsuarioMeResponse,
 )
-from src.schemas.laudo import (
-    ClienteInfoResponse,
-    LaudoDetalheResponse,
-    LoginClienteResponse,
-    ParametrosSoloResponse,
-)
+from src.schemas.laudo import LoginClienteResponse
 from src.services.google_auth_service import GoogleAuthError, GoogleAuthService
 from src.services.laudo_service import LaudoAuthService
 
@@ -212,15 +207,18 @@ async def login_analista_google(
 async def login_cliente_laudo(
     request: Request,
     payload: LoginClienteRequest,
+    db: AsyncSession = Depends(get_db),
 ):
     """
-    Autenticação do Cliente via Protocolo + CPF.
+    Autenticação do Cliente via Protocolo + CPF no banco de dados.
     Rate limit de 5 req/min por IP.
-    Retorna os dados do laudo e o JWT para download do PDF.
+    Retorna os dados do laudo e o JWT para acompanhamento e download do PDF.
     """
-    laudo = LaudoAuthService.autenticar_cliente(payload.protocolo, payload.cpf)
+    detalhe_laudo = await LaudoAuthService.autenticar_cliente_db(
+        payload.protocolo, payload.cpf, db
+    )
 
-    if not laudo:
+    if not detalhe_laudo:
         # VULN-02: Resposta unificada neutra para impedir enumeração e timing attack
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -230,29 +228,11 @@ async def login_cliente_laudo(
             },
         )
 
-    # Emite token restrito ao laudo
+    # Emite token restrito ao laudo (sem expor CPF no subject se possível, mantendo protocolo)
     token = create_access_token(
         subject=payload.cpf,
         role="CLIENTE",
-        extra_claims={"protocolo": payload.protocolo},
-    )
-
-    detalhe_laudo = LaudoDetalheResponse(
-        protocolo=laudo["protocolo"],
-        status=laudo["status"],
-        cliente=ClienteInfoResponse(
-            nome=laudo["cliente_nome"],
-            cpfMascarado=LaudoAuthService.mascarar_cpf(payload.cpf),
-        ),
-        propriedade=laudo["propriedade"],
-        dataEmissao=laudo["data_emissao"],
-        parametrosSolo=ParametrosSoloResponse(
-            ph=laudo["parametros"]["ph"],
-            materiaOrganica=laudo["parametros"]["materiaOrganica"],
-            fosforo=laudo["parametros"]["fosforo"],
-            potassio=laudo["parametros"]["potassio"],
-        ),
-        temPdfDisponivel=laudo.get("tem_pdf", False),
+        extra_claims={"protocolo": detalhe_laudo.protocolo},
     )
 
     return LoginClienteResponse(

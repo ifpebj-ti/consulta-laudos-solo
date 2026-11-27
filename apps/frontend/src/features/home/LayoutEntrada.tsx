@@ -131,9 +131,10 @@ type Props = {
   children: ReactNode;
   tituloId: string;
   voltar?: boolean;
+  rodapeExtra?: ReactNode;
 };
 
-export function LayoutEntrada({ children, tituloId, voltar = false }: Props) {
+export function LayoutEntrada({ children, tituloId, voltar = false, rodapeExtra }: Props) {
   return (
     <main id="conteudo" className="home-shell" tabIndex={-1}>
       <div className="home-tela">
@@ -149,7 +150,10 @@ export function LayoutEntrada({ children, tituloId, voltar = false }: Props) {
               Início
             </Link>
           )}
-          <Footer />
+          <div className="home-identidade__rodape">
+            <Footer />
+            {rodapeExtra}
+          </div>
         </div>
 
         <section className="home-conteudo" aria-labelledby={tituloId}>

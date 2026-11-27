@@ -443,6 +443,7 @@ export function AnaliseLaudoPage() {
         crea={amostraInfo?.responsavelCrea ?? session?.responsavelCrea ?? session?.crea ?? ''}
         jaLiberado={laudoConcluido}
         processada={statusServidor === 'AGUARDANDO_HOMOLOGACAO' || laudoConcluido}
+        podeHomologar={session?.role === 'ANALISTA'}
         onVoltarParaEdicao={() => irParaAba('registro')}
         onHomologar={handleHomologar}
       />

@@ -160,13 +160,72 @@ export function LaudoDetalhePage() {
     emitido && (laudo.versao ?? 1) > 1 && laudo.atualizadoEm ? formatarDataHoraServidor(laudo.atualizadoEm) : null;
   const consultadoEm = session.consultadoEm ? formatarDataHoraServidor(session.consultadoEm, true) : null;
 
+  const dadosAdicionais = laudo.parametrosSolo?.dadosAdicionais;
+  const infoAmostra = dadosAdicionais?.amostra;
+
   const dadosLaudo: Array<{ rotulo: string; valor: string; destaque?: boolean; copiavel?: boolean }> = [
     { rotulo: 'Titular', valor: textoOuTraco(laudo.cliente?.nome), destaque: true },
     { rotulo: 'CPF do titular', valor: textoOuTraco(laudo.cliente?.cpfMascarado) },
     { rotulo: 'Protocolo', valor: textoOuTraco(laudo.protocolo), copiavel: Boolean(laudo.protocolo) },
     { rotulo: 'Propriedade', valor: textoOuTraco(laudo.propriedade) },
+    ...(infoAmostra?.localizacao ? [{ rotulo: 'Localização', valor: infoAmostra.localizacao }] : []),
+    ...(infoAmostra?.profundidadeColeta ? [{ rotulo: 'Profundidade', valor: infoAmostra.profundidadeColeta }] : []),
+    ...(infoAmostra?.cultivo ? [{ rotulo: 'Cultivo / Finalidade', valor: infoAmostra.cultivo }] : []),
     { rotulo: 'Emitido em', valor: emitido && dataEmissao !== '—' ? dataEmissao : 'Aguardando emissão' },
+    ...(emitido && infoAmostra?.responsavelNome
+      ? [
+          {
+            rotulo: 'Responsável Técnico',
+            valor: infoAmostra.responsavelCrea
+              ? `${infoAmostra.responsavelNome} (${infoAmostra.responsavelCrea})`
+              : infoAmostra.responsavelNome,
+          },
+        ]
+      : []),
   ];
+
+  const param = laudo.parametrosSolo;
+  const quimicaExtra = dadosAdicionais?.quimica;
+  const sortivoExtra = dadosAdicionais?.complexoSortivo;
+  const granuloExtra = dadosAdicionais?.granulometria;
+
+  const atributosQuimicos: Array<{ rotulo: string; valor: string }> = emitido && param
+    ? [
+        ...(param.ph != null ? [{ rotulo: 'pH (H₂O)', valor: param.ph.toFixed(2) }] : []),
+        ...(param.fosforo ? [{ rotulo: 'Fósforo (P)', valor: param.fosforo }] : []),
+        ...(param.potassio ? [{ rotulo: 'Potássio (K⁺)', valor: param.potassio }] : []),
+        ...(param.materiaOrganica ? [{ rotulo: 'Matéria Orgânica', valor: param.materiaOrganica }] : []),
+        ...(quimicaExtra?.sodio ? [{ rotulo: 'Sódio (Na⁺)', valor: quimicaExtra.sodio }] : []),
+        ...(quimicaExtra?.calcio ? [{ rotulo: 'Cálcio (Ca²⁺)', valor: quimicaExtra.calcio }] : []),
+        ...(quimicaExtra?.magnesio ? [{ rotulo: 'Magnésio (Mg²⁺)', valor: quimicaExtra.magnesio }] : []),
+        ...(quimicaExtra?.aluminio ? [{ rotulo: 'Alumínio (Al³⁺)', valor: quimicaExtra.aluminio }] : []),
+        ...(quimicaExtra?.acidezPotencial ? [{ rotulo: 'Acidez Potencial (H+Al)', valor: quimicaExtra.acidezPotencial }] : []),
+      ]
+    : [];
+
+  const atributosSortivo: Array<{ rotulo: string; valor: string }> = emitido && sortivoExtra
+    ? [
+        ...(sortivoExtra.somaBases ? [{ rotulo: 'Soma de Bases (SB)', valor: sortivoExtra.somaBases }] : []),
+        ...(sortivoExtra.ctcEfetiva ? [{ rotulo: 'CTC Efetiva (t)', valor: sortivoExtra.ctcEfetiva }] : []),
+        ...(sortivoExtra.ctcPotencial ? [{ rotulo: 'CTC Potencial (T)', valor: sortivoExtra.ctcPotencial }] : []),
+        ...(sortivoExtra.saturacaoBases ? [{ rotulo: 'Saturação por Bases (V%)', valor: sortivoExtra.saturacaoBases }] : []),
+        ...(sortivoExtra.saturacaoAluminio ? [{ rotulo: 'Saturação por Alumínio (m%)', valor: sortivoExtra.saturacaoAluminio }] : []),
+        ...(sortivoExtra.relacaoCaMg ? [{ rotulo: 'Relação Ca/Mg', valor: sortivoExtra.relacaoCaMg }] : []),
+        ...(sortivoExtra.relacaoCaK ? [{ rotulo: 'Relação Ca/K', valor: sortivoExtra.relacaoCaK }] : []),
+        ...(sortivoExtra.relacaoMgK ? [{ rotulo: 'Relação Mg/K', valor: sortivoExtra.relacaoMgK }] : []),
+      ]
+    : [];
+
+  const atributosFisicos: Array<{ rotulo: string; valor: string; destaque?: boolean }> = emitido && granuloExtra
+    ? [
+        ...(granuloExtra.areia ? [{ rotulo: 'Fração Areia', valor: granuloExtra.areia }] : []),
+        ...(granuloExtra.silte ? [{ rotulo: 'Fração Silte', valor: granuloExtra.silte }] : []),
+        ...(granuloExtra.argila ? [{ rotulo: 'Fração Argila', valor: granuloExtra.argila }] : []),
+        ...(granuloExtra.classeTextural ? [{ rotulo: 'Classe Textural', valor: granuloExtra.classeTextural, destaque: true }] : []),
+      ]
+    : [];
+
+  const temResultadosSolo = atributosQuimicos.length > 0 || atributosSortivo.length > 0 || atributosFisicos.length > 0;
 
   const copiarProtocolo = async () => {
     try {
@@ -341,6 +400,59 @@ export function LaudoDetalhePage() {
             {copiado ? 'Protocolo copiado.' : ''}
           </span>
         </section>
+
+        {temResultadosSolo && (
+          <section className="detalhe-modulo" aria-labelledby="titulo-resultados-solo">
+            <h2 id="titulo-resultados-solo" className="detalhe-modulo__titulo">
+              Resultados da análise de solo
+            </h2>
+
+            {atributosQuimicos.length > 0 && (
+              <div className="resultados-solo__grupo">
+                <h3 className="resultados-solo__subtitulo">Atributos Químicos</h3>
+                <dl className="dados-laudo">
+                  {atributosQuimicos.map((item) => (
+                    <div className="dados-laudo__item" key={item.rotulo}>
+                      <dt>{item.rotulo}</dt>
+                      <dd>{item.valor}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
+            {atributosSortivo.length > 0 && (
+              <div className="resultados-solo__grupo">
+                <h3 className="resultados-solo__subtitulo">Complexo Sortivo, CTC e Saturação</h3>
+                <dl className="dados-laudo">
+                  {atributosSortivo.map((item) => (
+                    <div className="dados-laudo__item" key={item.rotulo}>
+                      <dt>{item.rotulo}</dt>
+                      <dd>{item.valor}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+
+            {atributosFisicos.length > 0 && (
+              <div className="resultados-solo__grupo">
+                <h3 className="resultados-solo__subtitulo">Atributos Físicos e Classe Textural</h3>
+                <dl className="dados-laudo">
+                  {atributosFisicos.map((item) => (
+                    <div
+                      className={`dados-laudo__item ${item.destaque ? 'dados-laudo__item--destaque' : ''}`.trim()}
+                      key={item.rotulo}
+                    >
+                      <dt>{item.rotulo}</dt>
+                      <dd>{item.valor}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="detalhe-modulo download-laudo" aria-labelledby="titulo-pdf">
           <h2 id="titulo-pdf" className="detalhe-modulo__titulo">
