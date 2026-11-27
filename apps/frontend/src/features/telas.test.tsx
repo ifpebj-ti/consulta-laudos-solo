@@ -120,6 +120,11 @@ describe('consulta do cliente', () => {
     await usuario.click(screen.getByRole('button', { name: /Consultar Laudo/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/Não encontramos um laudo/);
   });
+
+  it('preenche o protocolo automaticamente quando recebido via link compartilhado (/cliente?protocolo=...)', () => {
+    renderizar('/cliente?protocolo=lab-2026-0142');
+    expect(screen.getByLabelText('Protocolo')).toHaveValue('LAB-2026-0142');
+  });
 });
 
 describe('PDF do laudo', () => {
@@ -135,8 +140,8 @@ describe('PDF do laudo', () => {
     expect(alerta).toHaveTextContent('PDF ainda não disponível');
     expect(screen.getByText('João da Silva')).toBeInTheDocument();
     expect(screen.getByText('***.982.247-**')).toBeInTheDocument();
-    expect(screen.queryByText(/Indicadores de fertilidade/)).not.toBeInTheDocument();
-    expect(screen.queryByText('6.20')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Resultados da análise de solo' })).toBeInTheDocument();
+    expect(screen.getByText('6.20')).toBeInTheDocument();
     await usuario.click(screen.getByRole('button', { name: /Tentar novamente/ }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
@@ -272,7 +277,29 @@ describe('homologação bloqueada sem processamento', () => {
         onHomologar={async () => ({ ok: true, simulado: true })}
       />,
     );
-    expect(screen.getByRole('button', { name: /Assinar Digitalmente/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Homologar e Liberar Laudo/ })).toBeDisabled();
     expect(screen.getByText(/ainda não foi processada/)).toBeInTheDocument();
+  });
+
+  it('desabilita a homologação para Auxiliar e permite copiar o link direto para o cliente', async () => {
+    const usuario = userEvent.setup();
+    render(
+      <HomologacaoView
+        dados={{
+          ...DADOS_ANALISE_VAZIOS,
+          identificacao: { ...DADOS_ANALISE_VAZIOS.identificacao, protocolo: 'LAB-2026-0142' },
+        }}
+        responsavel="Dr. Marcos"
+        podeHomologar={false}
+        onVoltarParaEdicao={() => undefined}
+        onHomologar={async () => ({ ok: true, simulado: false })}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Homologar e Liberar Laudo/ })).toBeDisabled();
+    expect(screen.getByText(/Apenas o Analista Principal/)).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole('button', { name: 'Copiar Link para o Cliente' }));
+    expect(await navigator.clipboard.readText()).toContain('/cliente?protocolo=LAB-2026-0142');
+    expect(await screen.findByRole('button', { name: 'Link Copiado!' })).toBeInTheDocument();
   });
 });

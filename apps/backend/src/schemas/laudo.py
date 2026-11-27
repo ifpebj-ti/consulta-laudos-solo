@@ -21,10 +21,18 @@ class LaudoDetalheResponse(BaseModel):
     protocolo: str
     status: str
     cliente: ClienteInfoResponse
-    propriedade: str
-    dataEmissao: datetime
+    propriedade: str | None = None
+    dataEmissao: datetime | None = None
     parametrosSolo: ParametrosSoloResponse
     temPdfDisponivel: bool = False
+    dataPrevistaEntrega: str | None = None
+    versao: int | None = None
+    atualizadoEm: str | None = None
+
+
+class SituacaoLaudoResponse(BaseModel):
+    sucesso: bool = True
+    laudo: LaudoDetalheResponse
 
 
 class LoginClienteResponse(BaseModel):

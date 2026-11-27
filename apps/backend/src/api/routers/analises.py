@@ -6,6 +6,8 @@ from src.core.database import get_db
 from src.schemas.analise import (
     CriarLaudoInput,
     CriarLaudoResponse,
+    HomologarLaudoInput,
+    HomologarLaudoResponse,
     ListarLaudosResponse,
     ObterAnaliseResponse,
     ProcessarAnaliseInput,
@@ -113,6 +115,31 @@ async def processar_analise(
     Exige perfil de acesso ANALISTA ou AUXILIAR do mesmo escopo.
     """
     return await AnaliseService.processar_analise(
+        protocolo=protocolo,
+        payload=payload,
+        usuario=user,
+        db=db,
+    )
+
+
+@router.post(
+    "/{protocolo}/homologar",
+    response_model=HomologarLaudoResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Homologar e assinar digitalmente o laudo técnico",
+)
+async def homologar_laudo(
+    protocolo: str,
+    payload: HomologarLaudoInput,
+    user: dict = Depends(require_role("ANALISTA")),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Homologa o laudo técnico alterando seu status para CONCLUIDO e liberando
+    a geração do PDF oficial sob demanda para o cliente.
+    Restrito exclusivamente ao Analista Principal (role ANALISTA).
+    """
+    return await AnaliseService.homologar_laudo(
         protocolo=protocolo,
         payload=payload,
         usuario=user,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { MensagemErroCampo } from '@/components/ui/MensagemErroCampo';
 import { useAuth } from '@/context/AuthContext';
@@ -38,7 +38,9 @@ export function ConsultaLaudoPage() {
   useTituloPagina('Consultar laudo');
   const { entrarComProtocolo, motivoUltimaSaida, limparMotivoSaida } = useAuth();
   const navigate = useNavigate();
-  const [protocolo, setProtocolo] = useState('');
+  const [searchParams] = useSearchParams();
+  const protocoloUrl = normalizarProtocolo(searchParams.get('protocolo') ?? '');
+  const [protocolo, setProtocolo] = useState(protocoloUrl);
   const [cpf, setCpf] = useState('');
   const [carregando, setCarregando] = useState(false);
   const [falha, setFalha] = useState<{ mensagem: string; podeTentarNovamente: boolean } | null>(null);
@@ -56,6 +58,12 @@ export function ConsultaLaudoPage() {
     const temporizador = window.setInterval(() => setAgora(Date.now()), 1000);
     return () => window.clearInterval(temporizador);
   }, [bloqueadoAte]);
+
+  useEffect(() => {
+    if (protocoloUrl) {
+      setProtocolo(protocoloUrl);
+    }
+  }, [protocoloUrl]);
 
   useEffect(() => {
     montadoRef.current = true;
@@ -197,21 +205,6 @@ export function ConsultaLaudoPage() {
           {carregando ? 'Consultando...' : restante > 0 ? `Aguarde ${restante} s` : 'Consultar Laudo'}
           <SetaVelocidade />
         </Button>
-        {/* TEMPORARIO: preenche o laudo mockado do backend (laudo_service.py); remover antes de publicar. */}
-        {import.meta.env.DEV && (
-          <button
-            type="button"
-            className="entrada-teste"
-            onClick={() => {
-              setProtocolo('20101.2306');
-              setCpf('529.982.247-25');
-              setErros({});
-            }}
-            disabled={carregando}
-          >
-            Preencher dados de teste
-          </button>
-        )}
       </form>
     </LayoutEntrada>
   );

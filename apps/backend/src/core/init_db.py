@@ -9,15 +9,6 @@ from src.models import AnaliseBancada, Laudo, Usuario
 
 logger = logging.getLogger(__name__)
 
-POWER_USER_SEED = {
-    "username": "PowerUser",
-    "email": "poweruser@local",
-    "nome": "PowerUser",
-    "senha_plana": "0fb9d9a04f03dac9ca32a557cd828322895f8291",
-    "role": "POWER_USER",
-    "provedor": "LOCAL",
-}
-
 DEV_ANALISTA_SEED = {
     "email": "analista.dev@instituto.edu.br",
     "nome": "Prof. Msc. Carla Andrade Ferreira",
@@ -104,21 +95,31 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
 
     async with async_session_factory() as session:
-        # 1. Seed do PowerUser local no banco de dados
-        stmt_pu = select(Usuario).where(Usuario.username == POWER_USER_SEED["username"])
-        res_pu = await session.execute(stmt_pu)
-        pu_existente = res_pu.scalar_one_or_none()
-        if not pu_existente:
-            power_user = Usuario(
-                username=POWER_USER_SEED["username"],
-                email=POWER_USER_SEED["email"],
-                nome=POWER_USER_SEED["nome"],
-                senha_hash=get_password_hash(POWER_USER_SEED["senha_plana"]),
-                role=POWER_USER_SEED["role"],
-                provedor=POWER_USER_SEED["provedor"],
-                ativo=True,
+        # 1. Seed do PowerUser local no banco de dados se configurado no ambiente
+        pu_senha = (settings.POWERUSER_PASSWORD or "").strip()
+        if pu_senha:
+            stmt_pu = select(Usuario).where(
+                Usuario.username == settings.POWERUSER_USERNAME
             )
-            session.add(power_user)
+            res_pu = await session.execute(stmt_pu)
+            pu_existente = res_pu.scalar_one_or_none()
+            if not pu_existente:
+                power_user = Usuario(
+                    username=settings.POWERUSER_USERNAME,
+                    email=settings.POWERUSER_EMAIL,
+                    nome=settings.POWERUSER_USERNAME,
+                    senha_hash=get_password_hash(pu_senha),
+                    role="POWER_USER",
+                    provedor="LOCAL",
+                    ativo=True,
+                )
+                session.add(power_user)
+            else:
+                pu_existente.senha_hash = get_password_hash(pu_senha)
+        else:
+            logger.info(
+                "POWERUSER_PASSWORD não configurada; seed do PowerUser ignorado."
+            )
 
         # 2. Seed de analista dev quando em modo dev com mock habilitado
         if settings.ENVIRONMENT == "dev" and settings.ENABLE_MOCK_AUTH:
@@ -137,34 +138,35 @@ async def init_db():
                 )
                 session.add(dev_analista)
 
-        # 3. Seed das amostras iniciais
-        for seed in AMOSTRAS_SEED:
-            stmt = select(Laudo).where(Laudo.protocolo == seed["protocolo"])
-            result = await session.execute(stmt)
-            existente = result.scalar_one_or_none()
+        # 3. Seed das amostras iniciais apenas fora de produção
+        if settings.ENVIRONMENT.lower() != "production":
+            for seed in AMOSTRAS_SEED:
+                stmt = select(Laudo).where(Laudo.protocolo == seed["protocolo"])
+                result = await session.execute(stmt)
+                existente = result.scalar_one_or_none()
 
-            if not existente:
-                laudo = Laudo(
-                    protocolo=seed["protocolo"],
-                    cpf_cliente=seed["cpf_cliente"],
-                    cliente_nome=seed["cliente_nome"],
-                    propriedade=seed["propriedade"],
-                    status=seed["status"],
-                    versao=seed["versao"],
-                    analista_id=seed.get("analista_id"),
-                    analista_nome=seed.get("analista_nome"),
-                    analista_crea=seed.get("analista_crea"),
-                )
-                session.add(laudo)
-                await session.flush()
-
-                if "quimica" in seed:
-                    bancada = AnaliseBancada(
-                        laudo_id=laudo.id,
-                        **seed["quimica"],
-                        **seed["granulometria"],
-                        **seed["calibracao"],
+                if not existente:
+                    laudo = Laudo(
+                        protocolo=seed["protocolo"],
+                        cpf_cliente=seed["cpf_cliente"],
+                        cliente_nome=seed["cliente_nome"],
+                        propriedade=seed["propriedade"],
+                        status=seed["status"],
+                        versao=seed["versao"],
+                        analista_id=seed.get("analista_id"),
+                        analista_nome=seed.get("analista_nome"),
+                        analista_crea=seed.get("analista_crea"),
                     )
-                    session.add(bancada)
+                    session.add(laudo)
+                    await session.flush()
+
+                    if "quimica" in seed:
+                        bancada = AnaliseBancada(
+                            laudo_id=laudo.id,
+                            **seed["quimica"],
+                            **seed["granulometria"],
+                            **seed["calibracao"],
+                        )
+                        session.add(bancada)
 
         await session.commit()

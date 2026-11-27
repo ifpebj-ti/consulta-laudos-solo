@@ -12,7 +12,7 @@ export function resolverVersaoApp(): string {
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim()
-    if (tag) return tag
+    if (tag) return tag.replace(/^.*-(v\d+\.\d+\.\d+.*)$/, '$1')
   } catch {
     // fallback para package.json quando executado fora de um repositório git
   }

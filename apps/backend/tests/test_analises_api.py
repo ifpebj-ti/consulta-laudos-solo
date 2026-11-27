@@ -427,3 +427,162 @@ def test_isolamento_entre_equipes_e_acesso_auxiliar(client):
         headers={"Authorization": f"Bearer {token_analista_b}"},
     )
     assert res_patch_b.status_code == 403
+
+
+def test_homologar_laudo_fluxo_completo_e_pdf_sob_demanda(client):
+    """
+    Valida o ciclo completo até produção:
+    1. Auxiliar não pode homologar (403 Forbidden).
+    2. Laudo ainda não processado (EM_ANALISE) não pode ser homologado (422) e PDF retorna 409.
+    3. Consulta do cliente antes da homologação mostra andamento, mas sem PDF nem indicadores finais.
+    4. Após processar e homologar pelo Analista Principal, status vira CONCLUIDO,
+       situação do cliente libera indicadores e download gera o PDF (%PDF) sob demanda em memória.
+    """
+    protocolo = "LAB-HOMOLOG-2026"
+    cpf_cliente = "52998224725"
+
+    token_analista = create_access_token(
+        "analista.homolog@gmail.com",
+        "ANALISTA",
+        extra_claims={
+            "nome": "Dr. Marcos Responsável",
+            "email": "analista.homolog@gmail.com",
+            "crea": "CREA-PE 555666-D",
+            "escopoAnalistaId": "analista.homolog@gmail.com",
+            "responsavelNome": "Dr. Marcos Responsável",
+            "responsavelCrea": "CREA-PE 555666-D",
+        },
+    )
+    token_auxiliar = create_access_token(
+        "aux.homolog@gmail.com",
+        "AUXILIAR",
+        extra_claims={
+            "nome": "Auxiliar Bancada",
+            "email": "aux.homolog@gmail.com",
+            "escopoAnalistaId": "analista.homolog@gmail.com",
+            "responsavelNome": "Dr. Marcos Responsável",
+            "responsavelCrea": "CREA-PE 555666-D",
+        },
+    )
+
+    # 1. Criar amostra
+    res_criar = client.post(
+        "/api/laudos",
+        json={
+            "protocolo": protocolo,
+            "cpf_cliente": cpf_cliente,
+            "cliente_nome": "Produtor Rural Teste",
+            "propriedade": "Fazenda Esperança",
+            "localizacao": "Belo Jardim - PE",
+            "dataRecebimento": "2026-11-20",
+            "tipoAnalise": "fisico_quimica",
+            "culturaExistente": "Milho",
+        },
+        headers={"Authorization": f"Bearer {token_analista}"},
+    )
+    assert res_criar.status_code == 201
+    versao = res_criar.json()["dados"]["versao"]
+
+    # 2. Cliente já consegue consultar o andamento enquanto EM_ANALISE, mas sem PDF liberado
+    res_cliente_andamento = client.post(
+        "/api/auth/cliente",
+        json={"protocolo": protocolo, "cpf": cpf_cliente},
+    )
+    assert res_cliente_andamento.status_code == 200
+    token_cliente = res_cliente_andamento.json()["token"]
+    laudo_andamento = res_cliente_andamento.json()["laudo"]
+    assert laudo_andamento["status"] == "EM_ANALISE"
+    assert laudo_andamento["temPdfDisponivel"] is False
+    assert laudo_andamento["dataEmissao"] is None
+
+    # PDF antes da homologação -> 409 Conflict (PDF_NAO_GERADO)
+    res_pdf_antes = client.get(
+        f"/api/laudos/{protocolo}/pdf",
+        headers={"Authorization": f"Bearer {token_cliente}"},
+    )
+    assert res_pdf_antes.status_code == 409
+    assert res_pdf_antes.json()["detail"]["codigoErro"] == "PDF_NAO_GERADO"
+
+    # 3. Tentar homologar antes de processar -> 422
+    res_homolog_antes = client.post(
+        f"/api/laudos/{protocolo}/homologar",
+        json={"versaoEsperada": versao},
+        headers={"Authorization": f"Bearer {token_analista}"},
+    )
+    assert res_homolog_antes.status_code == 422
+
+    # 4. Processar cálculos
+    res_proc = client.post(
+        f"/api/laudos/{protocolo}/analise/processar",
+        json={
+            "versaoEsperada": versao,
+            "quimica": {
+                "ph": 6.1,
+                "fosforoAbsBruta": 0.612,
+                "sodioMgL": 12.0,
+                "potassioMgL": 45.0,
+                "calcio": {"medido": 2.1, "branco": 0.0},
+                "magnesio": {"medido": 0.85, "branco": 0.0},
+                "aluminio": {"medido": 0.3, "branco": 0.0},
+                "acidezPotencial": {"medido": 3.2, "branco": 0.0},
+            },
+            "granulometria": {
+                "tfsa": 20.0,
+                "areiaBecker": 15.9312,
+                "areiaBeckerVazio": 4.492,
+                "argilaBecker": 4.5824,
+                "argilaBeckerVazio": 4.4899,
+                "naohBecker": 4.479,
+                "naohBeckerVazio": 4.4711,
+            },
+            "calibracao": {
+                "a": 0.033,
+                "b": 0.019,
+                "r2": 0.9998,
+            },
+        },
+        headers={"Authorization": f"Bearer {token_auxiliar}"},
+    )
+    assert res_proc.status_code == 200
+    versao_pos_proc = res_proc.json()["dados"]["novaVersao"]
+
+    # 5. Auxiliar tentando homologar -> 403 Forbidden
+    res_homolog_aux = client.post(
+        f"/api/laudos/{protocolo}/homologar",
+        json={"versaoEsperada": versao_pos_proc},
+        headers={"Authorization": f"Bearer {token_auxiliar}"},
+    )
+    assert res_homolog_aux.status_code == 403
+
+    # 6. Analista Principal homologa com sucesso -> 200 OK
+    res_homolog = client.post(
+        f"/api/laudos/{protocolo}/homologar",
+        json={"versaoEsperada": versao_pos_proc},
+        headers={"Authorization": f"Bearer {token_analista}"},
+    )
+    assert res_homolog.status_code == 200
+    dados_homolog = res_homolog.json()["dados"]
+    assert dados_homolog["status"] == "CONCLUIDO"
+    assert dados_homolog["temPdfDisponivel"] is True
+    assert dados_homolog["responsavelNome"] == "Dr. Marcos Responsável"
+    assert dados_homolog["responsavelCrea"] == "CREA-PE 555666-D"
+
+    # 7. Cliente consulta situação atualizada (GET /api/laudos/{protocolo}) e baixa o PDF gerado sob demanda
+    res_situacao = client.get(
+        f"/api/laudos/{protocolo}",
+        headers={"Authorization": f"Bearer {token_cliente}"},
+    )
+    assert res_situacao.status_code == 200
+    laudo_concluido = res_situacao.json()["laudo"]
+    assert laudo_concluido["status"] == "CONCLUIDO"
+    assert laudo_concluido["temPdfDisponivel"] is True
+    assert laudo_concluido["dataEmissao"] is not None
+    assert laudo_concluido["parametrosSolo"]["ph"] == 6.1
+
+    res_pdf = client.get(
+        f"/api/laudos/{protocolo}/pdf",
+        headers={"Authorization": f"Bearer {token_cliente}"},
+    )
+    assert res_pdf.status_code == 200
+    assert res_pdf.headers["content-type"] == "application/pdf"
+    assert res_pdf.content.startswith(b"%PDF-")

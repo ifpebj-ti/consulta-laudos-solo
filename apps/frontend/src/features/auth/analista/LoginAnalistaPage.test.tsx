@@ -72,32 +72,9 @@ describe('LoginAnalistaPage', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('login com botão de desenvolvimento envia mock-dev-token, redireciona analista e trata erro 403', async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(respostaJson({ detail: { mensagem: 'Sem permissão' } }, 403))
-      .mockResolvedValueOnce(
-        respostaJson({
-          sucesso: true,
-          token: tokenComExpiracao(3600),
-          tipoToken: 'Bearer',
-          usuario: { nome: 'Carla Andrade', email: 'carla@lab.br', role: 'ANALISTA', crea: 'CREA-PE 1' },
-        }),
-      );
-
-    const usuario = userEvent.setup();
+  it('não exibe botão de analista de teste na tela de login', () => {
     renderizarLogin();
-
-    const botaoTeste = screen.getByRole('button', { name: /Entrar como analista de teste/ });
-    await usuario.click(botaoTeste);
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Esta conta não tem acesso ao módulo do analista. Entre com o e-mail institucional autorizado pelo laboratório.',
-    );
-
-    await usuario.click(botaoTeste);
-    expect(await screen.findByText('Painel Analista Destino')).toBeInTheDocument();
-    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ idToken: 'mock-dev-token' });
+    expect(screen.queryByRole('button', { name: /analista de teste/i })).not.toBeInTheDocument();
   });
 
   it('redireciona automaticamente quando já existe sessão válida', () => {

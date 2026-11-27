@@ -239,8 +239,22 @@ function CartaoBloco({
   mostrarPrazo: boolean;
   onAbrir?: () => void;
 }) {
+  const [copiado, setCopiado] = useState(false);
   const urgencia = mostrarPrazo ? urgenciaPrazo(cartao.prazo) : null;
   const clicavel = !!onAbrir;
+
+  async function copiarLink(evento: React.MouseEvent<HTMLButtonElement>) {
+    evento.stopPropagation();
+    if (!cartao.protocolo) return;
+    const url = `${window.location.origin}/cliente?protocolo=${encodeURIComponent(cartao.protocolo)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      window.setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      setCopiado(false);
+    }
+  }
 
   return (
     <div
@@ -260,8 +274,19 @@ function CartaoBloco({
           : undefined
       }
     >
-      <div className="dashboard-bloco__topo">
+      <div className="dashboard-bloco__topo" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
         <strong>{cartao.protocolo || 'Sem protocolo'}</strong>
+        {cartao.protocolo && (
+          <button
+            type="button"
+            className="link-acao"
+            style={{ fontSize: '12px' }}
+            onClick={(e) => void copiarLink(e)}
+            title="Copiar link direto de consulta para o cliente"
+          >
+            {copiado ? 'Link copiado!' : 'Compartilhar'}
+          </button>
+        )}
       </div>
       <p className="dashboard-bloco__solicitante">{cartao.solicitante || 'Solicitante não informado'}</p>
       {cartao.propriedade && <p className="dashboard-bloco__propriedade">{cartao.propriedade}</p>}

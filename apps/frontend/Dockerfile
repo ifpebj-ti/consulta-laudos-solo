@@ -11,8 +11,8 @@ ARG VITE_API_BASE_URL=/api
 ARG VITE_GOOGLE_CLIENT_ID
 ARG VITE_APP_VERSION
 ARG VITE_FEATURE_LISTAGEM_SERVIDOR=false
-ARG VITE_FEATURE_HOMOLOGACAO_SERVIDOR=false
-ARG VITE_FEATURE_SITUACAO_CLIENTE=false
+ARG VITE_FEATURE_HOMOLOGACAO_SERVIDOR=true
+ARG VITE_FEATURE_SITUACAO_CLIENTE=true
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL \
     VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID \
     VITE_APP_VERSION=$VITE_APP_VERSION \
@@ -26,7 +26,9 @@ RUN npm run build
 # Imagem sem privilégios: o processo roda como o usuário "nginx" (não root) e já escuta em 8080.
 FROM nginxinc/nginx-unprivileged:alpine
 USER root
-RUN apk update && apk upgrade --no-cache
+# Atualiza todos os pacotes e forca o libxml2 (CVEs HIGH corrigidas em 2.13.9-r5).
+# Alterar esta linha invalida o cache de build (type=gha) que mantinha a camada antiga.
+RUN apk update && apk upgrade --no-cache && apk add --no-cache --upgrade libxml2
 # Copia o build gerado para a pasta pública do Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 # Copia uma configuração customizada do Nginx (para lidar com rotas do React Router)

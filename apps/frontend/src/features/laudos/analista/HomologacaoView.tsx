@@ -29,6 +29,7 @@ interface HomologacaoViewProps {
   responsavelCrea?: string | null;
   jaLiberado?: boolean;
   processada?: boolean;
+  podeHomologar?: boolean;
   onVoltarParaEdicao: () => void;
   onHomologar: () => Promise<ResultadoHomologacao>;
 }
@@ -41,6 +42,7 @@ export function HomologacaoView({
   responsavelCrea,
   jaLiberado = false,
   processada = true,
+  podeHomologar = true,
   onVoltarParaEdicao,
   onHomologar,
 }: HomologacaoViewProps) {
@@ -50,8 +52,23 @@ export function HomologacaoView({
   const [confirmando, setConfirmando] = useState(false);
   const [homologando, setHomologando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const indisponivel = !FUNCIONALIDADES.homologacaoServidor && !import.meta.env.DEV;
   const bloqueadaPorProcessamento = !processada && !liberado;
+  const bloqueadaPorPerfil = !podeHomologar && !liberado;
+
+  async function copiarLinkCliente() {
+    const proto = dados.identificacao.protocolo?.trim();
+    if (!proto) return;
+    const url = `${window.location.origin}/cliente?protocolo=${encodeURIComponent(proto)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopiado(true);
+      window.setTimeout(() => setLinkCopiado(false), 2500);
+    } catch {
+      setLinkCopiado(false);
+    }
+  }
 
   async function confirmar() {
     if (homologando) return;
@@ -333,7 +350,6 @@ export function HomologacaoView({
             <br />
             Laboratório de Solos &middot; IFPE Campus Belo Jardim
           </div>
-          <div className="assinatura-box">Área reservada para assinatura digital/eletrônica</div>
         </div>
       </div>
 
@@ -362,18 +378,36 @@ export function HomologacaoView({
             Voltar para Edição
           </Button>
         )}
+        {identificacao.protocolo && (
+          <Button variant="ghost" lg onClick={() => void copiarLinkCliente()}>
+            {linkCopiado ? 'Link Copiado!' : 'Copiar Link para o Cliente'}
+          </Button>
+        )}
         <Button
-          variant="danger"
+          variant="primary"
           lg
           onClick={() => {
             setErro(null);
             setConfirmando(true);
           }}
-          disabled={liberado || homologando || indisponivel || bloqueadaPorProcessamento}
-          aria-describedby={indisponivel ? 'homologacao-indisponivel' : bloqueadaPorProcessamento ? 'homologacao-nao-processada' : undefined}
+          disabled={liberado || homologando || indisponivel || bloqueadaPorProcessamento || bloqueadaPorPerfil}
+          aria-describedby={
+            indisponivel
+              ? 'homologacao-indisponivel'
+              : bloqueadaPorProcessamento
+                ? 'homologacao-nao-processada'
+                : bloqueadaPorPerfil
+                  ? 'homologacao-restrita-analista'
+                  : undefined
+          }
         >
-          {liberado ? 'Laudo Liberado' : homologando ? 'Homologando...' : 'Assinar Digitalmente e Liberar Laudo'}
+          {liberado ? 'Laudo Liberado' : homologando ? 'Homologando...' : 'Homologar e Liberar Laudo'}
         </Button>
+        {bloqueadaPorPerfil && (
+          <p id="homologacao-restrita-analista" className="homolog-cta__aviso">
+            Apenas o Analista Principal (responsável técnico com CREA) pode homologar e liberar o laudo.
+          </p>
+        )}
         {bloqueadaPorProcessamento && (
           <p id="homologacao-nao-processada" className="homolog-cta__aviso">
             A análise ainda não foi processada. Volte para a edição e use "Salvar e Processar Cálculos" antes de homologar.
@@ -400,7 +434,7 @@ export function HomologacaoView({
           <Button variant="ghost" onClick={() => setConfirmando(false)} disabled={homologando}>
             Cancelar
           </Button>
-          <Button variant="danger" onClick={() => void confirmar()} disabled={homologando}>
+          <Button variant="primary" onClick={() => void confirmar()} disabled={homologando}>
             {homologando ? 'Homologando...' : 'Homologar laudo'}
           </Button>
         </div>

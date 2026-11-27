@@ -21,6 +21,9 @@ from src.schemas.analise import (
     CriarLaudoResponse,
     DadosBancadaSchema,
     GranulometriaRascunhoSchema,
+    HomologarLaudoDataSchema,
+    HomologarLaudoInput,
+    HomologarLaudoResponse,
     LaudoResumoItemSchema,
     ListarLaudosResponse,
     ObterAnaliseDataSchema,
@@ -363,6 +366,16 @@ class AnaliseService:
 
         AnaliseService._validar_acesso_laudo(laudo, usuario)
 
+        if laudo.status == "CONCLUIDO":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "sucesso": False,
+                    "mensagem": "Este laudo já foi homologado e não pode mais ser editado.",
+                    "codigoErro": "LAUDO_JA_HOMOLOGADO",
+                },
+            )
+
         # Bloqueio Concorrente Otimista (409 Conflict)
         if laudo.versao != payload.versaoEsperada:
             raise HTTPException(
@@ -445,7 +458,7 @@ class AnaliseService:
         bancada.atualizado_em = agora
 
         # Transição de Status e Versionamento
-        if laudo.status == "PENDENTE":
+        if laudo.status in ("PENDENTE", "AGUARDANDO_HOMOLOGACAO"):
             laudo.status = "EM_ANALISE"
 
         laudo.versao += 1
@@ -732,5 +745,96 @@ class AnaliseService:
                 calculosOficiais=calculos_oficiais,
                 processadoEm=agora.isoformat(),
                 processadoPor=laudo.atualizado_por,
+            ),
+        )
+
+    @staticmethod
+    async def homologar_laudo(
+        protocolo: str,
+        payload: HomologarLaudoInput,
+        usuario: dict[str, Any],
+        db: AsyncSession,
+    ) -> HomologarLaudoResponse:
+        """
+        Homologa oficialmente o laudo (exclusivo para Analista Principal),
+        registrando data/hora e responsável técnico e liberando o PDF sob demanda.
+        """
+        query = (
+            select(Laudo)
+            .options(
+                selectinload(Laudo.bancada), selectinload(Laudo.resultado_calculado)
+            )
+            .where(Laudo.protocolo == protocolo)
+        )
+        result = await db.execute(query)
+        laudo = result.scalar_one_or_none()
+
+        if not laudo:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "sucesso": False,
+                    "mensagem": "Laudo ou amostra não localizada para o protocolo informado.",
+                },
+            )
+
+        AnaliseService._validar_acesso_laudo(laudo, usuario)
+
+        if laudo.versao != payload.versaoEsperada:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "sucesso": False,
+                    "mensagem": "Conflito de versão: a análise foi alterada em outra aba ou sessão. Recarregue os dados antes de homologar.",
+                    "codigoErro": "CONFLITO_CONCORRENCIA",
+                },
+            )
+
+        if laudo.status != "AGUARDANDO_HOMOLOGACAO":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "sucesso": False,
+                    "mensagem": "A análise precisa estar com os cálculos processados (status AGUARDANDO_HOMOLOGACAO) antes de ser homologada.",
+                    "codigoErro": "ANALISE_NAO_PROCESSADA",
+                },
+            )
+
+        agora = datetime.now(timezone.utc)
+        analista_email = usuario.get("email") or usuario.get("sub") or "analista"
+        responsavel_nome = (
+            laudo.analista_nome
+            or usuario.get("responsavelNome")
+            or usuario.get("nome")
+            or analista_email
+        )
+        responsavel_crea = (
+            laudo.analista_crea or usuario.get("responsavelCrea") or usuario.get("crea")
+        )
+
+        laudo.status = "CONCLUIDO"
+        laudo.versao += 1
+        laudo.analista_nome = responsavel_nome
+        laudo.analista_crea = responsavel_crea
+        laudo.homologado_em = agora
+        laudo.homologado_por = analista_email
+        laudo.atualizado_em = agora
+        laudo.atualizado_por = analista_email
+
+        await db.commit()
+        await db.refresh(laudo)
+
+        return HomologarLaudoResponse(
+            sucesso=True,
+            mensagem="Laudo homologado e liberado para consulta com sucesso.",
+            dados=HomologarLaudoDataSchema(
+                protocolo=laudo.protocolo,
+                status=laudo.status,
+                novaVersao=laudo.versao,
+                homologadoEm=agora.isoformat(),
+                homologadoPor=laudo.homologado_por,
+                temPdfDisponivel=True,
+                responsavelNome=laudo.analista_nome,
+                responsavelCrea=laudo.analista_crea,
             ),
         )
