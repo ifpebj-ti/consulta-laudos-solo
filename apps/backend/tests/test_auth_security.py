@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from src.application.main import app
 from src.core.security import create_access_token
+from tests.conftest import TEST_POWERUSER_PASS
 
 
 @pytest.fixture
@@ -168,7 +169,7 @@ def test_login_local_poweruser_sucesso_e_falha(client):
         "/api/auth/login",
         json={
             "username": "PowerUser",
-            "password": "0fb9d9a04f03dac9ca32a557cd828322895f8291",
+            "password": TEST_POWERUSER_PASS,
         },
     )
     assert res_ok.status_code == 200
@@ -216,7 +217,7 @@ def test_gestao_analistas_principais_e_auxiliares(client, monkeypatch):
         "/api/auth/login",
         json={
             "username": "PowerUser",
-            "password": "0fb9d9a04f03dac9ca32a557cd828322895f8291",
+            "password": TEST_POWERUSER_PASS,
         },
     )
     token_pu = res_pu.json()["token"]
