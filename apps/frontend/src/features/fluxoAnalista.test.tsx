@@ -67,9 +67,9 @@ describe('navegação inicial', () => {
 });
 
 describe('login do analista', () => {
-  it('entra com o botão de teste e abre o painel', async () => {
+  it('entra pelo acesso administrativo discreto com credenciais locais e abre o painel', async () => {
     simularApi((url, init) =>
-      url.pathname.endsWith('/auth/google') && init.method === 'POST'
+      url.pathname.endsWith('/auth/login') && init.method === 'POST'
         ? respostaJson({
             sucesso: true,
             token: tokenComExpiracao(3600),
@@ -80,21 +80,12 @@ describe('login do analista', () => {
     );
     const usuario = userEvent.setup();
     renderizar('/analista/login');
-    await usuario.click(await screen.findByRole('button', { name: /analista de teste/ }));
+    await usuario.click(await screen.findByRole('button', { name: 'Acesso administrativo' }));
+    await usuario.type(screen.getByLabelText('Usuário'), 'ana');
+    await usuario.type(screen.getByLabelText('Senha'), '123456');
+    await usuario.click(screen.getByRole('button', { name: /Entrar com Usuário e Senha/ }));
     expect(await screen.findByRole('heading', { name: /Painel do\s*Analista/ })).toBeInTheDocument();
     expect(screen.getAllByText('Ana Analista').length).toBeGreaterThan(0);
-  });
-
-  it('mostra mensagem específica quando a conta não é autorizada (403)', async () => {
-    simularApi((url) =>
-      url.pathname.endsWith('/auth/google')
-        ? respostaJson({ sucesso: false, mensagem: 'proibido' }, 403)
-        : undefined,
-    );
-    const usuario = userEvent.setup();
-    renderizar('/analista/login');
-    await usuario.click(await screen.findByRole('button', { name: /analista de teste/ }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/não tem acesso ao módulo do analista/);
   });
 
   it('redireciona para o painel quando já existe sessão de analista', async () => {

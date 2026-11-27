@@ -235,3 +235,24 @@ class LaudoResumoItemSchema(BaseModel):
 class ListarLaudosResponse(BaseModel):
     sucesso: bool = True
     dados: list[LaudoResumoItemSchema]
+
+
+class HomologarLaudoInput(BaseModel):
+    versaoEsperada: int
+
+
+class HomologarLaudoDataSchema(BaseModel):
+    protocolo: str
+    status: str
+    novaVersao: int
+    homologadoEm: str
+    homologadoPor: str | None = None
+    temPdfDisponivel: bool = True
+    responsavelNome: str | None = None
+    responsavelCrea: str | None = None
+
+
+class HomologarLaudoResponse(BaseModel):
+    sucesso: bool = True
+    mensagem: str = "Laudo homologado e liberado para consulta com sucesso."
+    dados: HomologarLaudoDataSchema

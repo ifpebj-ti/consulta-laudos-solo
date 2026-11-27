@@ -5,8 +5,16 @@ import pytest
 from src.core.config import settings
 from src.core.database import Base, async_engine
 from src.core.init_db import init_db
+from src.core.limiter import limiter
 
 TEST_POWERUSER_PASS = "senha-teste-poweruser-123"
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Limpa contadores de rate limit entre testes para evitar 429 falso-positivo na suíte."""
+    limiter.reset()
+    yield
 
 
 @pytest.fixture(scope="session", autouse=True)

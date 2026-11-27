@@ -11,8 +11,6 @@ import { LayoutEntrada, SetaVelocidade } from '@/features/home/LayoutEntrada';
 import { destinoAposLogin } from '@/routes/rotas';
 import { GOOGLE_CLIENT_ID } from '@/config/ambiente';
 
-const TOKEN_MOCK_DEV = 'mock-dev-token';
-
 function mensagemDeFalha(erro: unknown): string {
   if (erro instanceof ApiError && erro.status === 403) {
     return 'Esta conta não tem acesso ao módulo do analista. Entre com o e-mail institucional autorizado pelo laboratório.';
@@ -99,7 +97,20 @@ export function LoginAnalistaPage() {
   const alerta = mensagemErro ?? avisoSessao ?? (import.meta.env.DEV ? null : erroGoogle);
 
   return (
-    <LayoutEntrada tituloId="login-titulo" voltar>
+    <LayoutEntrada
+      tituloId="login-titulo"
+      voltar
+      rodapeExtra={
+        <button
+          type="button"
+          className="entrada-admin-discreto"
+          aria-expanded={mostrarAcessoLocal}
+          onClick={() => setMostrarAcessoLocal((atual) => !atual)}
+        >
+          Acesso administrativo
+        </button>
+      }
+    >
       <span className="entrada-etapa">02 · Sou analista</span>
       <h1 id="login-titulo" className="home-titulo entrada-titulo">
         <span>Módulo do Analista</span>
@@ -130,26 +141,6 @@ export function LoginAnalistaPage() {
           </span>
         )}
       </div>
-
-      {import.meta.env.DEV && (
-        <button
-          type="button"
-          className="entrada-teste"
-          onClick={() => void aoReceberCredencial(TOKEN_MOCK_DEV)}
-          disabled={autenticando}
-        >
-          Entrar como analista de teste (somente desenvolvimento)
-        </button>
-      )}
-
-      <button
-        type="button"
-        className="entrada-teste"
-        aria-expanded={mostrarAcessoLocal}
-        onClick={() => setMostrarAcessoLocal((atual) => !atual)}
-      >
-        Acesso administrativo
-      </button>
 
       {mostrarAcessoLocal && (
         <>

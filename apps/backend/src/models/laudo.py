@@ -51,6 +51,10 @@ class Laudo(Base):
         nullable=False,
     )
     atualizado_por: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    homologado_em: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    homologado_por: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Relacionamentos 1:1
     bancada: Mapped["AnaliseBancada | None"] = relationship(

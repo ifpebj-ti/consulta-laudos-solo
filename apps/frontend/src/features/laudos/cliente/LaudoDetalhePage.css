@@ -127,6 +127,20 @@
   border-top: 1px solid var(--filete);
 }
 
+.painel-min--cliente .resultados-solo__grupo + .resultados-solo__grupo {
+  margin-top: calc(var(--u) * 3.5);
+}
+
+.painel-min--cliente .resultados-solo__subtitulo {
+  margin: 0 0 calc(var(--u) * 1.5);
+  font-family: var(--fonte);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--verde-escuro);
+}
+
 .painel-min--cliente .dados-laudo__item {
   position: relative;
   padding: calc(var(--u) * 2.5) calc(var(--u) * 2) calc(var(--u) * 2.5) 0;
