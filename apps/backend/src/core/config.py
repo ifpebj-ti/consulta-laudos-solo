@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     # Banco de Dados (PostgreSQL oficial com fallback SQLite assíncrono para dev/testes)
     DATABASE_URL: str = "sqlite+aiosqlite:///./laudos.db"
 
+    # PowerUser inicial (seed via ambiente)
+    POWERUSER_USERNAME: str = "PowerUser"
+    POWERUSER_PASSWORD: str = ""
+    POWERUSER_EMAIL: str = "poweruser@local"
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
