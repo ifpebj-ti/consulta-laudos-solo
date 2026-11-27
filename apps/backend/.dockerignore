@@ -13,3 +13,8 @@ venv
 tests
 coverage.xml
 htmlcov
+# Bancos e dados locais nunca entram na imagem
+*.db
+*.db-journal
+.coverage
+storage/*
